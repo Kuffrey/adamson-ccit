@@ -1,15 +1,97 @@
-/* HEADER */
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
-  :root{
-    --green:#00713D;  /* PRIMARY */
-    --blue:#003169;   /* SECONDARY */
-    --ink:#111827;
-    --edge:1px solid #e5e7eb;
-    --maxw:1200px;
-    --shadow:0 6px 20px rgba(17,24,39,.08);
-    --panel-gap:14px;
+/* ============== FILTER BAR (nbar) POLISH ============== */
+.nbar {
+  background: #fff;
+  border-bottom: 1px solid var(--edgec);
+  margin-bottom: 18px;
+}
+/* nbar: align all filter controls perfectly at the bottom for visual alignment */
+.nbar__inner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+}
+.nbar__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ncats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.nyear {
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+ .nyear select {
+  height: 40px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 0 12px;
+  background: #f8fafc;
+  color: #0b234c;
+  box-sizing: border-box;
+  line-height: 1.2;
+}
+/* nsearch: perfectly align with pills/year, match height, no vertical offset */
+.nsearch {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-left: auto;
+  height: 40px;
+}
+.nsearch input[type="search"] {
+  height: 40px;
+  min-width: 180px;
+  max-width: 260px;
+  padding: 0 12px;
+  font-size: 16px;
+  border-radius: 8px 0 0 8px;
+  border: 1px solid #d1d5db;
+  border-right: 0;
+  background: #fff;
+  color: #0b234c;
+  box-sizing: border-box;
+  display: block;
+  line-height: 40px;
+}
+.nsearch button {
+  height: 40px;
+  border-radius: 0 8px 8px 0;
+  font-size: 16px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 40px;
+  vertical-align: middle;
+}
+@media (max-width: 700px) {
+  .nsearch input[type="search"] {
+    width: 100%;
+    height: 40px;
+    min-width: 180px;
+    max-width: 260px;
+    padding: 0 12px;
+    font-size: 16px;
+    border-radius: 8px 0 0 8px;
+    border: 1px solid #d1d5db;
+    border-right: 0;
+    background: #fff;
+    color: #0b234c;
+    box-sizing: border-box;
+    display: block;
+    line-height: 40px;
   }
+}
 
   html,body{margin:0}
   .container{max-width:var(--maxw);margin-inline:auto;padding:0 20px}
@@ -432,8 +514,8 @@ a:focus-visible, button:focus-visible{outline:3px solid #9ad1ff;outline-offset:2
 
 /* Filter bar */
 .nbar{background:#fff;border-bottom:1px solid var(--edgec, #e6e9ef)}
-.nbar__inner{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:12px 0;flex-wrap:wrap}
-.nbar__left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.nbar__inner{display:flex;gap:18px;align-items:center;justify-content:space-between;padding:12px 0;flex-wrap:wrap}
+.nbar__left{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 
 .pill{
   border:1px solid var(--edgec, #e6e9ef);background:#fff;color:#0b234c;border-radius:999px;
@@ -446,9 +528,9 @@ a:focus-visible, button:focus-visible{outline:3px solid #9ad1ff;outline-offset:2
   border:1px solid var(--edgec, #e6e9ef);border-radius:10px;padding:8px 12px;background:#fff;font:inherit
 }
 
-.nsearch{display:flex;gap:8px;align-items:center}
+.nsearch{display:flex;gap:0;align-items:center;height:40px;margin-left:auto}
 .nsearch input{
-  min-width:220px;border:1px solid var(--edgec, #e6e9ef);border-radius:10px;padding:10px 12px;font:inherit
+  height:40px;min-width:180px;max-width:260px;padding:0 12px;font-size:16px;border-radius:8px 0 0 8px;border:1px solid #d1d5db;border-right:0;background:#fff;color:#0b234c;box-sizing:border-box;display:block;line-height:40px;
 }
 .nsearch input:focus{outline:2px solid var(--blue2);outline-offset:2px}
 

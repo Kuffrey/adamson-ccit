@@ -65,15 +65,16 @@ $cats = [
       <ul class="subnav__list" role="list">
         <li><a href="/adamson-ccit/public/index.php?page=news">News</a></li>
         <li class="is-active"><a href="/adamson-ccit/public/index.php?page=events" aria-current="page">Events</a></li>
+        <li><a href="/adamson-ccit/public/index.php?page=announcements">Announcements</a></li>
       </ul>
     </div>
   </nav>
 
   <!-- FILTER BAR -->
-  <section class="ebar">
-    <div class="container ebar__inner">
-      <div class="ebar__left">
-        <div class="ecats" role="tablist" aria-label="Filter events by category">
+  <section class="nbar">
+    <div class="container nbar__inner">
+      <div class="nbar__left">
+        <div class="ncats" role="tablist" aria-label="Filter events by category">
           <?php foreach ($cats as $val=>$label):
             $active = ($cat === $val) ? 'is-active' : '';
             $href = url_with(['cat'=>$val,'year'=>$year,'q'=>$q?:null,'p'=>1]);
@@ -81,8 +82,7 @@ $cats = [
             <a class="pill <?= $active ?>" role="tab" aria-selected="<?= $active? 'true':'false' ?>" href="<?= e($href) ?>"><?= e($label) ?></a>
           <?php endforeach; ?>
         </div>
-
-        <form class="eyear" method="get" action="/adamson-ccit/public/index.php">
+        <form class="nyear" method="get" action="/adamson-ccit/public/index.php">
           <input type="hidden" name="page" value="events">
           <input type="hidden" name="cat" value="<?= e($cat) ?>">
           <input type="hidden" name="q" value="<?= e($q) ?>">
@@ -91,7 +91,7 @@ $cats = [
             <?php
               if (!$metaYears) {
                   $yNow = (int)date('Y');
-                  for ($y=$yNow+1; $y>=$yNow-5; $y--) echo '<option>'.(int)$y.'</option>';
+                  for ($y=$yNow; $y>=$yNow-6; $y--) echo '<option>'.(int)$y.'</option>';
               } else {
                   foreach ($metaYears as $y) {
                       $sel = ($year == (string)$y) ? 'selected' : '';
@@ -102,8 +102,7 @@ $cats = [
           </select>
         </form>
       </div>
-
-      <form class="esearch" role="search" method="get" action="/adamson-ccit/public/index.php">
+      <form class="nsearch" role="search" aria-label="Search events" method="get" action="/adamson-ccit/public/index.php">
         <input type="hidden" name="page" value="events">
         <input type="hidden" name="cat" value="<?= e($cat) ?>">
         <input type="hidden" name="year" value="<?= e($year) ?>">
@@ -114,13 +113,12 @@ $cats = [
   </section>
 
   <!-- EVENTS GRID -->
-  <section class="elist">
+  <section class="nlist">
     <div class="container">
       <?php
         $catLabel = $cats[$cat] ?? 'All';
         $yrLabel  = ($year==='all') ? 'all years' : $year;
         $countTxt = $total === 0 ? 'No events found' : "Showing {$total} result" . ($total!==1?'s':'');
-
         $chipClass = [
           'career' =>'chip',
           'forum'  =>'chip chip--blue',
@@ -129,11 +127,11 @@ $cats = [
           'community'=>'chip'
         ];
       ?>
-      <div id="eCount" class="ecount"><?= e($countTxt) ?> • <?= e($catLabel) ?> • <?= e($yrLabel) ?></div>
+      <div id="eCount" class="ncount"><?= e($countTxt) ?> • <?= e($catLabel) ?> • <?= e($yrLabel) ?></div>
 
-      <div id="eGrid" class="ecards">
+      <div id="eGrid" class="cards">
         <?php if (!$items): ?>
-          <div class="eempty" role="status">No events match your filters.</div>
+          <div class="nempty" role="status">No events match your filters.</div>
         <?php else: foreach ($items as $row):
           $id    = (int)($row['id'] ?? 0);
           $title = (string)($row['title'] ?? 'Untitled');
@@ -147,23 +145,19 @@ $cats = [
           $y     = $start ? date('Y', strtotime($start)) : '';
           $editUrl= '/adamson-ccit/public/index.php?page=admin_manage_events&action=edit&id='.$id;
         ?>
-        <article class="e" data-cat="<?= e($catKey) ?>" data-year="<?= e($y) ?>" data-date="<?= e(substr($start,0,10)) ?>">
-          <a class="e__media" href="#">
+        <article class="n" data-cat="<?= e($catKey) ?>" data-year="<?= e($y) ?>" data-date="<?= e(substr($start,0,10)) ?>">
+          <a class="n__media" href="#">
             <img src="<?= e($img) ?>" alt="<?= e($title) ?>" />
             <span class="<?= e($chip) ?>"><?= e(ucfirst($catKey)) ?></span>
           </a>
-          <div class="e__body">
-            <div class="edate">
+          <div class="n__body">
+            <h3 class="n__title"><a href="#"><?= e($title) ?></a></h3>
+            <?php if ($loc): ?><p class="n__meta"><?= e($loc) ?></p><?php endif; ?>
+            <?php if ($desc): ?><p class="n__excerpt"><?= e(mb_substr(strip_tags($desc), 0, 140).'…') ?></p><?php endif; ?>
+            <div class="n__meta">
               <?php if ($start): ?>
-                <time datetime="<?= e($start) ?>">
-                  <span><?= e(date('d', strtotime($start))) ?></span><?= e(date('M Y', strtotime($start))) ?>
-                </time>
+                <time datetime="<?= e($start) ?>"><?= e(date('M j, Y', strtotime($start))) ?></time>
               <?php endif; ?>
-            </div>
-            <div class="e__content">
-              <h3 class="e__title"><a href="#"><?= e($title) ?></a></h3>
-              <?php if ($loc): ?><p class="e__meta"><?= e($loc) ?></p><?php endif; ?>
-              <?php if ($desc): ?><p class="e__excerpt"><?= e(mb_substr(strip_tags($desc), 0, 140).'…') ?></p><?php endif; ?>
             </div>
           </div>
         </article>
