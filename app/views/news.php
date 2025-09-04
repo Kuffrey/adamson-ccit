@@ -2,7 +2,9 @@
 declare(strict_types=1);
 
 // Expect Router to have loaded Auth already. We only require the model here.
+
 require_once __DIR__ . '/../models/News.php';
+require_once __DIR__ . '/../models/NewsPageSettings.php';
 
 // ---------- Helpers ----------
 function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
@@ -11,6 +13,8 @@ function url_with(array $params): string {
     $q = array_merge(['page' => 'news'], $params);
     return $base . '?' . http_build_query($q);
 }
+
+$settings = NewsPageSettings::getSettings();
 
 // ---------- Inputs ----------
 $cat   = isset($_GET['cat'])  ? strtolower(trim((string)$_GET['cat']))   : 'all';
@@ -106,9 +110,19 @@ $chipClass = [
     <div class="container subhero__inner">
       <p class="eyebrow">CCIT Updates</p>
       <h1 class="subhero__title">News</h1>
-      <p class="subhero__lead">Stories from CCIT—research, achievements, announcements, and student life.</p>
+      <p class="subhero__lead"><?= e($settings['subhero_lead'] ?? '') ?></p>
     </div>
   </section>
+
+  <?php if (!empty($settings['announcement'])): ?>
+  <section class="announcement">
+    <div class="container">
+      <div class="announcement__content">
+        <?= nl2br(e($settings['announcement'])) ?>
+      </div>
+    </div>
+  </section>
+  <?php endif; ?>
 
   <!-- ============ LOCAL SUBNAV ============ -->
 <nav class="subnav" aria-label="News sub-navigation">

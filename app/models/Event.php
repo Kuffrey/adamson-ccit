@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/Model.php';
 
 // Load base Model safely
 $base = __DIR__ . '/../core/Model.php';
@@ -7,7 +8,6 @@ if (is_file($base)) {
     require_once $base;
 } else {
     if (!class_exists('Model')) {
-        abstract class Model { protected static function db(){ throw new \RuntimeException('DB not configured'); } }
     }
 }
 

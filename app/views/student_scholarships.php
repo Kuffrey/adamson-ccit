@@ -1,4 +1,11 @@
-<?php /* student_scholarships.php — Scholarships (uses global styles) */ ?>
+
+<?php
+require_once __DIR__ . '/../models/StudentScholarshipsPageSettings.php';
+require_once __DIR__ . '/../models/StudentScholarship.php';
+function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+$settings = StudentScholarshipsPageSettings::getSettings();
+$scholarships = StudentScholarship::getAll();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,13 +21,13 @@
   <!-- ============ SUB-HERO ============ -->
   <section class="subhero">
     <div class="subhero__media" aria-hidden="true">
-      <img src="/adamson-ccit/public/assets/images/hero-campus.jpg" alt="Adamson University campus">
+      <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-campus.jpg') ?>" alt="Adamson University campus">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
     <div class="container subhero__inner">
       <p class="eyebrow">Student Support</p>
       <h1 class="subhero__title">Scholarships</h1>
-      <p class="subhero__lead">Financial aid options for incoming and current Adamson students.</p>
+      <p class="subhero__lead"><?= e($settings['subhero_lead'] ?? 'Financial aid options for incoming and current Adamson students.') ?></p>
     </div>
   </section>
 
@@ -41,99 +48,43 @@
   <section class="content" aria-labelledby="scholarships-heading">
     <div class="container">
       <h2 id="scholarships-heading" class="sr-only">Available Scholarships</h2>
-
       <div class="prog__grid">
-
-        <!-- Freshmen Scholarships -->
+        <?php foreach ($scholarships as $sch): ?>
         <article class="prog__card">
           <header class="prog__head">
-            <h3 class="prog__title">Scholarships for Freshmen Students</h3>
-            <span class="sch__type sch__type--fresh">Freshmen</span>
+            <h3 class="prog__title"><?= e($sch['name']) ?></h3>
+            <span class="sch__type sch__type--<?= strtolower($sch['type']) ?>"><?= e($sch['type']) ?></span>
           </header>
-
-          <p class="prog__summary">
-            Rank&nbsp;1: <strong>100% tuition</strong> (1st &amp; 2nd sem). Rank&nbsp;2: <strong>50% tuition</strong> (1st &amp; 2nd sem). Maintain no grade below 2.5 and pass NSTP in 1st sem.
-          </p>
-
+          <p class="prog__summary"><?= $sch['summary'] ?></p>
+          <?php if (!empty($sch['conditions'])): ?>
           <div class="pillbox">
             <h4 class="pillbox__title">Key Conditions</h4>
-            <ul class="bullets">
-              <li>Graduate of a government-recognized school.</li>
-              <li>School with <strong>≥100 graduates</strong> (else Registrar evaluation; good for one sem only).</li>
-              <li><strong>Certificate of Honor</strong> with dry seal &amp; total number of graduates.</li>
-            </ul>
+            <?= $sch['conditions'] ?>
           </div>
-
-          <div class="prog__footer">
-            <a class="btn btn--outline-blue ext" href="https://www.adamson.edu.ph/v1/?page=freshmen-scholarship" target="_blank" rel="noopener">Learn More</a>
-          </div>
-        </article>
-
-        <!-- Academic Scholarship Program (ASP) -->
-        <article class="prog__card">
-          <header class="prog__head">
-            <h3 class="prog__title">Academic Scholarship Program (ASP)</h3>
-            <span class="sch__type sch__type--univ">University</span>
-          </header>
-
-          <p class="prog__summary">
-            Tuition coverage for <strong>regular load only</strong>. Highly selective; outstanding GWA and clean academic record required.
-          </p>
-
-          <div class="pillbox">
-            <h4 class="pillbox__title">Not Eligible If Prior Sem Has</h4>
-            <ul class="bullets">
-              <li>Failing (5.0) or Dropped (130)</li>
-              <li>Not Attending (120) or No Grade OBE (140)</li>
-              <li>Special Consideration (150) or Unofficial Withdrawal (0.0)</li>
-            </ul>
-          </div>
-
-          <div class="prog__footer">
-            <a class="btn btn--outline-blue ext" href="https://www.adamson.edu.ph/v1/?page=academic-scholarship-program" target="_blank" rel="noopener">Learn More</a>
-          </div>
-        </article>
-
-        <!-- Corporate / Foundation / Individual Sponsorships -->
-        <article class="prog__card">
-          <header class="prog__head">
-            <h3 class="prog__title">Corporate / Foundation / Individual Sponsorships</h3>
-            <span class="sch__type sch__type--ext">External</span>
-          </header>
-
-          <p class="prog__summary">
-            Full (100%) or partial (50%) support in tuition/misc. Maintain sponsor-required GWA; <strong>no dropped/failed/incomplete</strong>. Join at least <strong>2 OSAS/college activities</strong> per semester.
-          </p>
-
+          <?php endif; ?>
+          <?php if (!empty($sch['requirements'])): ?>
           <div class="pillbox">
             <h4 class="pillbox__title">Initial Requirements</h4>
-            <ul class="bullets">
-              <li>Letter of intent to the VP for Student Affairs.</li>
-              <li>Required course; good moral character.</li>
-              <li>Form 138 (GWA ≥88%) or sem GWA ≤<strong>1.75</strong>, no drops/fails/incompletes.</li>
-            </ul>
+            <?= $sch['requirements'] ?>
           </div>
-
+          <?php endif; ?>
+          <?php if (!empty($sch['examples'])): ?>
           <div class="pillbox">
             <h4 class="pillbox__title">Examples</h4>
-            <ul class="bullets">
-              <li>CHED UniFAST, GBF, Megaworld, Petron Foundation</li>
-              <li>San Miguel Foundation, LCCK, Rotary Club of Manila Bay</li>
-              <li>NROTC tuition discounts (25–100% by rank)</li>
-            </ul>
+            <?= $sch['examples'] ?>
           </div>
-
+          <?php endif; ?>
           <div class="prog__footer">
-            <a class="btn btn--outline-blue ext" href="https://www.adamson.edu.ph/v1/?page=corporate-foundation-individual-sponsorships" target="_blank" rel="noopener">Learn More</a>
+            <?php if (!empty($sch['learn_more_url'])): ?>
+            <a class="btn btn--outline-blue ext" href="<?= e($sch['learn_more_url']) ?>" target="_blank" rel="noopener">Learn More</a>
+            <?php endif; ?>
           </div>
         </article>
-
+        <?php endforeach; ?>
       </div>
-
-      <p class="sch__note">
-        For new calls, slots, and deadlines, follow OSAS:
-        <a class="ext" href="https://www.facebook.com/AdamsonU.osas/" target="_blank" rel="noopener">Facebook</a>.
-      </p>
+      <?php if (!empty($settings['note'])): ?>
+      <p class="sch__note"><?= $settings['note'] ?></p>
+      <?php endif; ?>
     </div>
   </section>
 

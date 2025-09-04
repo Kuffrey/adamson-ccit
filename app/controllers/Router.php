@@ -9,6 +9,18 @@ class Router {
         $page = $_GET['page'] ?? 'home';
 
         switch ($page) {
+            // -------------------- ADMIN: HOMEPAGE CMS --------------------
+            case 'admin_homepage':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminHomepageController.php';
+                $c = new AdminHomepageController();
+                echo $c->index(); break;
+
+            case 'admin_homepage_save':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminHomepageController.php';
+                $c = new AdminHomepageController();
+                $c->save(); break;
 
             /* -------------------- PUBLIC: ABOUT -------------------- */
             case 'about_history':

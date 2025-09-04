@@ -1,12 +1,13 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../models/Event.php';
+require_once __DIR__ . '/../models/EventsPageSettings.php';
 
 function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 function url_with(array $params): string {
-    $base = '/adamson-ccit/public/index.php';
-    $q = array_merge(['page' => 'events'], $params);
-    return $base . '?' . http_build_query($q);
+  $base = '/adamson-ccit/public/index.php';
+  $q = array_merge(['page' => 'events'], $params);
+  return $base . '?' . http_build_query($q);
 }
 
 $cat   = isset($_GET['cat'])  ? strtolower(trim((string)$_GET['cat'])) : 'all';
@@ -17,17 +18,17 @@ $per   = 9;
 
 $items = []; $total = 0; $metaYears = [];
 try {
-    $res = Event::searchPublished(
-        [
-            'cat'  => $cat === 'all' ? null : $cat,
-            'year' => $year === 'all' ? null : (int)$year,
-            'q'    => $q !== '' ? $q : null,
-        ],
-        ['page'=>$page, 'perPage'=>$per]
-    );
-    $items = $res['items'] ?? [];
-    $total = (int)($res['total'] ?? 0);
-    $metaYears = $res['years'] ?? [];
+  $res = Event::searchPublished(
+    [
+      'cat'  => $cat === 'all' ? null : $cat,
+      'year' => $year === 'all' ? null : (int)$year,
+      'q'    => $q !== '' ? $q : null,
+    ],
+    ['page'=>$page, 'perPage'=>$per]
+  );
+  $items = $res['items'] ?? [];
+  $total = (int)($res['total'] ?? 0);
+  $metaYears = $res['years'] ?? [];
 } catch (\Throwable $e) { $items=[]; $total=0; $metaYears=[]; }
 
 $pages = max(1, (int)ceil($total / $per));
@@ -36,6 +37,8 @@ $page  = min($page, $pages);
 $cats = [
   'all'=>'All','career'=>'Career','forum'=>'Forum','workshop'=>'Workshop','competition'=>'Competition','community'=>'Community'
 ];
+
+$settings = (new EventsPageSettings())->get();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -56,7 +59,7 @@ $cats = [
     <div class="container subhero__inner">
       <p class="eyebrow">CCIT Updates</p>
       <h1 class="subhero__title">Events</h1>
-      <p class="subhero__lead">Career fairs, forums, workshops, and student showcases happening at CCIT.</p>
+  <p class="subhero__lead"><?= htmlspecialchars($settings['subhero_lead'] ?? 'Career fairs, forums, workshops, and student showcases happening at CCIT.') ?></p>
     </div>
   </section>
 

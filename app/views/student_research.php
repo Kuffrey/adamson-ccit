@@ -1,4 +1,11 @@
-<?php /* student_research.php — Student Research (uses global styles) */ ?>
+
+<?php
+require_once __DIR__ . '/../models/StudentResearchPageSettings.php';
+require_once __DIR__ . '/../models/StudentResearch.php';
+function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+$settings = StudentResearchPageSettings::getSettings();
+$research = StudentResearch::getAll();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,13 +21,13 @@
   <!-- ============ SUB-HERO ============ -->
   <section class="subhero">
     <div class="subhero__media" aria-hidden="true">
-      <img src="/adamson-ccit/public/assets/images/hero-research.jpg" alt="Students presenting research posters">
+      <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-research.jpg') ?>" alt="Students presenting research posters">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
     <div class="container subhero__inner">
       <p class="eyebrow">Students</p>
       <h1 class="subhero__title">Research</h1>
-      <p class="subhero__lead">Publications and conference papers by our students and faculty mentors.</p>
+      <p class="subhero__lead"><?= e($settings['subhero_lead'] ?? 'Publications and conference papers by our students and faculty mentors.') ?></p>
     </div>
   </section>
 
@@ -71,68 +78,27 @@
       <div id="rCount" class="rcount">Showing all research</div>
 
       <div id="rGrid" class="cards">
-        <!-- 1 -->
-        <article class="r" data-cat="publication" data-year="2024">
-          <a class="r__media" href="https://doi.org/10.1109/ICBIR61386.2024.10875872" target="_blank" rel="noopener">
-            <img src="/adamson-ccit/public/assets/images/research/bird-flock.jpg" alt="Poster: Mixed-Species Bird Flock classification">
-            <span class="chip chip--blue">Publication</span>
+        <?php foreach ($research as $r): ?>
+        <article class="r" data-cat="<?= e($r['category']) ?>" data-year="<?= e($r['year']) ?>">
+          <a class="r__media" href="<?= e($r['link_url']) ?>" target="_blank" rel="noopener">
+            <img src="<?= e($r['image_url']) ?>" alt="Poster: <?= e($r['title']) ?>">
+            <span class="chip chip--blue"><?= ucfirst(e($r['category'])) ?></span>
           </a>
           <div class="r__body">
             <h3 class="r__title">
-              <a href="https://doi.org/10.1109/ICBIR61386.2024.10875872" target="_blank" rel="noopener">
-                Species Classification and Counter for Mixed-Species Bird Flock Using ResNet9 and YOLOv5
+              <a href="<?= e($r['link_url']) ?>" target="_blank" rel="noopener">
+                <?= e($r['title']) ?>
               </a>
             </h3>
-            <p class="r__meta">
-              ICBIR 2024 — Bangkok, Thailand • DOI: 10.1109/ICBIR61386.2024.10875872
-            </p>
+            <?php if (!empty($r['meta'])): ?><p class="r__meta"><?= $r['meta'] ?></p><?php endif; ?>
             <div class="r__actions">
-              <a class="btn btn--outline-blue" href="https://doi.org/10.1109/ICBIR61386.2024.10875872" target="_blank" rel="noopener">Read on IEEE Xplore</a>
+              <?php if (!empty($r['link_url']) && !empty($r['link_label'])): ?>
+                <a class="btn btn--outline-blue" href="<?= e($r['link_url']) ?>" target="_blank" rel="noopener"><?= e($r['link_label']) ?></a>
+              <?php endif; ?>
             </div>
           </div>
         </article>
-
-        <!-- 2 -->
-        <article class="r" data-cat="publication" data-year="2024">
-          <a class="r__media" href="https://doi.org/10.1109/ICBIR61386.2024.10875844" target="_blank" rel="noopener">
-            <img src="/adamson-ccit/public/assets/images/research/ets-hrm.jpg" alt="Poster: Employment Tracking System">
-            <span class="chip chip--blue">Publication</span>
-          </a>
-          <div class="r__body">
-            <h3 class="r__title">
-              <a href="https://doi.org/10.1109/ICBIR61386.2024.10875844" target="_blank" rel="noopener">
-                Development of Employment Tracking System with File Routing for HR Management (AdU)
-              </a>
-            </h3>
-            <p class="r__meta">
-              ICBIR 2024 — Bangkok, Thailand • DOI: 10.1109/ICBIR61386.2024.10875844
-            </p>
-            <div class="r__actions">
-              <a class="btn btn--outline-blue" href="https://doi.org/10.1109/ICBIR61386.2024.10875844" target="_blank" rel="noopener">Read on IEEE Xplore</a>
-            </div>
-          </div>
-        </article>
-
-        <!-- 3 -->
-        <article class="r" data-cat="publication" data-year="2025">
-          <a class="r__media" href="https://doi.org/10.1109/AIIT63112.2025.11082862" target="_blank" rel="noopener">
-            <img src="/adamson-ccit/public/assets/images/research/melanonychia.jpg" alt="Poster: Real-time object detection for melanonychia">
-            <span class="chip chip--blue">Publication</span>
-          </a>
-          <div class="r__body">
-            <h3 class="r__title">
-              <a href="https://doi.org/10.1109/AIIT63112.2025.11082862" target="_blank" rel="noopener">
-                Unified NN Framework for Real-time Detection of Early Longitudinal Melanonychia
-              </a>
-            </h3>
-            <p class="r__meta">
-              AIIT 2025 — University of Jeddah • DOI: 10.1109/AIIT63112.2025.11082862
-            </p>
-            <div class="r__actions">
-              <a class="btn btn--outline-blue" href="https://doi.org/10.1109/AIIT63112.2025.11082862" target="_blank" rel="noopener">Read on IEEE Xplore</a>
-            </div>
-          </div>
-        </article>
+        <?php endforeach; ?>
       </div>
 
       <div id="rEmpty" class="nempty" hidden>No research matches your filters.</div>

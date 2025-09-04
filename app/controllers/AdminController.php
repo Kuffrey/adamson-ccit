@@ -4,7 +4,7 @@ declare(strict_types=1);
 class AdminController
 {
     /** Simple auth guard (admin only) */
-    private function requireAdmin(): void
+    protected function requireAdmin(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -17,44 +17,11 @@ class AdminController
 
     public function dashboard(): string
     {
-        $this->requireAdmin();
-
-        // Load base Model so models can connect
-        $core = __DIR__ . '/../core/Model.php';
-        if (is_file($core)) require_once $core;
-
-        $recentNews = $recentPrograms = $pendingSubmissions = [];
-
-        // News
-        $newsPath = __DIR__ . '/../models/News.php';
-        if (is_file($newsPath)) {
-            include_once $newsPath;
-            if (class_exists('News') && method_exists('News','latest')) {
-                $recentNews = News::latest(6);
-            }
-        }
-
-        // Optional other models (Program / Submission) — safe if absent
-        $progPath = __DIR__ . '/../models/Program.php';
-        if (is_file($progPath)) {
-            include_once $progPath;
-            if (class_exists('Program') && method_exists('Program','latest')) {
-                $recentPrograms = Program::latest(4);
-            }
-        }
-
-        $subPath = __DIR__ . '/../models/Submission.php';
-        if (is_file($subPath)) {
-            include_once $subPath;
-            if (class_exists('Submission') && method_exists('Submission','pendingForAdmin')) {
-                $pendingSubmissions = Submission::pendingForAdmin(5);
-            }
-        }
-
-        ob_start();
-        extract(compact('recentNews','recentPrograms','pendingSubmissions'), EXTR_SKIP);
-        include __DIR__ . '/../views/admin_dashboard.php';
-        return ob_get_clean();
+    $this->requireAdmin();
+    ob_start();
+    // Only render the view, do not include CSS here
+    include __DIR__ . '/../views/admin_dashboard.php';
+    return ob_get_clean();
     }
 
     public function manageNews(): string

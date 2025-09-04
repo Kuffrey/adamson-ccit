@@ -1,31 +1,34 @@
-<?php /* student_certifications.php — Student Certifications (uses global styles) */ ?>
+<?php
+// student_certifications.php — Dynamic Student Certifications (CMS-driven)
+require_once __DIR__ . '/../models/StudentCertificationsPageSettings.php';
+require_once __DIR__ . '/../models/StudentCertificationStat.php';
+require_once __DIR__ . '/../models/StudentCertification.php';
+
+$settings = StudentCertificationsPageSettings::getSettings();
+$stats = StudentCertificationStat::getAll();
+$certs = StudentCertification::getAll();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Certifications | AdU-CCIT</title>
-
-  <!-- Global site CSS -->
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css"/>
-
-  <!-- Page-specific polish -->
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/student-certifications.css"/>
 </head>
 <body>
-
 <main class="page-certs">
-
   <!-- ============ SUB-HERO ============ -->
   <section class="subhero">
     <div class="subhero__media" aria-hidden="true">
-      <img src="/adamson-ccit/public/assets/images/hero-campus.jpg" alt="Adamson University campus exterior">
+      <img src="<?= htmlspecialchars($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-campus.jpg') ?>" alt="Adamson University campus exterior">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
     <div class="container subhero__inner">
       <p class="eyebrow">Students</p>
       <h1 class="subhero__title">Certifications</h1>
-      <p class="subhero__lead">Industry badges aligned with CCIT courses and labs.</p>
+      <p class="subhero__lead"><?= htmlspecialchars($settings['subhero_lead'] ?? 'Industry badges aligned with CCIT courses and labs.') ?></p>
     </div>
   </section>
 
@@ -49,65 +52,21 @@
         <h2 id="latest-rates" class="h2">Recent Passing Rates</h2>
         <p class="sec__kicker">SY 2024–2025 • 2nd Semester</p>
       </div>
-
       <ul class="cstat__grid" role="list">
+        <?php foreach ($stats as $stat): ?>
         <li class="cstat">
           <div class="cstat__rate">
-            <span class="num">100%</span>
-            <span class="tag">Passing rate</span>
+            <span class="num"><?= htmlspecialchars($stat['rate']) ?></span>
+            <span class="tag"><?= htmlspecialchars($stat['tag']) ?></span>
           </div>
           <div class="cstat__body">
-            <h3 class="cstat__title">IT Specialist — Cybersecurity</h3>
-            <p class="cstat__meta">BS Computer Science</p>
+            <h3 class="cstat__title"><?= htmlspecialchars($stat['title']) ?></h3>
+            <p class="cstat__meta"><?= htmlspecialchars($stat['meta']) ?></p>
           </div>
         </li>
-
-        <li class="cstat">
-          <div class="cstat__rate">
-            <span class="num">99.53%</span>
-            <span class="tag">Passing rate</span>
-          </div>
-          <div class="cstat__body">
-            <h3 class="cstat__title">IT Specialist — Network Security</h3>
-            <p class="cstat__meta">BS Information Technology &amp; BS Information Systems</p>
-          </div>
-        </li>
-
-        <li class="cstat">
-          <div class="cstat__rate">
-            <span class="num">99.02%</span>
-            <span class="tag">Passing rate</span>
-          </div>
-          <div class="cstat__body">
-            <h3 class="cstat__title">IT Specialist — Networking</h3>
-            <p class="cstat__meta">BS Computer Science</p>
-          </div>
-        </li>
-
-        <li class="cstat">
-          <div class="cstat__rate">
-            <span class="num">96.11%</span>
-            <span class="tag">Passing rate</span>
-          </div>
-          <div class="cstat__body">
-            <h3 class="cstat__title">IT Specialist — Databases</h3>
-            <p class="cstat__meta">BS Information Technology &amp; BS Information Systems</p>
-          </div>
-        </li>
-
-        <li class="cstat">
-          <div class="cstat__rate">
-            <span class="num">95.62%</span>
-            <span class="tag">Passing rate</span>
-          </div>
-          <div class="cstat__body">
-            <h3 class="cstat__title">IT Specialist — Databases</h3>
-            <p class="cstat__meta">BS Computer Science &amp; BSCS–BSIE (Dual)</p>
-          </div>
-        </li>
+        <?php endforeach; ?>
       </ul>
-
-      <p class="cstat__note">If an exam isn’t listed here, its passing rate will be posted when available.</p>
+      <p class="cstat__note"><?= htmlspecialchars($settings['cstat_note'] ?? 'If an exam isn’t listed here, its passing rate will be posted when available.') ?></p>
     </div>
   </section>
 
@@ -118,73 +77,25 @@
         <h2 id="available-certs" class="h2">Available Industry Certifications</h2>
         <p class="sec__kicker">Pearson IT Specialist series (via Certiport)</p>
       </div>
-
       <div class="certs__grid">
-        <!-- Networking -->
+        <?php foreach ($certs as $cert): ?>
         <article class="cert">
           <figure class="cert__badge">
-            <img src="/adamson-ccit/public/assets/images/certs/its-networking.png" alt="IT Specialist - Networking badge">
+            <img src="<?= htmlspecialchars($cert['badge_url']) ?>" alt="<?= htmlspecialchars($cert['name']) ?> badge">
           </figure>
           <div class="cert__body">
-            <h3 class="cert__title">IT Specialist – Networking</h3>
-            <p class="cert__issuer">Issued by Certiport</p>
-            <p class="cert__desc">
-              Foundational networking knowledge and skills: TCP/IP, networking services, topologies,
-              and troubleshooting for wired and wireless environments.
-            </p>
+            <h3 class="cert__title"><?= htmlspecialchars($cert['name']) ?></h3>
+            <p class="cert__issuer">Issued by <?= htmlspecialchars($cert['issuer']) ?></p>
+            <p class="cert__desc"><?= htmlspecialchars($cert['description']) ?></p>
           </div>
         </article>
-
-        <!-- Network Security -->
-        <article class="cert">
-          <figure class="cert__badge">
-            <img src="/adamson-ccit/public/assets/images/certs/its-network-security.png" alt="IT Specialist - Network Security badge">
-          </figure>
-          <div class="cert__body">
-            <h3 class="cert__title">IT Specialist – Network Security</h3>
-            <p class="cert__issuer">Issued by Certiport</p>
-            <p class="cert__desc">
-              Core security principles; OS, network, and device security; secure computing practices.
-            </p>
-          </div>
-        </article>
-
-        <!-- Cybersecurity -->
-        <article class="cert">
-          <figure class="cert__badge">
-            <img src="/adamson-ccit/public/assets/images/certs/its-cybersecurity.png" alt="IT Specialist - Cybersecurity badge">
-          </figure>
-          <div class="cert__body">
-            <h3 class="cert__title">IT Specialist – Cybersecurity</h3>
-            <p class="cert__issuer">Issued by Certiport</p>
-            <p class="cert__desc">
-              Baseline cybersecurity skills including threats, vulnerabilities, controls, and basic incident response.
-            </p>
-          </div>
-        </article>
-
-        <!-- Databases -->
-        <article class="cert">
-          <figure class="cert__badge">
-            <img src="/adamson-ccit/public/assets/images/certs/its-databases.png" alt="IT Specialist - Databases badge">
-          </figure>
-          <div class="cert__body">
-            <h3 class="cert__title">IT Specialist – Databases</h3>
-            <p class="cert__issuer">Issued by Certiport</p>
-            <p class="cert__desc">
-              Designing and querying relational databases (e.g., MySQL, Microsoft SQL Server, Oracle).
-            </p>
-          </div>
-        </article>
+        <?php endforeach; ?>
       </div>
-
       <div class="cnotice cnotice--inline" role="note">
-        Certification windows &amp; registration are announced by the department through official CCIT channels and your instructors. Posts include dates, fees (if any), seat counts, and step-by-step registration.
+        <?= nl2br(htmlspecialchars($settings['certs_note'] ?? 'Certification windows & registration are announced by the department through official CCIT channels and your instructors. Posts include dates, fees (if any), seat counts, and step-by-step registration.')) ?>
       </div>
     </div>
   </section>
-
 </main>
-
 </body>
 </html>
