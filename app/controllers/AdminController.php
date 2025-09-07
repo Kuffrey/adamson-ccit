@@ -1,48 +1,80 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 class AdminController
 {
-    /** Simple auth guard (admin only) */
-    protected function requireAdmin(): void
+    /** Allow Admin or Dean */
+    protected function requireAdminOrDean(): void
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        if (empty($_SESSION['user']) || ($_SESSION['user']['role'] ?? '') !== 'admin') {
-            header('Location: ?page=admin_login');
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $role = $_SESSION['user']['role'] ?? '';
+        if (!in_array($role, ['admin','dean'], true)) {
+            header('Location: ?page=login_admin'); // correct route name
             exit;
         }
     }
 
+    /** Homepage CMS CRUD */
+    public function manageHomepage(): string
+    {
+        $this->requireAdminOrDean();
+        require_once __DIR__ . '/../models/HomepageSettings.php';
+
+        $model   = new HomepageSettings();
+        $success = false;
+        $error   = '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = $_POST;
+            if ($model->update($data)) $success = true;
+            else $error = 'Failed to save homepage settings.';
+        }
+
+        $homepage = $model->get();
+        $username = $_SESSION['user']['username'] ?? 'Admin';
+
+        ob_start();
+        include __DIR__ . '/../views/admin_manage_homepage.php';
+        return ob_get_clean();
+    }
+
     public function dashboard(): string
     {
-    $this->requireAdmin();
-    ob_start();
-    // Only render the view, do not include CSS here
-    include __DIR__ . '/../views/admin_dashboard.php';
-    return ob_get_clean();
+        $this->requireAdminOrDean();
+
+        $core = __DIR__ . '/../core/Model.php'; if (is_file($core)) require_once $core;
+        $mNews = __DIR__ . '/../models/News.php'; if (is_file($mNews)) include_once $mNews;
+        $mEvent = __DIR__ . '/../models/Event.php'; if (is_file($mEvent)) include_once $mEvent;
+        $mAnn  = __DIR__ . '/../models/Announcement.php'; if (is_file($mAnn)) include_once $mAnn;
+
+        $emptyCounts = ['all'=>0,'draft'=>0,'published'=>0,'archived'=>0];
+        $newsCounts = (class_exists('News') && method_exists('News','statusCounts')) ? News::statusCounts() : $emptyCounts;
+        $eventCounts = (class_exists('Event') && method_exists('Event','statusCounts')) ? Event::statusCounts() : $emptyCounts;
+        $announcementCounts = (class_exists('Announcement') && method_exists('Announcement','statusCounts')) ? Announcement::statusCounts() : $emptyCounts;
+
+        $username = $_SESSION['user']['username'] ?? 'Admin';
+
+        ob_start();
+        extract(compact('username','newsCounts','eventCounts','announcementCounts'), EXTR_SKIP);
+        include __DIR__ . '/../views/admin_dashboard.php';
+        return ob_get_clean();
     }
 
     public function manageNews(): string
     {
-        $this->requireAdmin();
+        $this->requireAdminOrDean();
 
         $core = __DIR__ . '/../core/Model.php'; if (is_file($core)) require_once $core;
         $newsPath = __DIR__ . '/../models/News.php'; if (is_file($newsPath)) include_once $newsPath;
 
-        // Which tab?
         $status = isset($_GET['status']) ? strtolower((string)$_GET['status']) : 'all';
         if (!in_array($status, ['all','draft','published','archived'], true)) $status = 'all';
 
-        // Create
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_news']) && class_exists('News')) {
             $title    = trim($_POST['title']    ?? '');
             $content  = trim($_POST['content']  ?? '');
             $category = trim($_POST['category'] ?? 'news');
             $nStatus  = trim($_POST['status']   ?? 'draft');
 
-            // image upload (optional)
             $imageUrl = null;
             if (!empty($_FILES['image']['name']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
                 $okTypes = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'];
@@ -52,10 +84,9 @@ class AdminController
                     $safeBase = preg_replace('~[^a-zA-Z0-9_-]+~', '-', strtolower(pathinfo($_FILES['image']['name'], PATHINFO_FILENAME)));
                     $fname    = date('Ymd_His').'_'.($safeBase ?: 'news').'.'.$ext;
 
-                    $destDir  = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'news';
+                    $destDir  = dirname(__DIR__, 2).'/public/uploads/news';
                     if (!is_dir($destDir)) mkdir($destDir, 0777, true);
-
-                    $destPath = $destDir . DIRECTORY_SEPARATOR . $fname;
+                    $destPath = $destDir . '/' . $fname;
                     if (move_uploaded_file($_FILES['image']['tmp_name'], $destPath)) {
                         $imageUrl = '/adamson-ccit/public/uploads/news/'.$fname;
                     }
@@ -63,27 +94,25 @@ class AdminController
             }
             if ($title !== '' && $content !== '') {
                 News::create($title, $content, $nStatus, $category, $imageUrl);
-                $status = $nStatus; // return to the tab you used
+                $status = $nStatus;
             }
-            header('Location: ?page=admin_manage_news&status='.urlencode($status));
-            exit;
-        }
-
-        // Quick status change
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'], $_POST['id']) && class_exists('News')) {
-            $id      = (int)$_POST['id'];
-            $nStatus = trim($_POST['update_status']);
-            if ($id > 0) News::updateStatus($id, $nStatus);
             header('Location: ?page=admin_manage_news&status='.urlencode($status)); exit;
         }
 
-        // Delete
+        if ($_SERVER['REQUEST_METHOD']=== 'POST' && isset($_POST['update_status'], $_POST['id']) && class_exists('News')) {
+            $id      = (int)$_POST['id'];
+            $nStatus = trim($_POST['update_status']);
+            if ($id > 0) News::updateStatus($id, $nStatus);
+            $status = $nStatus;
+            header('Location: ?page=admin_manage_news&status='.urlencode($status)); exit;
+        }
+
         if (isset($_GET['delete']) && class_exists('News')) {
             News::delete((int)$_GET['delete']);
             header('Location: ?page=admin_manage_news&status='.urlencode($status)); exit;
         }
 
-        $news   = (class_exists('News')) ? News::list($status) : [];
+        $news   = class_exists('News') ? News::list($status) : [];
         $counts = (class_exists('News') && method_exists('News','statusCounts')) ? News::statusCounts() : ['all'=>0,'draft'=>0,'published'=>0,'archived'=>0];
 
         ob_start();
@@ -92,9 +121,29 @@ class AdminController
         return ob_get_clean();
     }
 
+    public function manageAbout(): string
+    {
+        $this->requireAdminOrDean();
+        require_once __DIR__ . '/../models/AboutHistory.php';
+        $model = new AboutHistory();
+        $success = false; $error = '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if ($model->update($_POST)) $success = true;
+            else $error = 'Failed to save About page content.';
+        }
+
+        $about = $model->get();
+        $username = $_SESSION['user']['username'] ?? 'Admin';
+
+        ob_start();
+        include __DIR__ . '/../views/admin_manage_about.php';
+        return ob_get_clean();
+    }
+
     public function manageEvents(): string
     {
-        $this->requireAdmin();
+        $this->requireAdminOrDean();
 
         $core = __DIR__ . '/../core/Model.php'; if (is_file($core)) require_once $core;
         $mdl  = __DIR__ . '/../models/Event.php'; if (is_file($mdl)) include_once $mdl;
@@ -102,7 +151,6 @@ class AdminController
         $status = isset($_GET['status']) ? strtolower((string)$_GET['status']) : 'all';
         if (!in_array($status, ['all','draft','published','archived'], true)) $status = 'all';
 
-        // helper: convert HTML datetime-local to MySQL DATETIME
         $toDT = static function (?string $x): ?string {
             $x = trim((string)$x);
             if ($x === '') return null;
@@ -111,7 +159,6 @@ class AdminController
             return $x;
         };
 
-        // Create
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_event']) && class_exists('Event')) {
             $title   = trim($_POST['title'] ?? '');
             $desc    = trim($_POST['description'] ?? '');
@@ -121,7 +168,6 @@ class AdminController
             $startAt = $toDT($_POST['start_at'] ?? null);
             $endAt   = $toDT($_POST['end_at']   ?? null);
 
-            // image upload
             $imageUrl = null;
             if (!empty($_FILES['image']['name']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
                 $okTypes = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'];
@@ -131,10 +177,9 @@ class AdminController
                     $safeBase = preg_replace('~[^a-zA-Z0-9_-]+~', '-', strtolower(pathinfo($_FILES['image']['name'], PATHINFO_FILENAME)));
                     $fname    = date('Ymd_His').'_'.($safeBase ?: 'event').'.'.$ext;
 
-                    $destDir  = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'events';
+                    $destDir  = dirname(__DIR__, 2).'/public/uploads/events';
                     if (!is_dir($destDir)) mkdir($destDir, 0777, true);
-
-                    $destPath = $destDir . DIRECTORY_SEPARATOR . $fname;
+                    $destPath = $destDir . '/' . $fname;
                     if (move_uploaded_file($_FILES['image']['tmp_name'], $destPath)) {
                         $imageUrl = '/adamson-ccit/public/uploads/events/'.$fname;
                     }
@@ -152,26 +197,25 @@ class AdminController
                     'end_at'      => $endAt,
                     'image_url'   => $imageUrl
                 ]);
-                $status = $eStatus; // return to the tab used
+                $status = $eStatus;
             }
             header('Location: ?page=admin_manage_events&status='.urlencode($status)); exit;
         }
 
-        // Status change
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'], $_POST['id']) && class_exists('Event')) {
             $id      = (int)$_POST['id'];
             $eStatus = trim($_POST['update_status']);
             if ($id > 0) Event::updateStatus($id, $eStatus);
+            $status = $eStatus; // <-- keep tab in sync
             header('Location: ?page=admin_manage_events&status='.urlencode($status)); exit;
         }
 
-        // Delete
         if (isset($_GET['delete']) && class_exists('Event')) {
             Event::delete((int)$_GET['delete']);
             header('Location: ?page=admin_manage_events&status='.urlencode($status)); exit;
         }
 
-        $events = (class_exists('Event')) ? Event::list($status) : [];
+        $events = class_exists('Event') ? Event::list($status) : [];
         $counts = (class_exists('Event') && method_exists('Event','statusCounts')) ? Event::statusCounts() : ['all'=>0,'draft'=>0,'published'=>0,'archived'=>0];
 
         ob_start();
@@ -180,25 +224,9 @@ class AdminController
         return ob_get_clean();
     }
 
-    // (stubs)
-    public function managePrograms(): string {
-        $this->requireAdmin();
-        ob_start();
-        include __DIR__ . '/../views/admin_manage_programs.php';
-        return ob_get_clean();
-    }
-
-    public function manageFaculty(): string {
-        $this->requireAdmin();
-        ob_start();
-        include __DIR__ . '/../views/admin_manage_faculty.php';
-        return ob_get_clean();
-    }
-
-    /** FULL announcements manager (inside class; no duplicate below!) */
     public function manageAnnouncements(): string
     {
-        $this->requireAdmin();
+        $this->requireAdminOrDean();
 
         $core = __DIR__ . '/../core/Model.php'; if (is_file($core)) require_once $core;
         $mdl  = __DIR__ . '/../models/Announcement.php'; if (is_file($mdl)) include_once $mdl;
@@ -206,14 +234,13 @@ class AdminController
         $status = isset($_GET['status']) ? strtolower((string)$_GET['status']) : 'all';
         if (!in_array($status, ['all','draft','published','archived'], true)) $status = 'all';
 
-        // Create
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_announcement']) && class_exists('Announcement')) {
             $title    = trim($_POST['title']    ?? '');
             $content  = trim($_POST['content']  ?? '');
             $category = trim($_POST['category'] ?? 'general');
             $aStatus  = trim($_POST['status']   ?? 'draft');
+            $date     = $_POST['date'] ?? date('Y-m-d'); // <-- include date
 
-            // image upload (optional)
             $imageUrl = null;
             if (!empty($_FILES['image']['name']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
                 $okTypes = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'];
@@ -223,36 +250,36 @@ class AdminController
                     $safeBase = preg_replace('~[^a-zA-Z0-9_-]+~', '-', strtolower(pathinfo($_FILES['image']['name'], PATHINFO_FILENAME)));
                     $fname    = date('Ymd_His').'_'.($safeBase ?: 'announcement').'.'.$ext;
 
-                    $destDir  = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'announcements';
+                    $destDir  = dirname(__DIR__, 2).'/public/uploads/announcements';
                     if (!is_dir($destDir)) mkdir($destDir, 0777, true);
-
-                    $destPath = $destDir . DIRECTORY_SEPARATOR . $fname;
+                    $destPath = $destDir . '/' . $fname;
                     if (move_uploaded_file($_FILES['image']['tmp_name'], $destPath)) {
                         $imageUrl = '/adamson-ccit/public/uploads/announcements/'.$fname;
                     }
                 }
             }
+
             if ($title !== '' && $content !== '') {
-                Announcement::create($title, $content, $aStatus, $category, $imageUrl);
+                // Signature includes $date
+                Announcement::create($title, $content, $aStatus, $category, $date, $imageUrl);
                 $status = $aStatus;
             }
             header('Location: ?page=admin_manage_announcements&status='.urlencode($status)); exit;
         }
 
-        // Status change
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'], $_POST['id']) && class_exists('Announcement')) {
             $id = (int)$_POST['id']; $aStatus = trim($_POST['update_status']);
             if ($id>0) Announcement::updateStatus($id, $aStatus);
+            $status = $aStatus; // <-- keep tab in sync
             header('Location: ?page=admin_manage_announcements&status='.urlencode($status)); exit;
         }
 
-        // Delete
         if (isset($_GET['delete']) && class_exists('Announcement')) {
             Announcement::delete((int)$_GET['delete']);
             header('Location: ?page=admin_manage_announcements&status='.urlencode($status)); exit;
         }
 
-        $announcements = (class_exists('Announcement')) ? Announcement::list($status) : [];
+        $announcements = class_exists('Announcement') ? Announcement::list($status) : [];
         $counts = (class_exists('Announcement') && method_exists('Announcement','statusCounts'))
             ? Announcement::statusCounts()
             : ['all'=>0,'draft'=>0,'published'=>0,'archived'=>0];
@@ -260,6 +287,20 @@ class AdminController
         ob_start();
         extract(compact('announcements','status','counts'), EXTR_SKIP);
         include __DIR__ . '/../views/admin_manage_announcements.php';
+        return ob_get_clean();
+    }
+
+    public function managePrograms(): string {
+        $this->requireAdminOrDean();
+        ob_start();
+        include __DIR__ . '/../views/admin_manage_programs.php';
+        return ob_get_clean();
+    }
+
+    public function manageFaculty(): string {
+        $this->requireAdminOrDean();
+        ob_start();
+        include __DIR__ . '/../views/admin_manage_faculty.php';
         return ob_get_clean();
     }
 }

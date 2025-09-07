@@ -35,7 +35,7 @@ class Router {
                     header('Location: ' . $base . 'about_vision_mission', true, 302);
                     exit;
                 }
-                echo '<script>location.href="'.htmlspecialchars($base.'about_vision_mission').'";</script>';
+                echo '<script>location.href="/adamson-ccit/public/index.php?page=about_vision_mission";</script>';
                 exit;
 
             case 'about_industry_partners':
@@ -151,45 +151,98 @@ class Router {
                 $fc = new FacultyController();
                 echo $fc->manageCertifications(); break;
 
-            /* -------------------- ADMIN + DEAN CMS -------------------- */
+            // -------------------- ADMIN + DEAN CMS --------------------
+            case 'admin_manage_homepage':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminController.php';
+                $ac = new AdminController();
+                echo $ac->manageHomepage();
+                break;
+
             case 'admin_dashboard':
                 Auth::requireRole(['admin','dean'], $base . 'login_admin');
                 require_once __DIR__ . '/AdminController.php';
                 $ac = new AdminController();
-                echo $ac->dashboard(); break;
+                echo $ac->dashboard();
+                break;
 
             case 'admin_manage_news':
                 Auth::requireRole(['admin','dean'], $base . 'login_admin');
                 require_once __DIR__ . '/AdminController.php';
                 $ac = new AdminController();
-                echo $ac->manageNews(); break;
+                echo $ac->manageNews();
+                break;
 
-            case 'admin_manage_events':
-                require_once __DIR__ . '/AdminController.php';
-                $c = new AdminController();
-                echo $c->manageEvents();
+            case 'admin_news_settings':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminNewsPageController.php';
+                AdminNewsPageController::handle();
                 break;
 
             case 'admin_manage_programs':
-                // If "programs" includes managing Events or static pages, Dean can help
                 Auth::requireRole(['admin','dean'], $base . 'login_admin');
                 require_once __DIR__ . '/AdminController.php';
                 $ac = new AdminController();
-                echo $ac->managePrograms(); break;
+                echo $ac->managePrograms();
+                break;
 
             case 'admin_manage_faculty':
-                // Keep user/faculty management Admin-only
                 Auth::requireRole(['admin'], $base . 'login_admin');
                 require_once __DIR__ . '/AdminController.php';
                 $ac = new AdminController();
-                echo $ac->manageFaculty(); break;
+                echo $ac->manageFaculty();
+                break;
 
-            // NEW: announcements manager (Admin + Dean can create/publish)
             case 'admin_manage_announcements':
                 Auth::requireRole(['admin','dean'], $base . 'login_admin');
                 require_once __DIR__ . '/AdminController.php';
                 $ac = new AdminController();
-                echo $ac->manageAnnouncements(); break;
+                echo $ac->manageAnnouncements();
+                break;
+
+            /* ---- About (Admin) ---- */
+            case 'admin_manage_about':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminController.php';
+                $ac = new AdminController();
+                echo $ac->manageAbout();
+                break;
+
+            /* NEW: About → Vision & Mission (Admin) */
+            case 'admin_about_vision_mission':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                // The view loads its model and $about data on its own
+                require_once __DIR__ . '/../views/admin/about_vision_mission_form.php';
+                break;
+
+            case 'admin_about_vision_mission_save':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/../models/AboutVisionMission.php';
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    $m  = new AboutVisionMission();
+                    $ok = $m->update($_POST);
+                    $to = $base . 'admin_about_vision_mission' . ($ok ? '&success=1' : '&success=0');
+                    if (!headers_sent()) {
+                        header('Location: ' . $to, true, 303);
+                        exit;
+                    }
+                    echo '<script>location.href='.json_encode($to).';</script>';
+                    exit;
+                }
+                if (!headers_sent()) {
+                    header('Location: ' . $base . 'admin_about_vision_mission', true, 303);
+                    exit;
+                }
+                echo '<script>location.href='.json_encode($base.'admin_about_vision_mission').';</script>';
+                exit;
+
+                case 'admin_manage_events':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminController.php';
+                $ac = new AdminController();
+                echo $ac->manageEvents();
+                break;
+
 
             /* -------------------- DEAN -------------------- */
             case 'dashboard_dean':
@@ -239,6 +292,18 @@ class Router {
                 require_once __DIR__ . '/HomeController.php';
                 $hc = new HomeController();
                 echo $hc->index(); break;
+
+            case 'admin_manage_about':
+            Auth::requireRole(['admin','dean'], $base . 'login_admin');
+            require_once __DIR__ . '/AdminController.php';
+            $ac = new AdminController();
+            echo $ac->manageAbout(); break;
+
+            case 'admin_news_settings':
+            Auth::requireRole(['admin','dean'], $base . 'login_admin');
+            require_once __DIR__ . '/AdminNewsPageController.php';
+            AdminNewsPageController::handle();
+            break;
         }
     }
 }

@@ -1,13 +1,12 @@
 <?php
 declare(strict_types=1);
-// Ensure base Model is loaded
-$base = __DIR__ . '/Model.php';
-if (is_file($base)) { require_once $base; }
 
-$base = __DIR__ . '/../core/Model.php';
-if (is_file($base)) { require_once $base; }
-else if (!class_exists('Model')) {
-}
+// Ensure base Model is loaded
+$base1 = __DIR__ . '/Model.php';
+if (is_file($base1)) require_once $base1;
+
+$base2 = __DIR__ . '/../core/Model.php';
+if (is_file($base2)) require_once $base2;
 
 final class Announcement extends Model
 {
@@ -15,6 +14,7 @@ final class Announcement extends Model
     private static array $allowedStatus = ['draft','published','archived'];
     private static array $allowedCats   = ['general','advisory','deadline','policy','alert'];
 
+    /** Column discovery so we can feature-detect optional fields safely. */
     private static function cols(): array {
         if (!self::$cols) {
             try {
@@ -25,14 +25,30 @@ final class Announcement extends Model
         return self::$cols;
     }
     private static function has(string $c): bool { return in_array($c, self::cols(), true); }
-    private static function bodyCol(): string { return self::has('body') ? 'body' : (self::has('content') ? 'content' : 'body'); }
 
+    /** Prefer the first available body column. */
+    private static function bodyCol(): string {
+        foreach (['body','content','text','details'] as $c) if (self::has($c)) return $c;
+        return 'body'; // will error only if neither exists; schema should have at least one
+    }
+
+    /** A unified "date" expression for selects (what your views expect). */
+    private static function dateExpr(): string {
+        // Prefer explicit `date`, then `published_at`, then `created_at`
+        $parts = [];
+        if (self::has('date'))         $parts[] = 'date';
+        if (self::has('published_at')) $parts[] = 'published_at';
+        $parts[] = 'created_at';
+        return 'COALESCE('.implode(',', $parts).')';
+    }
+
+    /** Status counts for tabs. */
     public static function statusCounts(): array {
         try {
             $db   = parent::db();
             $rows = $db->query("SELECT LOWER(status) s, COUNT(*) c FROM announcements GROUP BY LOWER(status)")
                        ->fetchAll(\PDO::FETCH_KEY_PAIR);
-            $all  = array_sum($rows) ?: 0;
+            $all  = (int)array_sum($rows);
             return [
                 'all'       => $all,
                 'draft'     => (int)($rows['draft']     ?? 0),
@@ -44,46 +60,128 @@ final class Announcement extends Model
         }
     }
 
+    /** Admin list by status (null/'all' = all). */
     public static function list(?string $status=null): array {
         try {
             $db = parent::db();
             $where=''; $bind=[];
             if ($status && $status!=='all') { $where='WHERE LOWER(status)=:s'; $bind[':s']=strtolower($status); }
 
-            $b = 'COALESCE(body, content, \'\')';
-            $img = self::has('image_url') ? 'image_url' : 'NULL AS image_url';
+            $body = self::bodyCol();
+            $img  = self::has('image_url') ? 'image_url' : 'NULL AS image_url';
+            $date = self::dateExpr();
+            $author = self::has('author') ? 'author' : 'NULL AS author';
 
-            $sql = "SELECT id, title, COALESCE(excerpt, SUBSTRING($b,1,160)) excerpt,
-                           $b AS body, category, status, $img,
-                           COALESCE(published_at, created_at) created_at
+            // excerpt: use column if present, else substring from body
+            $excerptExpr = self::has('excerpt')
+                ? 'excerpt'
+                : "NULLIF(TRIM(SUBSTRING($body,1,160)),'') AS excerpt";
+
+            $sql = "SELECT id, title, $excerptExpr,
+                           $body AS body, category, status, $img, $author,
+                           $date AS date, created_at
                     FROM announcements
                     $where
-                    ORDER BY COALESCE(published_at, created_at) DESC";
+                    ORDER BY $date DESC";
             $st=$db->prepare($sql); foreach($bind as $k=>$v)$st->bindValue($k,$v);
             $st->execute(); return $st->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\Throwable) { return []; }
     }
 
-    public static function create(string $title, string $content, string $status='draft', ?string $category='general', ?string $imageUrl=null): int {
-        $db   = parent::db();
-        $bcol = self::bodyCol();
+    /** Single row (useful for edit screens). */
+    public static function get(int $id): ?array {
+        try {
+            $db = parent::db();
+            $body = self::bodyCol();
+            $img  = self::has('image_url') ? 'image_url' : 'NULL AS image_url';
+            $date = self::dateExpr();
+            $author = self::has('author') ? 'author' : 'NULL AS author';
+
+            $st=$db->prepare("
+                SELECT id, title, ".(self::has('excerpt')?'excerpt':'NULL AS excerpt').",
+                       $body AS body, category, status, $img, $author,
+                       $date AS date, created_at, updated_at
+                FROM announcements
+                WHERE id=:id
+                LIMIT 1
+            ");
+            $st->execute([':id'=>$id]);
+            $row = $st->fetch(\PDO::FETCH_ASSOC);
+            return $row ?: null;
+        } catch (\Throwable) { return null; }
+    }
+
+    /**
+     * Create (AdminController calls: create($title,$content,$status,$category,$date,$imageUrl))
+     * $date is optional; if your table has `date` or `published_at`, we’ll use it.
+     */
+    public static function create(
+        string $title,
+        string $content,
+        string $status='draft',
+        ?string $category='general',
+        ?string $date=null,
+        ?string $imageUrl=null
+    ): int {
+        $db = parent::db();
+
+        $bcol     = self::bodyCol();
         $status   = in_array(strtolower($status), self::$allowedStatus, true) ? strtolower($status) : 'draft';
         $category = in_array(strtolower((string)$category), self::$allowedCats, true) ? strtolower((string)$category) : 'general';
 
-        $cols = ['title'=>$title, $bcol=>$content, 'status'=>$status, 'category'=>$category];
-        if (self::has('image_url') && $imageUrl) { $cols['image_url'] = $imageUrl; }
+        $cols = [
+            'title'    => $title,
+            $bcol      => $content,
+            'status'   => $status,
+            'category' => $category,
+        ];
 
-        $fields = array_keys($cols); $ph = array_map(fn($f)=>':'.$f, $fields);
-        $sql = "INSERT INTO announcements (".implode(',', $fields).", created_at) VALUES (".implode(',', $ph).", NOW())";
-        $st  = $db->prepare($sql); foreach ($cols as $f=>$v) $st->bindValue(':'.$f, $v);
-        $st->execute(); return (int)$db->lastInsertId();
+        if (self::has('image_url') && $imageUrl) {
+            $cols['image_url'] = $imageUrl;
+        }
+
+        // If you have an explicit `date` column, use it; otherwise if publishing and `published_at` exists, use that.
+        if ($date) {
+            // Normalize date to DATETIME if it looks like a date only.
+            $norm = preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) ? ($date.' 00:00:00') : $date;
+            if (self::has('date')) {
+                $cols['date'] = $norm;
+            } elseif ($status === 'published' && self::has('published_at')) {
+                $cols['published_at'] = $norm;
+            }
+        }
+
+        // Build dynamic insert
+        $fields = array_keys($cols);
+        $ph     = array_map(fn($f)=>':'.$f, $fields);
+
+        // Always set created_at
+        $fields[] = 'created_at';
+        $values   = implode(',', $ph) . ', NOW()';
+
+        $sql = "INSERT INTO announcements (".implode(',', $fields).") VALUES ($values)";
+        $st  = $db->prepare($sql);
+        foreach ($cols as $f=>$v) $st->bindValue(':'.$f, $v);
+        $st->execute();
+
+        return (int)$db->lastInsertId();
     }
 
+    /** Update status (sets published_at on first publish if column exists). */
     public static function updateStatus(int $id, string $status): bool {
-        $status=strtolower($status); if (!in_array($status,self::$allowedStatus,true)) return false;
-        $sql = ($status==='published')
-            ? "UPDATE announcements SET status=:s, published_at=COALESCE(published_at,NOW()), updated_at=NOW() WHERE id=:id"
-            : "UPDATE announcements SET status=:s, updated_at=NOW() WHERE id=:id";
+        $status=strtolower($status);
+        if (!in_array($status,self::$allowedStatus,true)) return false;
+
+        $hasPubAt = self::has('published_at');
+        if ($status==='published' && $hasPubAt) {
+            $sql = "UPDATE announcements
+                    SET status=:s, published_at=COALESCE(published_at,NOW()), updated_at=NOW()
+                    WHERE id=:id";
+        } else {
+            $sql = "UPDATE announcements
+                    SET status=:s, updated_at=NOW()
+                    WHERE id=:id";
+        }
         $st = parent::db()->prepare($sql);
         return $st->execute([':s'=>$status, ':id'=>$id]);
     }
@@ -93,7 +191,7 @@ final class Announcement extends Model
         return $st->execute([':id'=>(int)$id]);
     }
 
-    // For public listing
+    /** Public listing with filters (published only). */
     public static function searchPublished(array $f, array $pg=[]): array {
         $db   = parent::db();
         $cat  = $f['cat']  ?? null;
@@ -104,29 +202,50 @@ final class Announcement extends Model
         $per  = max(1,min(48,(int)($pg['perPage'] ?? 9)));
         $off  = ($page-1)*$per;
 
-        $w=["LOWER(status)='published'"]; $b=[];
-        if ($cat)  { $w[]='LOWER(category)=:cat'; $b[':cat']=strtolower($cat); }
-        if ($year) { $w[]='YEAR(COALESCE(published_at, created_at))=:y'; $b[':y']=(int)$year; }
-        if ($q)    { $bc=self::bodyCol(); $w[]="(title LIKE :q OR excerpt LIKE :q OR $bc LIKE :q)"; $b[':q']='%'.$q.'%'; }
-        $ws='WHERE '.implode(' AND ',$w);
+        $where = ["LOWER(status)='published'"];
+        $bind  = [];
 
-        $cnt=$db->prepare("SELECT COUNT(*) FROM announcements $ws"); foreach($b as $k=>$v)$cnt->bindValue($k,$v); $cnt->execute();
-        $total=(int)$cnt->fetchColumn();
+        if ($cat)  { $where[]='LOWER(category)=:cat'; $bind[':cat']=strtolower($cat); }
 
-        $img=self::has('image_url')?'image_url':'NULL AS image_url';
-        $bc=self::bodyCol();
-        $sql="SELECT id,title,excerpt,COALESCE($bc,'') body,category,$img,
-                     COALESCE(published_at,created_at) date,author
+        $date = self::dateExpr();
+        if ($year) { $where[]="YEAR($date)=:y"; $bind[':y']=(int)$year; }
+
+        $body = self::bodyCol();
+        if ($q)    { $where[]="(title LIKE :q OR ".(self::has('excerpt')?'excerpt':'').(self::has('excerpt')?' LIKE :q OR ':'')."$body LIKE :q)"; $bind[':q']='%'.$q.'%'; }
+
+        $ws = 'WHERE '.implode(' AND ',$where);
+
+        // Total
+        $cnt = $db->prepare("SELECT COUNT(*) FROM announcements $ws");
+        foreach($bind as $k=>$v) $cnt->bindValue($k,$v);
+        $cnt->execute();
+        $total = (int)$cnt->fetchColumn();
+
+        // Items
+        $img  = self::has('image_url') ? 'image_url' : 'NULL AS image_url';
+        $author = self::has('author') ? 'author' : 'NULL AS author';
+
+        $sql="SELECT id, title, ".(self::has('excerpt')?'excerpt':'NULL AS excerpt').",
+                     $body AS body, category, $img, $author,
+                     $date AS date
               FROM announcements
               $ws
-              ORDER BY COALESCE(published_at,created_at) DESC
+              ORDER BY $date DESC
               LIMIT :off,:per";
-        $st=$db->prepare($sql); foreach($b as $k=>$v)$st->bindValue($k,$v);
-        $st->bindValue(':off',$off,\PDO::PARAM_INT); $st->bindValue(':per',$per,\PDO::PARAM_INT); $st->execute();
+        $st=$db->prepare($sql);
+        foreach($bind as $k=>$v) $st->bindValue($k,$v);
+        $st->bindValue(':off',$off,\PDO::PARAM_INT);
+        $st->bindValue(':per',$per,\PDO::PARAM_INT);
+        $st->execute();
         $items=$st->fetchAll(\PDO::FETCH_ASSOC);
 
-        $ys=$db->query("SELECT DISTINCT YEAR(COALESCE(published_at,created_at)) y
-                        FROM announcements WHERE LOWER(status)='published' ORDER BY y DESC")->fetchAll(\PDO::FETCH_COLUMN);
+        // Year facets
+        $ys=$db->query("
+            SELECT DISTINCT YEAR($date) y
+            FROM announcements
+            WHERE LOWER(status)='published'
+            ORDER BY y DESC
+        ")->fetchAll(\PDO::FETCH_COLUMN);
 
         return ['items'=>$items,'total'=>$total,'years'=>$ys?:[]];
     }

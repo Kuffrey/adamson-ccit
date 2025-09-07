@@ -1,14 +1,12 @@
 <?php
 declare(strict_types=1);
 
-// Load base Model safely
 $base = __DIR__ . '/Model.php';
 if (is_file($base)) { require_once $base; }
 
 final class News extends Model
 {
     private static array $cols = [];
-    // ⬇️ Announcements removed here
     private static array $allowedStatus = ['draft','published','archived'];
     private static array $allowedCats   = ['news','research','achievement','student'];
 
@@ -23,6 +21,12 @@ final class News extends Model
     }
     private static function has(string $col): bool { return in_array($col, self::cols(), true); }
     private static function bodyCol(): string { return self::has('body') ? 'body' : (self::has('content') ? 'content' : 'body'); }
+
+    /** Prefer `date` if exists, else `published_at`, else `created_at` */
+    private static function dateExpr(): string {
+        if (self::has('date')) return 'date';
+        return 'COALESCE(published_at, created_at)';
+    }
 
     public static function statusCounts(): array {
         try {
@@ -51,23 +55,27 @@ final class News extends Model
                 $where[] = 'LOWER(status) = :s';
                 $bind[':s'] = strtolower($status);
             }
-            // prevent announcements leaking into News if old rows still exist
+            // never show announcements in News
             $where[] = "LOWER(category) <> 'announcement'";
 
             $whereSql = $where ? 'WHERE '.implode(' AND ',$where) : '';
 
-            $bodyExpr = 'COALESCE(body, content, \'\')';
+            $bcol    = self::bodyCol();
+            $bodyExpr = "COALESCE($bcol, '')";
             $imgExpr  = self::has('image_url') ? 'image_url' : 'NULL AS image_url';
+            $authExpr = self::has('author') ? 'author' : 'NULL AS author';
+            $dateExpr = self::dateExpr() . ' AS display_date'; // <-- new alias
 
             $sql = "
                 SELECT id, title,
                        COALESCE(excerpt, SUBSTRING($bodyExpr, 1, 160)) AS excerpt,
                        $bodyExpr AS body,
-                       category, status, $imgExpr,
-                       COALESCE(published_at, created_at) AS created_at
+                       category, status, $imgExpr, $authExpr,
+                       $dateExpr,
+                       published_at, created_at, updated_at
                 FROM news
                 $whereSql
-                ORDER BY COALESCE(published_at, created_at) DESC";
+                ORDER BY ".self::dateExpr()." DESC, id DESC";
             $st = $db->prepare($sql);
             foreach ($bind as $k=>$v) $st->bindValue($k,$v);
             $st->execute();
@@ -86,9 +94,25 @@ final class News extends Model
         $status   = in_array(strtolower($status), self::$allowedStatus, true) ? strtolower($status) : 'draft';
         $category = in_array(strtolower((string)$category), self::$allowedCats, true) ? strtolower((string)$category) : 'news';
 
-        $cols = ['title'=>$title, $bcol=>$content, 'status'=>$status, 'category'=>$category];
-        if (self::has('image_url') && $imageUrl) { $cols['image_url'] = $imageUrl; }
+        // base columns
+        $cols = [
+            'title'    => $title,
+            $bcol      => $content,
+            'status'   => $status,
+            'category' => $category,
+        ];
 
+        if (self::has('image_url') && $imageUrl) {
+            $cols['image_url'] = $imageUrl;
+        }
+
+        // 👇 KEY FIX: if initially created as "published", stamp published_at and date (if present)
+        if ($status === 'published') {
+            if (self::has('published_at')) $cols['published_at'] = date('Y-m-d H:i:s');
+            if (self::has('date'))         $cols['date']         = date('Y-m-d H:i:s');
+        }
+
+        // build INSERT
         $fields = array_keys($cols);
         $ph     = array_map(fn($f)=>':'.$f, $fields);
 
@@ -103,9 +127,18 @@ final class News extends Model
         $status = strtolower($status);
         if (!in_array($status, self::$allowedStatus, true)) return false;
 
+        // When publishing, ensure both published_at and date are set the first time
         $sql = ($status === 'published')
-            ? "UPDATE news SET status=:s, published_at = COALESCE(published_at, NOW()), updated_at=NOW() WHERE id=:id"
-            : "UPDATE news SET status=:s, updated_at=NOW() WHERE id=:id";
+            ? "UPDATE news
+            SET status=:s,
+                published_at = COALESCE(published_at, NOW()),
+                /* the line below ensures front-end uses a real date immediately */
+                date = COALESCE(date, NOW()),
+                updated_at=NOW()
+            WHERE id=:id"
+            : "UPDATE news
+            SET status=:s, updated_at=NOW()
+            WHERE id=:id";
 
         $st = parent::db()->prepare($sql);
         return $st->execute([':s'=>$status, ':id'=>$id]);
@@ -116,15 +149,19 @@ final class News extends Model
         return $st->execute([':id'=>(int)$id]);
     }
 
+    /** For small admin lists */
     public static function latest(int $limit = 6): array {
         try {
             $db = parent::db();
-            $st = $db->prepare("
-                SELECT id, title, status, COALESCE(published_at, created_at) AS date
+            $sql = "
+                SELECT id, title, status,
+                       ".self::dateExpr()." AS display_date,
+                       author, category
                 FROM news
-                WHERE LOWER(status)='published' AND LOWER(category) <> 'announcement'
-                ORDER BY date DESC
-                LIMIT :lim");
+                WHERE LOWER(category) <> 'announcement'
+                ORDER BY ".self::dateExpr()." DESC, id DESC
+                LIMIT :lim";
+            $st = $db->prepare($sql);
             $st->bindValue(':lim', $limit, \PDO::PARAM_INT);
             $st->execute();
             return $st->fetchAll(\PDO::FETCH_ASSOC);
@@ -133,6 +170,7 @@ final class News extends Model
         }
     }
 
+    /** Public listing for /news page (published only) */
     public static function searchPublished(array $f, array $pg = []): array {
         $db   = parent::db();
         $cat  = $f['cat']  ?? null;
@@ -143,12 +181,10 @@ final class News extends Model
         $per  = max(1, min(48, (int)($pg['perPage'] ?? 9)));
         $off  = ($page - 1) * $per;
 
-        // never include announcements here
         $where = ["LOWER(status)='published'","LOWER(category) <> 'announcement'"];
         $bind  = [];
         if ($cat && $cat!=='announcement') { $where[] = 'LOWER(category) = :cat'; $bind[':cat'] = strtolower((string)$cat); }
-        if ($year) { $where[] = 'YEAR(COALESCE(published_at, created_at)) = :yr'; $bind[':yr'] = (int)$year; }
-
+        if ($year) { $where[] = "YEAR(".self::dateExpr().") = :yr"; $bind[':yr'] = (int)$year; }
         if ($q) {
             $bcol = self::bodyCol();
             $where[] = "(title LIKE :q OR excerpt LIKE :q OR $bcol LIKE :q)";
@@ -165,10 +201,10 @@ final class News extends Model
         $bcol    = self::bodyCol();
 
         $sql = "SELECT id, title, excerpt, COALESCE($bcol,'') AS body, category, $imgExpr,
-                       COALESCE(published_at, created_at) AS date, author
+                       ".self::dateExpr()." AS date, author
                 FROM news
                 $whereSql
-                ORDER BY COALESCE(published_at, created_at) DESC
+                ORDER BY ".self::dateExpr()." DESC, id DESC
                 LIMIT :off,:per";
         $stmt = $db->prepare($sql);
         foreach ($bind as $k=>$v) $stmt->bindValue($k,$v);
@@ -178,7 +214,7 @@ final class News extends Model
         $items = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         $ys = $db->query("
-            SELECT DISTINCT YEAR(COALESCE(published_at, created_at)) y
+            SELECT DISTINCT YEAR(".self::dateExpr().") y
             FROM news
             WHERE LOWER(status)='published' AND LOWER(category) <> 'announcement'
             ORDER BY y DESC

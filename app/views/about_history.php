@@ -54,7 +54,7 @@ $about = (new AboutHistory())->get();
         <div class="fact">
           <h3><?= htmlspecialchars($about['fact_title'] ?? 'At a Glance') ?></h3>
           <ul>
-            <li><?= htmlspecialchars($about['fact_1'] ?? '') ?></li>
+              <a href="/adamson-ccit/public/index.php?page=about_vision_mission">Vision &amp; Mission</a>
             <li><?= htmlspecialchars($about['fact_2'] ?? '') ?></li>
             <li><?= htmlspecialchars($about['fact_3'] ?? '') ?></li>
           </ul>

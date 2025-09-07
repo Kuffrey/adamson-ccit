@@ -21,7 +21,7 @@ $newsList = class_exists('News') ? News::latest(20) : [];
     </div>
     <nav class="admin-sb__nav">
       <a href="?page=admin_dashboard" class="nav__link">Dashboard</a>
-      <a href="?page=admin_homepage_edit" class="nav__link">Homepage</a>
+  <a href="?page=admin_manage_homepage" class="nav__link">Homepage</a>
       <a href="?page=admin_news_edit" class="nav__link is-active">News</a>
       <a href="?page=admin_events_edit" class="nav__link">Events</a>
       <a href="?page=admin_announcements_edit" class="nav__link">Announcements</a>
