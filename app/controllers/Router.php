@@ -339,6 +339,22 @@ class Router {
             require_once __DIR__ . '/AdminNewsPageController.php';
             AdminNewsPageController::handle();
             break;
+
+            /* -------------------- STUDENT: Certifications actions -------------------- */
+            case 'student_cert_save':
+                Auth::requireRole(['student'], $base . 'login_guest_student');
+                require_once __DIR__ . '/StudentCertController.php';
+                (new StudentCertController())->save();
+                break;
+
+            case 'student_cert_delete':
+                Auth::requireRole(['student'], $base . 'login_guest_student');
+                require_once __DIR__ . '/StudentCertController.php';
+                (new StudentCertController())->delete();
+                break;
+                
+
         }
+        
     }
 }
