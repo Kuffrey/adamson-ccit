@@ -1,16 +1,17 @@
 <?php
-// Modular admin sidebar for CMS
 if (!function_exists('esc')) {
   function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 }
-$user = class_exists('Auth') ? (Auth::user() ?? []) : [];
+$user     = class_exists('Auth') ? (Auth::user() ?? []) : [];
 $username = $user['username'] ?? 'Admin';
+$roleName = ucfirst($user['role'] ?? 'Administrator');
 
 $pg = $_GET['page'] ?? '';
 
-// Helper: mark dropdown open if one of its children is active
-$aboutOpen = in_array($pg, ['admin_manage_about','admin_about_vision_mission']) ? ' open' : '';
-$newsOpen  = in_array($pg, ['admin_news_settings','admin_manage_news']) ? ' open' : '';
+$aboutOpen    = in_array($pg, ['admin_manage_about','admin_about_vision_mission'], true) ? ' open' : '';
+$newsOpen     = in_array($pg, ['admin_news_settings','admin_manage_news','admin_manage_events','admin_manage_announcements'], true) ? ' open' : '';
+$admitOpen    = in_array($pg, ['admin_admission_freshman','admin_admission_transferee','admin_admission_graduate'], true) ? ' open' : '';
+$programsOpen = in_array($pg, ['admin_manage_programs','admin_programs_undergraduate','admin_programs_graduate'], true) ? ' open' : '';
 ?>
 <aside class="admin-sb" aria-label="Admin navigation">
   <div class="admin-sb__brand">
@@ -19,55 +20,97 @@ $newsOpen  = in_array($pg, ['admin_news_settings','admin_manage_news']) ? ' open
   </div>
 
   <nav class="admin-sb__nav admin-sb__nav--main">
-    <a href="?page=admin_dashboard" class="nav__link<?= $pg === 'admin_dashboard' ? ' is-active' : '' ?>">Dashboard</a>
-    <a href="?page=admin_manage_homepage" class="nav__link<?= $pg === 'admin_manage_homepage' ? ' is-active' : '' ?>">Homepage</a>
+    <a href="?page=admin_dashboard"
+       class="nav__link<?= $pg === 'admin_dashboard' ? ' is-active' : '' ?>"
+       <?= $pg === 'admin_dashboard' ? 'aria-current="page"' : '' ?>>Dashboard</a>
 
-    <!-- About dropdown -->
+    <a href="?page=admin_manage_homepage"
+       class="nav__link<?= $pg === 'admin_manage_homepage' ? ' is-active' : '' ?>"
+       <?= $pg === 'admin_manage_homepage' ? 'aria-current="page"' : '' ?>>Homepage</a>
+
+    <!-- About -->
     <div class="nav__dropdown<?= $aboutOpen ?>">
-      <button class="nav__link nav__toggle" type="button" aria-expanded="<?= $aboutOpen ? 'true' : 'false' ?>" aria-controls="submenu-about">
+      <button class="nav__link nav__toggle" type="button"
+              aria-expanded="<?= $aboutOpen ? 'true' : 'false' ?>" aria-controls="submenu-about">
         About <span class="caret" aria-hidden="true">▾</span>
       </button>
       <div id="submenu-about" class="nav__submenu">
-        <a href="?page=admin_manage_about" class="nav__sublink<?= $pg === 'admin_manage_about' ? ' is-active' : '' ?>">About Page (History)</a>
-        <a href="?page=admin_about_vision_mission" class="nav__sublink<?= $pg === 'admin_about_vision_mission' ? ' is-active' : '' ?>">Vision &amp; Mission</a>
+        <a href="?page=admin_manage_about"
+           class="nav__sublink<?= $pg === 'admin_manage_about' ? ' is-active' : '' ?>"
+           <?= $pg === 'admin_manage_about' ? 'aria-current="page"' : '' ?>>About Page (History)</a>
+        <a href="?page=admin_about_vision_mission"
+           class="nav__sublink<?= $pg === 'admin_about_vision_mission' ? ' is-active' : '' ?>"
+           <?= $pg === 'admin_about_vision_mission' ? 'aria-current="page"' : '' ?>>Vision &amp; Mission</a>
       </div>
     </div>
 
-    <!-- Dropdown for News -->
-    <div class="nav__dropdown<?= in_array(($_GET['page'] ?? ''), [
-        'admin_news_settings','admin_manage_news',
-        'admin_events_settings','admin_manage_events',
-        'admin_announcements_settings','admin_manage_announcements'
-    ]) ? ' open' : '' ?>">
-      <button class="nav__link nav__toggle">
-        News ▾
+    <!-- News -->
+    <div class="nav__dropdown<?= $newsOpen ?>">
+      <button class="nav__link nav__toggle" type="button"
+              aria-expanded="<?= $newsOpen ? 'true' : 'false' ?>" aria-controls="submenu-news">
+        News <span class="caret" aria-hidden="true">▾</span>
       </button>
-      <div class="nav__submenu">
+      <div id="submenu-news" class="nav__submenu">
         <a href="?page=admin_news_settings"
-          class="nav__sublink<?= (($_GET['page'] ?? '') === 'admin_news_settings') ? ' is-active' : '' ?>">
-          News Page Settings
-        </a>
+           class="nav__sublink<?= $pg === 'admin_news_settings' ? ' is-active' : '' ?>"
+           <?= $pg === 'admin_news_settings' ? 'aria-current="page"' : '' ?>>News Page Settings</a>
         <a href="?page=admin_manage_news"
-          class="nav__sublink<?= (($_GET['page'] ?? '') === 'admin_manage_news') ? ' is-active' : '' ?>">
-          Manage News
-        </a>
-
+           class="nav__sublink<?= $pg === 'admin_manage_news' ? ' is-active' : '' ?>"
+           <?= $pg === 'admin_manage_news' ? 'aria-current="page"' : '' ?>>Manage News</a>
         <a href="?page=admin_manage_events"
-          class="nav__sublink<?= (($_GET['page'] ?? '') === 'admin_manage_events') ? ' is-active' : '' ?>">
-          Manage Events
-        </a>
-
+           class="nav__sublink<?= $pg === 'admin_manage_events' ? ' is-active' : '' ?>"
+           <?= $pg === 'admin_manage_events' ? 'aria-current="page"' : '' ?>>Manage Events</a>
         <a href="?page=admin_manage_announcements"
-          class="nav__sublink<?= (($_GET['page'] ?? '') === 'admin_manage_announcements') ? ' is-active' : '' ?>">
-          Manage Announcements
-        </a>
+           class="nav__sublink<?= $pg === 'admin_manage_announcements' ? ' is-active' : '' ?>"
+           <?= $pg === 'admin_manage_announcements' ? 'aria-current="page"' : '' ?>>Manage Announcements</a>
       </div>
     </div>
 
-    <a href="?page=admin_manage_admission" class="nav__link<?= $pg === 'admin_manage_admission' ? ' is-active' : '' ?>">Admission</a>
-    <a href="?page=admin_manage_programs" class="nav__link<?= $pg === 'admin_manage_programs' ? ' is-active' : '' ?>">Programs</a>
-    <a href="?page=admin_manage_student" class="nav__link<?= $pg === 'admin_manage_student' ? ' is-active' : '' ?>">Student</a>
-    <a href="?page=admin_manage_faculty" class="nav__link<?= $pg === 'admin_manage_faculty' ? ' is-active' : '' ?>">Faculty</a>
+    <!-- Admission -->
+    <div class="nav__dropdown<?= $admitOpen ?>">
+      <button class="nav__link nav__toggle" type="button"
+              aria-expanded="<?= $admitOpen ? 'true' : 'false' ?>" aria-controls="submenu-admission">
+        Admission <span class="caret" aria-hidden="true">▾</span>
+      </button>
+      <div id="submenu-admission" class="nav__submenu">
+        <a href="?page=admin_admission_freshman"
+           class="nav__sublink<?= $pg==='admin_admission_freshman' ? ' is-active' : '' ?>"
+           <?= $pg==='admin_admission_freshman' ? 'aria-current="page"' : '' ?>>Freshman</a>
+        <a href="?page=admin_admission_transferee"
+           class="nav__sublink<?= $pg==='admin_admission_transferee' ? ' is-active' : '' ?>"
+           <?= $pg==='admin_admission_transferee' ? 'aria-current="page"' : '' ?>>Transferee</a>
+        <a href="?page=admin_admission_graduate"
+           class="nav__sublink<?= $pg==='admin_admission_graduate' ? ' is-active' : '' ?>"
+           <?= $pg==='admin_admission_graduate' ? 'aria-current="page"' : '' ?>>Graduate School &amp; JD</a>
+      </div>
+    </div>
+
+    <!-- Programs -->
+    <div class="nav__dropdown<?= $programsOpen ?>">
+      <button class="nav__link nav__toggle" type="button"
+              aria-expanded="<?= $programsOpen ? 'true' : 'false' ?>" aria-controls="submenu-programs">
+        Programs <span class="caret" aria-hidden="true">▾</span>
+      </button>
+      <div id="submenu-programs" class="nav__submenu">
+        <a href="?page=admin_manage_programs"
+           class="nav__sublink<?= $pg==='admin_manage_programs' ? ' is-active' : '' ?>"
+           <?= $pg==='admin_manage_programs' ? 'aria-current="page"' : '' ?>>All Programs</a>
+        <a href="?page=admin_programs_undergraduate"
+           class="nav__sublink<?= $pg==='admin_programs_undergraduate' ? ' is-active' : '' ?>"
+           <?= $pg==='admin_programs_undergraduate' ? 'aria-current="page"' : '' ?>>Undergraduate</a>
+        <a href="?page=admin_programs_graduate"
+           class="nav__sublink<?= $pg==='admin_programs_graduate' ? ' is-active' : '' ?>"
+           <?= $pg==='admin_programs_graduate' ? 'aria-current="page"' : '' ?>>Graduate Studies</a>
+      </div>
+    </div>
+
+    <a href="?page=admin_manage_student"
+       class="nav__link<?= $pg === 'admin_manage_student' ? ' is-active' : '' ?>"
+       <?= $pg === 'admin_manage_student' ? 'aria-current="page"' : '' ?>>Student</a>
+
+    <a href="?page=admin_manage_faculty"
+       class="nav__link<?= $pg === 'admin_manage_faculty' ? ' is-active' : '' ?>"
+       <?= $pg === 'admin_manage_faculty' ? 'aria-current="page"' : '' ?>>Faculty</a>
   </nav>
 
   <div class="admin-sb__spacer"></div>
@@ -77,7 +120,7 @@ $newsOpen  = in_array($pg, ['admin_news_settings','admin_manage_news']) ? ' open
       <span class="avatar"><?= esc(strtoupper($username[0] ?? 'A')) ?></span>
       <div class="uinfo">
         <span class="uname"><?= esc($username) ?></span>
-        <span class="urole">Administrator</span>
+        <span class="urole"><?= esc($roleName) ?></span>
       </div>
     </div>
     <a class="btn btn--muted btn--sm" href="?page=logout">Logout</a>
@@ -85,7 +128,6 @@ $newsOpen  = in_array($pg, ['admin_news_settings','admin_manage_news']) ? ' open
 
   <script>
   document.addEventListener("DOMContentLoaded", () => {
-    // Toggle open/close
     document.querySelectorAll(".nav__toggle").forEach(btn => {
       btn.addEventListener("click", () => {
         const dd = btn.parentElement;
@@ -93,8 +135,6 @@ $newsOpen  = in_array($pg, ['admin_news_settings','admin_manage_news']) ? ' open
         btn.setAttribute("aria-expanded", open ? "true" : "false");
       });
     });
-
-    // Auto-open any dropdown that already has an active sublink (server-side also sets this, but this is a safety net)
     document.querySelectorAll(".nav__dropdown").forEach(dd => {
       if (dd.querySelector(".nav__sublink.is-active")) {
         dd.classList.add("open");

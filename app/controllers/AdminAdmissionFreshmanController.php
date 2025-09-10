@@ -1,10 +1,12 @@
 <?php
-// app/controllers/AdminAdmissionFreshmanController.php
 declare(strict_types=1);
 require_once __DIR__ . '/../models/AdmissionFreshmanSettings.php';
+require_once __DIR__ . '/../lib/Auth.php';
 
 class AdminAdmissionFreshmanController {
     public static function handle(): void {
+        Auth::requireRole(['admin','dean'], '/adamson-ccit/public/index.php?page=login_admin');
+
         $msg = null;
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ok = AdmissionFreshmanSettings::updateSettings([
@@ -27,6 +29,7 @@ class AdminAdmissionFreshmanController {
             $msg = $ok ? 'Freshman Admission page updated.' : 'Failed to update settings.';
         }
         $settings = AdmissionFreshmanSettings::getSettings();
+        $username = $_SESSION['user']['username'] ?? 'Admin';
         require __DIR__ . '/../views/admin/admission_freshman_form.php';
     }
 }

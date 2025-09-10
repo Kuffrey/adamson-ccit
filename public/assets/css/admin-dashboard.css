@@ -433,3 +433,4 @@ label{ display:block; font-weight:600; margin: 10px 0 6px; }
 }
 .savebar__status{ color: var(--muted); }
 .savebar__actions{ margin-left: auto; display:flex; gap:8px; }
+

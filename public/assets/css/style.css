@@ -1352,3 +1352,50 @@ a:focus-visible, button:focus-visible{outline:3px solid #9ad1ff;outline-offset:2
   }
 }
 
+/* ===== CCIT Chatbot ===== */
+#ccit-chat-root * { box-sizing: border-box; }
+
+/* Guarantee that hidden really hides, even if some global CSS overrides it */
+#chatbot-box[hidden] { display: none !important; }
+
+#chatbot-toggle{
+  position:fixed; right:20px; bottom:20px; width:56px; height:56px;
+  border:none; border-radius:50%; font-size:22px; cursor:pointer;
+  background:#0b5fff; color:#fff; z-index:2147483646; pointer-events:auto;
+}
+
+#chatbot-box{
+  position:fixed; right:20px; bottom:88px; width:340px; max-width:calc(100vw - 32px);
+  display:flex; flex-direction:column; background:#fff; border:1px solid #e5e7eb;
+  border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.15);
+  z-index:2147483647; pointer-events:auto;
+}
+
+#chatbot-box .header{
+  position:relative; display:flex; align-items:center; justify-content:center;
+  padding:10px 44px; background:#0b5fff; color:#fff; font-weight:700;
+}
+
+/* ✕: large hit area, always on top */
+#chatbot-close{
+  position:absolute; right:6px; top:4px; width:36px; height:36px;
+  display:flex; align-items:center; justify-content:center;
+  border:none; background:transparent; color:#fff; font-size:22px; line-height:1;
+  cursor:pointer; z-index:2147483647; padding:0;
+}
+
+.chat-output{ height:320px; overflow-y:auto; background:#f9fafb; padding:12px; }
+.bot-msg,.user-msg{ max-width:80%; margin:6px 0; padding:8px 10px; border-radius:10px; font-size:14px; }
+.bot-msg{ background:#fff; border:1px solid #e5e7eb; color:#1f2937; }
+.user-msg{ margin-left:auto; background:#0b5fff; color:#fff; }
+
+#chat-form{ display:flex; gap:8px; padding:10px; border-top:1px solid #e5e7eb; background:#fff; }
+#chat-input{
+  flex:1; border:1px solid #e5e7eb; border-radius:999px; padding:10px 14px; font-size:14px;
+}
+#chat-send{
+  border:none; border-radius:999px; padding:10px 16px; background:#0b5fff; color:#fff; font-weight:600; cursor:pointer;
+}
+
+/* Make sure nothing in the footer overlays the chat */
+footer, .ccit-footer, .ccit-legal { position:relative; z-index:auto; }

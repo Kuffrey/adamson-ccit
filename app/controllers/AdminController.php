@@ -290,12 +290,99 @@ class AdminController
         return ob_get_clean();
     }
 
-    public function managePrograms(): string {
-        $this->requireAdminOrDean();
-        ob_start();
-        include __DIR__ . '/../views/admin_manage_programs.php';
-        return ob_get_clean();
+public function managePrograms(): string
+{
+    $this->requireAdminOrDean();
+
+    // Load models
+    $core = __DIR__ . '/../core/Model.php'; if (is_file($core)) require_once $core;
+    $mProgram = __DIR__ . '/../models/Program.php'; if (is_file($mProgram)) include_once $mProgram;
+    $mUgs     = __DIR__ . '/../models/ProgramsUndergraduateSettings.php'; if (is_file($mUgs)) include_once $mUgs;
+    $mGs      = __DIR__ . '/../models/ProgramsGraduateSettings.php'; if (is_file($mGs)) include_once $mGs;
+
+    $notice = '';
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        try {
+            // Delete a program
+            if (!empty($_POST['delete_program']) && class_exists('Program')) {
+                Program::delete((int)$_POST['delete_program']);
+                $notice .= 'Program deleted. ';
+            }
+
+            // Update existing programs
+            if (!empty($_POST['program']) && is_array($_POST['program']) && class_exists('Program')) {
+                foreach ($_POST['program'] as $id => $row) {
+                    if (!is_numeric($id)) continue;
+                    // Requires Program::update($id, array $data) as added earlier
+                    Program::update((int)$id, [
+                        'name'        => $row['name'] ?? '',
+                        'description' => $row['description'] ?? '',
+                        'image'       => $row['image'] ?? '',
+                        'image_alt'   => $row['image_alt'] ?? '',
+                        'url'         => $row['url'] ?? '',
+                        'is_active'   => isset($row['is_active']) ? 1 : 0,
+                    ]);
+                }
+                $notice .= 'Programs saved. ';
+            }
+
+            // Add new program
+            if (!empty($_POST['new_program']['name']) && class_exists('Program')) {
+                $np = $_POST['new_program'];
+                if (method_exists('Program','createFull')) {
+                    Program::createFull($np);
+                } else {
+                    Program::create(trim($np['name']), trim($np['description'] ?? ''));
+                }
+                $notice .= 'New program added. ';
+            }
+
+            // Undergraduate page settings
+            if (isset($_POST['ugs']) && is_array($_POST['ugs']) && class_exists('ProgramsUndergraduateSettings')) {
+                ProgramsUndergraduateSettings::updateSettings([
+                    'subhero_image_url' => $_POST['ugs']['subhero_image_url'] ?? null,
+                    'subhero_lead'      => $_POST['ugs']['subhero_lead'] ?? null,
+                    'programs_grid'     => $_POST['ugs']['programs_grid'] ?? null,
+                    'cta_title'         => $_POST['ugs']['cta_title'] ?? null,
+                    'cta_description'   => $_POST['ugs']['cta_description'] ?? null,
+                    'cta_action_url'    => $_POST['ugs']['cta_action_url'] ?? null,
+                    'cta_action_label'  => $_POST['ugs']['cta_action_label'] ?? null,
+                ]);
+                $notice .= 'Undergraduate settings saved. ';
+            }
+
+            // Graduate page settings
+            if (isset($_POST['gs']) && is_array($_POST['gs']) && class_exists('ProgramsGraduateSettings')) {
+                ProgramsGraduateSettings::updateSettings([
+                    'subhero_image_url' => $_POST['gs']['subhero_image_url'] ?? null,
+                    'subhero_lead'      => $_POST['gs']['subhero_lead'] ?? null,
+                    'programs_grid'     => $_POST['gs']['programs_grid'] ?? null,
+                    'cta_title'         => $_POST['gs']['cta_title'] ?? null,
+                    'cta_description'   => $_POST['gs']['cta_description'] ?? null,
+                    'cta_action_url'    => $_POST['gs']['cta_action_url'] ?? null,
+                    'cta_action_label'  => $_POST['gs']['cta_action_label'] ?? null,
+                ]);
+                $notice .= 'Graduate settings saved. ';
+            }
+
+        } catch (Throwable $e) {
+            $notice = 'Error: ' . $e->getMessage();
+        }
     }
+
+    // Fetch fresh data
+    $programs = class_exists('Program') ? Program::all() : [];
+    $ugs      = class_exists('ProgramsUndergraduateSettings') ? ProgramsUndergraduateSettings::getSettings() : [];
+    $gs       = class_exists('ProgramsGraduateSettings') ? ProgramsGraduateSettings::getSettings() : [];
+
+    $username = $_SESSION['user']['username'] ?? 'Admin';
+
+    ob_start();
+    extract(compact('username','programs','ugs','gs','notice'), EXTR_SKIP);
+    include __DIR__ . '/../views/admin_manage_programs.php';
+    return ob_get_clean();
+}
 
     public function manageFaculty(): string {
         $this->requireAdminOrDean();
@@ -303,4 +390,117 @@ class AdminController
         include __DIR__ . '/../views/admin_manage_faculty.php';
         return ob_get_clean();
     }
+
+    // In: app/controllers/AdminController.php
+
+public function programsUndergraduate(): string {
+    $this->requireAdminOrDean();
+    require_once __DIR__ . '/../models/ProgramCard.php';
+
+    $level  = 'undergraduate';
+    $status = $_GET['status'] ?? 'all';
+    if (!in_array($status, ['all','draft','published','archived'], true)) $status = 'all';
+    $notice = '';
+
+    // PRG: handle POST
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        try {
+            // add
+            if (!empty($_POST['add_card'])) {
+                $d = $_POST['card'] ?? [];
+                $d['level'] = $level;
+                ProgramCard::create($d);
+                header('Location: ?page=admin_programs_undergraduate&status='.urlencode($d['status'] ?? 'draft').'&ok=1&act=add'); exit;
+            }
+            // update status
+            if (!empty($_POST['update_status']) && !empty($_POST['id'])) {
+                ProgramCard::updateStatus((int)$_POST['id'], $_POST['update_status']);
+                header('Location: ?page=admin_programs_undergraduate&status='.urlencode($_POST['update_status']).'&ok=1&act=status'); exit;
+            }
+            // update (edit)
+            if (!empty($_POST['edit_card']) && !empty($_POST['id'])) {
+                ProgramCard::update((int)$_POST['id'], $_POST['card'] ?? []);
+                header('Location: ?page=admin_programs_undergraduate&status='.urlencode($status).'&ok=1&act=edit'); exit;
+            }
+        } catch (Throwable $e) {
+            $notice = 'Error: '.$e->getMessage();
+        }
+    }
+    // delete
+    if (!empty($_GET['delete'])) {
+        ProgramCard::delete((int)$_GET['delete']);
+        header('Location: ?page=admin_programs_undergraduate&status='.urlencode($status).'&ok=1&act=del'); exit;
+    }
+
+    // data
+    $cards   = ProgramCard::list($level, $status);
+    $counts  = ProgramCard::statusCounts($level);
+    $username = $_SESSION['user']['username'] ?? 'Admin';
+
+    // notice
+    if (!$notice && isset($_GET['ok'], $_GET['act'])) {
+        $ok = $_GET['ok'] === '1';
+        $notice = $ok ? match($_GET['act']) {
+            'add'=>'Card added.', 'status'=>'Status updated.', 'edit'=>'Card saved.', 'del'=>'Card deleted.', default=>'',
+        } : 'Operation failed.';
+    }
+
+    ob_start();
+    extract(compact('cards','counts','status','username','level','notice'), EXTR_SKIP);
+    include __DIR__ . '/../views/admin/admin_programs_cards.php';
+    return ob_get_clean();
+}
+
+public function programsGraduate(): string {
+    $this->requireAdminOrDean();
+    require_once __DIR__ . '/../models/ProgramCard.php';
+
+    $level  = 'graduate';
+    $status = $_GET['status'] ?? 'all';
+    if (!in_array($status, ['all','draft','published','archived'], true)) $status = 'all';
+    $notice = '';
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        try {
+            if (!empty($_POST['add_card'])) {
+                $d = $_POST['card'] ?? [];
+                $d['level'] = $level;
+                ProgramCard::create($d);
+                header('Location: ?page=admin_programs_graduate&status='.urlencode($d['status'] ?? 'draft').'&ok=1&act=add'); exit;
+            }
+            if (!empty($_POST['update_status']) && !empty($_POST['id'])) {
+                ProgramCard::updateStatus((int)$_POST['id'], $_POST['update_status']);
+                header('Location: ?page=admin_programs_graduate&status='.urlencode($_POST['update_status']).'&ok=1&act=status'); exit;
+            }
+            if (!empty($_POST['edit_card']) && !empty($_POST['id'])) {
+                ProgramCard::update((int)$_POST['id'], $_POST['card'] ?? []);
+                header('Location: ?page=admin_programs_graduate&status='.urlencode($status).'&ok=1&act=edit'); exit;
+            }
+        } catch (Throwable $e) {
+            $notice = 'Error: '.$e->getMessage();
+        }
+    }
+    if (!empty($_GET['delete'])) {
+        ProgramCard::delete((int)$_GET['delete']);
+        header('Location: ?page=admin_programs_graduate&status='.urlencode($status).'&ok=1&act=del'); exit;
+    }
+
+    $cards   = ProgramCard::list($level, $status);
+    $counts  = ProgramCard::statusCounts($level);
+    $username = $_SESSION['user']['username'] ?? 'Admin';
+
+    if (!$notice && isset($_GET['ok'], $_GET['act'])) {
+        $ok = $_GET['ok'] === '1';
+        $notice = $ok ? match($_GET['act']) {
+            'add'=>'Card added.', 'status'=>'Status updated.', 'edit'=>'Card saved.', 'del'=>'Card deleted.', default=>'',
+        } : 'Operation failed.';
+    }
+
+    ob_start();
+    extract(compact('cards','counts','status','username','level','notice'), EXTR_SKIP);
+    include __DIR__ . '/../views/admin/admin_programs_cards.php';
+    return ob_get_clean();
+}
+
+    
 }

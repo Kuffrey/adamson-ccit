@@ -186,6 +186,22 @@ class Router {
                 echo $ac->managePrograms();
                 break;
 
+                // Programs — Undergraduate (Admin)
+            case 'admin_programs_undergraduate':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminController.php';
+                $ac = new AdminController();
+                echo $ac->programsUndergraduate();
+                break;
+
+            // Programs — Graduate (Admin)
+            case 'admin_programs_graduate':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminController.php';
+                $ac = new AdminController();
+                echo $ac->programsGraduate();
+                break;
+
             case 'admin_manage_faculty':
                 Auth::requireRole(['admin'], $base . 'login_admin');
                 require_once __DIR__ . '/AdminController.php';
@@ -242,6 +258,25 @@ class Router {
                 $ac = new AdminController();
                 echo $ac->manageEvents();
                 break;
+
+                // -------------------- ADMIN: ADMISSION CMS --------------------
+                case 'admin_admission_freshman':
+                    Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                    require_once __DIR__ . '/AdminAdmissionFreshmanController.php';
+                    AdminAdmissionFreshmanController::handle();
+                    break;
+
+                case 'admin_admission_transferee':
+                    Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                    require_once __DIR__ . '/AdminAdmissionTransfereeController.php';
+                    AdminAdmissionTransfereeController::handle();
+                    break;
+
+                case 'admin_admission_graduate':
+                    Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                    require_once __DIR__ . '/AdminAdmissionGraduateController.php';
+                    AdminAdmissionGraduateController::handle();
+                    break;
 
 
             /* -------------------- DEAN -------------------- */

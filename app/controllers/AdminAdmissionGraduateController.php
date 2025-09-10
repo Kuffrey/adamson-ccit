@@ -5,6 +5,9 @@ require_once __DIR__ . '/../models/AdmissionGraduateSettings.php';
 
 class AdminAdmissionGraduateController {
     public static function handle(): void {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $username = $_SESSION['user']['username'] ?? 'Admin';
+
         $msg = null;
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ok = AdmissionGraduateSettings::updateSettings([
@@ -27,6 +30,7 @@ class AdminAdmissionGraduateController {
             ]);
             $msg = $ok ? 'Graduate School & JD Admission page updated.' : 'Failed to update settings.';
         }
+
         $settings = AdmissionGraduateSettings::getSettings();
         require __DIR__ . '/../views/admin/admission_graduate_form.php';
     }

@@ -203,5 +203,7 @@
   </div>
 </footer>
 
+<script src="/adamson-ccit/public/assets/js/chatbot.js"></script>
+
 </body>
 </html>
