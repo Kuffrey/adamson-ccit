@@ -1,5 +1,18 @@
 {
   "require": {
     "google/cloud-dialogflow": "1.3"
+  },
+  "require-dev": {
+    "pestphp/pest": "^3.8"
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
   }
 }
