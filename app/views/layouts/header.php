@@ -1,7 +1,71 @@
 <?php
-/* header.php — compact user menu (icon only) with dropdown */
+/* header.php — dynamic main nav & utility links via DB; compact user menu stays the same */
 
-$user = $_SESSION['user'] ?? null; // expected: ['username'=>'…','role'=>'student|faculty|admin']
+if (session_status() === PHP_SESSION_NONE) session_start();
+$user = $_SESSION['user'] ?? null;
+
+if (!function_exists('e')) {
+  function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+}
+
+/* Build PDO directly from config (same pattern as footer) */
+$config = require __DIR__ . '/../../config/database.php';
+try {
+  $dsn = "mysql:host={$config['host']};dbname={$config['dbname']};charset={$config['charset']}";
+  $pdo = new PDO($dsn, $config['user'], $config['pass'], [
+      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+  ]);
+} catch (PDOException $e) {
+  // If DB fails, we'll render with fallbacks below
+  $pdo = null;
+}
+
+require_once __DIR__ . '/../../models/HeaderRepository.php';
+
+$settings     = $pdo ? HeaderRepository::getSettings($pdo) : [
+  'logo_url'  => '/adamson-ccit/public/assets/images/adamson-ccit-logo.png',
+  'cta_label' => 'Career Pathway Generator',
+  'cta_url'   => '/adamson-ccit/public/index.php?page=career_pathway_generator',
+];
+$utilityLinks = $pdo ? HeaderRepository::getUtilityLinks($pdo) : [
+  ['label'=>'AdU Website','url'=>'https://www.adamson.edu.ph/2018/','is_external'=>1],
+  ['label'=>'AdU Live','url'=>'https://live.adamson.edu.ph/login','is_external'=>1],
+];
+$menus        = $pdo ? HeaderRepository::getMenu($pdo) : [];
+
+/* Fallback full menu if DB empty */
+if (!$menus) {
+  $menus = [
+    ['label'=>'Home','url'=>'/adamson-ccit/public/index.php','type'=>'link'],
+    ['label'=>'About','type'=>'dropdown','items'=>[
+      ['label'=>'History','url'=>'/adamson-ccit/public/index.php?page=about_history'],
+      ['label'=>'Mission & Vision','url'=>'/adamson-ccit/public/index.php?page=about_vision_mission'],
+    ]],
+    ['label'=>'News','url'=>'/adamson-ccit/public/index.php?page=news','type'=>'link'],
+    ['label'=>'Admission','type'=>'dropdown','items'=>[
+      ['label'=>'Freshman','url'=>'/adamson-ccit/public/index.php?page=admission_freshman'],
+      ['label'=>'Transferee','url'=>'/adamson-ccit/public/index.php?page=admission_transferee'],
+      ['label'=>'Graduate School and Juris Doctor','url'=>'/adamson-ccit/public/index.php?page=admission_graduate_school'],
+    ]],
+    ['label'=>'Programs','type'=>'dropdown','items'=>[
+      ['label'=>'Undergraduate','url'=>'/adamson-ccit/public/index.php?page=programs_undergraduate'],
+      ['label'=>'Graduate Studies','url'=>'/adamson-ccit/public/index.php?page=programs_graduate_studies'],
+    ]],
+    ['label'=>'Student','type'=>'dropdown','items'=>[
+      ['label'=>'Student Organizations','url'=>'/adamson-ccit/public/index.php?page=student_organizations'],
+      ['label'=>'Student Scholarships','url'=>'/adamson-ccit/public/index.php?page=student_scholarships'],
+      ['label'=>'Student Research','url'=>'/adamson-ccit/public/index.php?page=student_research'],
+      ['label'=>'Student Certifications','url'=>'/adamson-ccit/public/index.php?page=student_certifications'],
+      ['label'=>'Student Testimonials','url'=>'/adamson-ccit/public/index.php?page=student_testimonials'],
+    ]],
+    ['label'=>'Faculty','type'=>'dropdown','items'=>[
+      ['label'=>'Faculty Profile','url'=>'/adamson-ccit/public/index.php?page=faculty_profile'],
+      ['label'=>'Faculty Research','url'=>'/adamson-ccit/public/index.php?page=faculty_research'],
+      ['label'=>'Faculty Certifications','url'=>'/adamson-ccit/public/index.php?page=faculty_certifications'],
+    ]],
+  ];
+}
 ?>
 <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
 
@@ -36,7 +100,11 @@ $user = $_SESSION['user'] ?? null; // expected: ['username'=>'…','role'=>'stud
   <div class="container">
     <div>Adamson University | College of Computing and Information Technology</div>
     <nav class="util-links" aria-label="Quick links">
-      <a href="https://www.adamson.edu.ph/2018/">AdU Website</a><a href="https://live.adamson.edu.ph/login">AdU Live</a>
+      <?php foreach ($utilityLinks as $ul): ?>
+        <a href="<?= e($ul['url']); ?>" <?= !empty($ul['is_external']) ? 'target="_blank" rel="noopener"' : '' ?>>
+          <?= e($ul['label']); ?>
+        </a>
+      <?php endforeach; ?>
     </nav>
   </div>
 </div>
@@ -46,76 +114,33 @@ $user = $_SESSION['user'] ?? null; // expected: ['username'=>'…','role'=>'stud
   <div class="container header-inner">
     <div class="brand">
       <a class="logo" href="/adamson-ccit/public/index.php" aria-label="Adamson CCIT Home">
-        <img src="/adamson-ccit/public/assets/images/adamson-ccit-logo.png" alt="Adamson CCIT Logo">
+        <img src="<?= e($settings['logo_url']); ?>" alt="Adamson CCIT Logo">
       </a>
     </div>
 
     <nav aria-label="Main">
       <ul class="main-nav">
-        <li><a href="/adamson-ccit/public/index.php">Home</a></li>
-
-        <li>
-          <details>
-            <summary aria-haspopup="true" aria-expanded="false">About</summary>
-            <div class="panel" role="menu">
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=about_history">History</a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=about_vision_mission">Mission &amp; Vision</a>
-            </div>
-          </details>
-        </li>
-
-        <li><a href="/adamson-ccit/public/index.php?page=news">News</a></li>
-
-        <li>
-          <details>
-            <summary aria-haspopup="true" aria-expanded="false">Admission</summary>
-            <div class="panel" role="menu">
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=admission_freshman">Freshman</a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=admission_transferee">Transferee</a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=admission_graduate_school">Graduate School and Juris Doctor</a>
-            </div>
-          </details>
-        </li>
-
-        <li>
-          <details>
-            <summary aria-haspopup="true" aria-expanded="false">Programs</summary>
-            <div class="panel" role="menu">
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=programs_undergraduate">Undergraduate</a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=programs_graduate_studies">Graduate Studies</a>
-            </div>
-          </details>
-        </li>
-
-        <li>
-          <details>
-            <summary aria-haspopup="true" aria-expanded="false">Student</summary>
-            <div class="panel" role="menu">
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=student_organizations">Student Organizations</a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=student_scholarships">Student Scholarships</a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=student_research">Student Research</a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=student_certifications">Student Certifications</a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=student_testimonials">Student Testimonials</a>
-            </div>
-          </details>
-        </li>
-
-        <li>
-          <!-- IMPORTANT: .no-cap so Faculty container isn't cut -->
-          <details class="no-cap">
-            <summary aria-haspopup="true" aria-expanded="false">Faculty</summary>
-            <div class="panel" role="menu">
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=faculty_profile">Faculty Profile</a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=faculty_research">Faculty Research</a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=faculty_certifications">Faculty Certifications</a>
-            </div>
-          </details>
-        </li>
+        <?php foreach ($menus as $m): ?>
+          <?php if (($m['type'] ?? 'link') === 'link'): ?>
+            <li><a href="<?= e($m['url']); ?>"><?= e($m['label']); ?></a></li>
+          <?php else: ?>
+            <li>
+              <details <?= strtolower($m['label'])==='faculty' ? 'class="no-cap"' : '' ?>>
+                <summary aria-haspopup="true" aria-expanded="false"><?= e($m['label']); ?></summary>
+                <div class="panel" role="menu">
+                  <?php foreach ($m['items'] ?? [] as $it): ?>
+                    <a role="menuitem" href="<?= e($it['url']); ?>"><?= e($it['label']); ?></a>
+                  <?php endforeach; ?>
+                </div>
+              </details>
+            </li>
+          <?php endif; ?>
+        <?php endforeach; ?>
       </ul>
     </nav>
 
     <div class="main-nav-right">
-      <a href="/adamson-ccit/public/index.php?page=career_pathway_generator" class="btn blue">Career Pathway Generator</a>
+      <a href="<?= e($settings['cta_url']); ?>" class="btn blue"><?= e($settings['cta_label']); ?></a>
 
       <?php if (!$user): ?>
         <!-- Not logged in -->
@@ -133,24 +158,21 @@ $user = $_SESSION['user'] ?? null; // expected: ['username'=>'…','role'=>'stud
           </summary>
           <div class="panel" role="menu">
             <div class="umeta">
-              <div><strong><?= htmlspecialchars($user['username']) ?></strong></div>
-              <div class="role"><?= htmlspecialchars($user['role']) ?></div>
+              <div><strong><?= e($user['username']); ?></strong></div>
+              <div class="role"><?= e($user['role']); ?></div>
             </div>
 
             <?php if ($user['role'] === 'student'): ?>
               <a role="menuitem" href="/adamson-ccit/public/index.php?page=student_profile">
-                <!-- portfolio icon -->
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-5l-2-2H9L7 7H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-5l-2-2H9L7 7H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0  0 0-2-2z"/></svg>
                 My Portfolio
               </a>
               <a role="menuitem" href="/adamson-ccit/public/index.php?page=career_pathway_generator">
-                <!-- compass icon -->
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16 8 14 14 8 16 10 10 16 8"/></svg>
                 Career Pathway
               </a>
             <?php elseif ($user['role'] === 'faculty'): ?>
               <a role="menuitem" href="/adamson-ccit/public/index.php?page=faculty_dashboard">
-                <!-- dashboard icon -->
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 Faculty Dashboard
               </a>
@@ -182,7 +204,6 @@ $user = $_SESSION['user'] ?? null; // expected: ['username'=>'…','role'=>'stud
             <?php endif; ?>
 
             <a role="menuitem" href="/adamson-ccit/public/index.php?page=logout">
-              <!-- logout icon -->
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
               Logout
             </a>
@@ -265,13 +286,13 @@ $user = $_SESSION['user'] ?? null; // expected: ['username'=>'…','role'=>'stud
       const scheduleClose = () => { closeTimer = setTimeout(close, 140); };
       const cancelClose = () => { if (closeTimer){ clearTimeout(closeTimer); closeTimer = null; } };
 
-      summary.addEventListener('click', (e) => {
+      summary?.addEventListener('click', (e) => {
         e.preventDefault();
         if (d.open) { close(); } else { closeOthers(d); open(); }
       });
 
       if (media.matches) {
-        summary.addEventListener('pointerenter', () => { cancelClose(); closeOthers(d); open(); });
+        summary?.addEventListener('pointerenter', () => { cancelClose(); closeOthers(d); open(); });
         d.addEventListener('pointerleave', scheduleClose);
         panel?.addEventListener('pointerenter', cancelClose);
         panel?.addEventListener('pointerleave', scheduleClose);

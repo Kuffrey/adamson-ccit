@@ -2,11 +2,14 @@
 // app/models/ProgramsUndergraduateSettings.php
 require_once __DIR__ . '/Model.php';
 
-class ProgramsUndergraduateSettings extends Model {
+class ProgramsUndergraduateSettings extends Model
+{
     protected static $table = 'programs_undergraduate_settings';
+    protected const CARDS_TABLE = 'ug_cards';
 
-    /** Always return latest row (your table already stores a single record). */
-    public static function getSettings(): array {
+    /** Always return latest row (your table stores a single record). */
+    public static function getSettings(): array
+    {
         $db  = self::db();
         $sql = 'SELECT * FROM ' . self::$table . ' ORDER BY id DESC LIMIT 1';
         $stmt = $db->query($sql);
@@ -14,127 +17,424 @@ class ProgramsUndergraduateSettings extends Model {
     }
 
     /**
-     * Update latest row with flat fields (including per-card fields).
-     * - preserves programs_grid as a fallback
-     * - normalizes checkboxes to 0/1
-     * - normalizes newline for pills
-     * - lightly sanitizes slugs
+     * Update settings row; optionally insert ONE new dynamic card.
+     *
+     * Usage from admin:
+     *   ProgramsUndergraduateSettings::updateSettings($_POST['ugs'] ?? [], $_POST['add_card'] ?? null);
      */
-    public static function updateSettings(array $data): void {
+    public static function updateSettings(array $settings, ?array $addCard = null): void
+    {
         $db = self::db();
 
-        // Ensure we have a row to update (no-op if one exists)
-        $db->exec('INSERT INTO ' . self::$table . ' (subhero_image_url) 
-                   SELECT \'/adamson-ccit/public/assets/images/programs/undergrad.jpg\' 
-                   WHERE NOT EXISTS (SELECT 1 FROM ' . self::$table . ')');
+        // Ensure there is at least one settings row
+        $db->exec(
+            'INSERT INTO ' . self::$table . ' (subhero_image_url)
+             SELECT \'/adamson-ccit/public/assets/images/programs/undergrad.jpg\'
+             WHERE NOT EXISTS (SELECT 1 FROM ' . self::$table . ')'
+        );
 
-        // --- normalize helpers ---
-        $b = function($v){ return (int)!empty($v); };
-        $normSlug = function($v){
-            $s = strtolower(trim((string)$v));
-            $s = preg_replace('~[^a-z0-9-]+~', '-', $s);
-            $s = preg_replace('~-+~', '-', $s);
-            $s = trim($s, '-');
-            return $s ?: null;
-        };
-        $normPills = function($v){
-            $t = str_replace(["\r\n", "\r"], "\n", (string)$v);
-            // trim each line, drop empties, join with single \n
-            $lines = array_filter(array_map('trim', explode("\n", $t)), fn($x) => $x !== '');
-            return $lines ? implode("\n", $lines) : null;
-        };
-
-        // normalize booleans, slugs, pills for each card
-        for ($i=1; $i<=4; $i++) {
-            $data["card{$i}_active"]                = $b($data["card{$i}_active"] ?? 0);
-            $data["card{$i}_learn_more_external"]   = $b($data["card{$i}_learn_more_external"] ?? 1);
-            $data["card{$i}_curriculum_external"]   = $b($data["card{$i}_curriculum_external"] ?? 1);
-
-            if (isset($data["card{$i}_position"])) {
-                $pos = (int)$data["card{$i}_position"];
-                $data["card{$i}_position"] = $pos > 0 ? $pos : $i;
-            }
-
-            if (array_key_exists("card{$i}_slug", $data)) {
-                $data["card{$i}_slug"] = $normSlug($data["card{$i}_slug"]);
-            }
-
-            if (array_key_exists("card{$i}_pills", $data)) {
-                $data["card{$i}_pills"] = $normPills($data["card{$i}_pills"]);
-            }
-        }
-
-        // --- allowlist of columns to update (includes existing + per-card + CTA) ---
-        $fields = [
+        // --- Allowlist & update settings ---
+        $allow = [
             'subhero_image_url','subhero_lead','programs_grid',
-
-            // Card 1
-            'card1_active','card1_position','card1_slug','card1_badge','card1_title','card1_title_muted',
-            'card1_summary','card1_pillbox_title','card1_pills',
-            'card1_learn_more_url','card1_learn_more_external','card1_curriculum_url','card1_curriculum_external','card1_apply_url',
-
-            // Card 2
-            'card2_active','card2_position','card2_slug','card2_badge','card2_title','card2_title_muted',
-            'card2_summary','card2_pillbox_title','card2_pills',
-            'card2_learn_more_url','card2_learn_more_external','card2_curriculum_url','card2_curriculum_external','card2_apply_url',
-
-            // Card 3
-            'card3_active','card3_position','card3_slug','card3_badge','card3_title','card3_title_muted',
-            'card3_summary','card3_pillbox_title','card3_pills',
-            'card3_learn_more_url','card3_learn_more_external','card3_curriculum_url','card3_curriculum_external','card3_apply_url',
-
-            // Card 4
-            'card4_active','card4_position','card4_slug','card4_badge','card4_title','card4_title_muted',
-            'card4_summary','card4_pillbox_title','card4_pills',
-            'card4_learn_more_url','card4_learn_more_external','card4_curriculum_url','card4_curriculum_external','card4_apply_url',
-
-            // CTA
             'cta_title','cta_description','cta_action_url','cta_action_label',
         ];
 
-        $set = implode(', ', array_map(fn($f) => "$f = :$f", $fields));
-        $sql = 'UPDATE ' . self::$table . ' 
-                   SET ' . $set . ', updated_at = CURRENT_TIMESTAMP
+        $setParts = [];
+        foreach ($allow as $col) { $setParts[] = "$col = :$col"; }
+        $sql = 'UPDATE ' . self::$table . '
+                   SET ' . implode(', ', $setParts) . ', updated_at = CURRENT_TIMESTAMP
                  WHERE id = (SELECT id FROM ' . self::$table . ' ORDER BY id DESC LIMIT 1)';
         $stmt = $db->prepare($sql);
-
-        foreach ($fields as $f) {
-            $stmt->bindValue(":$f", array_key_exists($f, $data) ? $data[$f] : null);
+        foreach ($allow as $col) {
+            $stmt->bindValue(':' . $col, array_key_exists($col, $settings) ? $settings[$col] : null);
         }
         $stmt->execute();
+
+        // --- Optional: add ONE new dynamic card into ug_cards ---
+        if (is_array($addCard)) {
+            self::insertOneCard($db, $addCard);
+        }
     }
 
     /**
-     * Helper: turn flat $settings into structured cards array for rendering.
-     * Returns only active cards, sorted by position.
+     * Frontend renderer: return ACTIVE cards only.
+     * (position, slug, badge, title, muted, summary, pill_t, pills[], lm_url, lm_ext, cur_url, cur_ext, apply)
      */
-    public static function getCards(array $settings): array {
+    public static function getCards(array $settings = []): array
+    {
+        $db = self::db();
+        $sql = 'SELECT id, is_active, position, slug, badge, title, title_muted, summary,
+                       pillbox_title, pills, learn_more_url, learn_more_external,
+                       curriculum_url, curriculum_external, apply_url
+                  FROM ' . self::CARDS_TABLE . '
+                 WHERE is_active = 1
+              ORDER BY position ASC, id ASC';
+        $rows = $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
         $cards = [];
-        for ($i=1; $i<=4; $i++) {
-            if (!empty($settings["card{$i}_active"])) {
-                $pills = [];
-                if (!empty($settings["card{$i}_pills"])) {
-                    $pills = preg_split("/\r\n|\n|\r/", (string)$settings["card{$i}_pills"]);
-                    $pills = array_values(array_filter(array_map('trim', $pills), fn($x)=>$x!==''));
-                }
-                $cards[] = [
-                    'position' => (int)($settings["card{$i}_position"] ?? $i),
-                    'slug'     => $settings["card{$i}_slug"] ?? '',
-                    'badge'    => $settings["card{$i}_badge"] ?? '',
-                    'title'    => $settings["card{$i}_title"] ?? '',
-                    'muted'    => $settings["card{$i}_title_muted"] ?? '',
-                    'summary'  => $settings["card{$i}_summary"] ?? '',
-                    'pill_t'   => $settings["card{$i}_pillbox_title"] ?? '',
-                    'pills'    => $pills,
-                    'lm_url'   => $settings["card{$i}_learn_more_url"] ?? '',
-                    'lm_ext'   => !empty($settings["card{$i}_learn_more_external"]),
-                    'cur_url'  => $settings["card{$i}_curriculum_url"] ?? '',
-                    'cur_ext'  => !empty($settings["card{$i}_curriculum_external"]),
-                    'apply'    => $settings["card{$i}_apply_url"] ?? '',
-                ];
-            }
+        foreach ($rows as $r) {
+            $cards[] = self::rowToCard($r);
         }
-        usort($cards, fn($a,$b) => ($a['position'] <=> $b['position']));
         return $cards;
     }
+
+    /**
+     * Admin: fetch ALL cards (active + inactive), ordered by position then id.
+     */
+    public static function fetchAllCards(): array
+    {
+        $db = self::db();
+        $sql = 'SELECT id, is_active, position, slug, badge, title, title_muted, summary,
+                       pillbox_title, pills, learn_more_url, learn_more_external,
+                       curriculum_url, curriculum_external, apply_url, created_at, updated_at
+                  FROM ' . self::CARDS_TABLE . '
+              ORDER BY position ASC, id ASC';
+        return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Admin: bulk update cards + optional delete list.
+     * $cards shape: [id => [fields...], ...]
+     * $deleteIds: [id, id, ...]
+     */
+    public static function updateCardsBulk(array $cards, array $deleteIds = []): void
+    {
+        $db = self::db();
+        $db->beginTransaction();
+        try {
+
+            // Delete marked cards
+            if (!empty($deleteIds)) {
+                $ids = array_values(array_filter(array_map('intval', $deleteIds), fn($x) => $x > 0));
+                if ($ids) {
+                    $in = implode(',', array_fill(0, count($ids), '?'));
+                    $db->prepare('DELETE FROM ' . self::CARDS_TABLE . ' WHERE id IN (' . $in . ')')->execute($ids);
+                }
+            }
+
+            // Update existing
+            if (!empty($cards)) {
+                $sql = 'UPDATE ' . self::CARDS_TABLE . ' SET
+                            is_active = :is_active,
+                            position = :position,
+                            slug = :slug,
+                            badge = :badge,
+                            title = :title,
+                            title_muted = :title_muted,
+                            summary = :summary,
+                            pillbox_title = :pillbox_title,
+                            pills = :pills,
+                            learn_more_url = :learn_more_url,
+                            learn_more_external = :learn_more_external,
+                            curriculum_url = :curriculum_url,
+                            curriculum_external = :curriculum_external,
+                            apply_url = :apply_url,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = :id';
+                $stmt = $db->prepare($sql);
+
+                foreach ($cards as $id => $in) {
+                    $id = (int)$id;
+                    if ($id <= 0) continue;
+
+                    // Normalize
+                    $is_active = self::bool01($in['is_active'] ?? 0);
+                    $position  = max(1, (int)($in['position'] ?? 1));
+
+                    $badge   = self::nullIfEmpty($in['badge'] ?? null);
+                    $title   = trim((string)($in['title'] ?? ''));
+                    if ($title === '') $title = (string)($badge ?? 'Program');
+
+                    $muted   = self::nullIfEmpty($in['title_muted'] ?? null);
+                    $summary = self::nullIfEmpty($in['summary'] ?? null);
+
+                    $pill_t  = self::nullIfEmpty($in['pillbox_title'] ?? null);
+                    $pills   = self::normalizePills($in['pills'] ?? null);
+
+                    $lm_url  = self::nullIfEmpty($in['learn_more_url'] ?? null);
+                    $lm_ext  = self::bool01($in['learn_more_external'] ?? 0);
+                    $cur_url = self::nullIfEmpty($in['curriculum_url'] ?? null);
+                    $cur_ext = self::bool01($in['curriculum_external'] ?? 0);
+                    $apply   = self::nullIfEmpty($in['apply_url'] ?? null);
+
+                    // Slug
+                    $slugIn = trim((string)($in['slug'] ?? ''));
+                    $slug   = $slugIn !== '' ? self::slugify($slugIn)
+                                             : self::slugify($title ?: ($badge ?? 'program'));
+                    $slug   = self::uniqueSlugExcept($db, $slug, $id);
+
+                    $stmt->execute([
+                        ':id'        => $id,
+                        ':is_active' => $is_active,
+                        ':position'  => $position,
+                        ':slug'      => $slug,
+                        ':badge'     => $badge,
+                        ':title'     => $title,
+                        ':title_muted' => $muted,
+                        ':summary'   => $summary,
+                        ':pillbox_title' => $pill_t,
+                        ':pills'     => $pills,
+                        ':learn_more_url' => $lm_url,
+                        ':learn_more_external' => $lm_ext,
+                        ':curriculum_url' => $cur_url,
+                        ':curriculum_external' => $cur_ext,
+                        ':apply_url' => $apply,
+                    ]);
+                }
+            }
+
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            throw $e;
+        }
+    }
+
+    /* ======================== Private helpers ======================== */
+
+    private static function insertOneCard(PDO $db, array $in): void
+    {
+        // If nothing meaningful provided, skip
+        $title = trim((string)($in['title'] ?? ''));
+        $badge = trim((string)($in['badge'] ?? ''));
+        if ($title === '' && $badge === '') return;
+
+        // Normalize inputs
+        $slugIn   = trim((string)($in['slug'] ?? ''));
+        $slug     = $slugIn !== '' ? self::slugify($slugIn) : self::slugify($title ?: $badge);
+        if ($slug === '') $slug = 'program-' . time();
+        $slug     = self::uniqueSlug(self::db(), $slug);
+
+        $summary  = self::nullIfEmpty($in['summary'] ?? null);
+        $muted    = self::nullIfEmpty($in['title_muted'] ?? null);
+        $pill_t   = self::nullIfEmpty($in['pillbox_title'] ?? null);
+        $pillsRaw = self::normalizePills($in['pills'] ?? null);
+
+        $lm_url   = self::nullIfEmpty($in['learn_more_url'] ?? null);
+        $lm_ext   = self::bool01($in['learn_more_external'] ?? 1);
+        $cur_url  = self::nullIfEmpty($in['curriculum_url'] ?? null);
+        $cur_ext  = self::bool01($in['curriculum_external'] ?? 1);
+        $apply    = self::nullIfEmpty($in['apply_url'] ?? null);
+
+        // Next position
+        $position = (int)$db->query('SELECT IFNULL(MAX(position),0)+1 AS p FROM ' . self::CARDS_TABLE)->fetchColumn();
+        if ($position < 1) $position = 1;
+
+        // Insert
+        $sql = 'INSERT INTO ' . self::CARDS_TABLE . ' 
+                   (is_active, position, slug, badge, title, title_muted, summary,
+                    pillbox_title, pills,
+                    learn_more_url, learn_more_external,
+                    curriculum_url, curriculum_external,
+                    apply_url)
+                VALUES
+                   (1, :position, :slug, :badge, :title, :muted, :summary,
+                    :pill_t, :pills,
+                    :lm_url, :lm_ext,
+                    :cur_url, :cur_ext,
+                    :apply)';
+        $stmt = $db->prepare($sql);
+        $stmt->execute([
+            ':position' => $position,
+            ':slug'     => $slug,
+            ':badge'    => self::nullIfEmpty($badge),
+            ':title'    => $title ?: $badge,
+            ':muted'    => $muted,
+            ':summary'  => $summary,
+            ':pill_t'   => $pill_t,
+            ':pills'    => $pillsRaw,
+            ':lm_url'   => $lm_url,
+            ':lm_ext'   => $lm_ext,
+            ':cur_url'  => $cur_url,
+            ':cur_ext'  => $cur_ext,
+            ':apply'    => $apply,
+        ]);
+    }
+
+    private static function rowToCard(array $r): array
+    {
+        return [
+            'position' => (int)($r['position'] ?? 0),
+            'slug'     => (string)($r['slug'] ?? ''),
+            'badge'    => (string)($r['badge'] ?? ''),
+            'title'    => (string)($r['title'] ?? ''),
+            'muted'    => (string)($r['title_muted'] ?? ''),
+            'summary'  => (string)($r['summary'] ?? ''),
+            'pill_t'   => (string)($r['pillbox_title'] ?? ''),
+            'pills'    => self::pillsToArray($r['pills'] ?? ''),
+            'lm_url'   => (string)($r['learn_more_url'] ?? ''),
+            'lm_ext'   => !empty($r['learn_more_external']),
+            'cur_url'  => (string)($r['curriculum_url'] ?? ''),
+            'cur_ext'  => !empty($r['curriculum_external']),
+            'apply'    => (string)($r['apply_url'] ?? ''),
+        ];
+    }
+
+    private static function slugify(string $v): string
+    {
+        $s = strtolower(trim($v));
+        $s = preg_replace('~[^a-z0-9-]+~', '-', $s);
+        $s = preg_replace('~-+~', '-', $s);
+        $s = trim($s, '-');
+        return mb_substr($s, 0, 80);
+    }
+
+    private static function uniqueSlug(PDO $db, string $base): string
+    {
+        $slug = $base;
+        $i = 2;
+        $check = $db->prepare('SELECT 1 FROM ' . self::CARDS_TABLE . ' WHERE slug = ? LIMIT 1');
+        while (true) {
+            $check->execute([$slug]);
+            if (!$check->fetchColumn()) return $slug;
+            $slug = $base . '-' . $i;
+            $i++;
+            if ($i > 200) return $base . '-' . uniqid();
+        }
+    }
+
+    private static function uniqueSlugExcept(PDO $db, string $base, int $exceptId): string
+    {
+        $slug = $base;
+        $i = 2;
+        $check = $db->prepare('SELECT 1 FROM ' . self::CARDS_TABLE . ' WHERE slug = ? AND id <> ? LIMIT 1');
+        while (true) {
+            $check->execute([$slug, $exceptId]);
+            if (!$check->fetchColumn()) return $slug;
+            $slug = $base . '-' . $i;
+            $i++;
+            if ($i > 200) return $base . '-' . uniqid();
+        }
+    }
+
+    private static function normalizePills(?string $v): ?string
+    {
+        if ($v === null) return null;
+        $t = str_replace(["\r\n", "\r"], "\n", (string)$v);
+        $lines = array_filter(array_map('trim', explode("\n", $t)), fn($x) => $x !== '');
+        return $lines ? implode("\n", $lines) : null;
+    }
+
+    private static function pillsToArray(?string $v): array
+    {
+        if (!$v) return [];
+        $lines = preg_split("/\r\n|\n|\r/", (string)$v);
+        return array_values(array_filter(array_map('trim', $lines), fn($x)=>$x!==''));
+    }
+
+    private static function bool01($v): int { return !empty($v) ? 1 : 0; }
+
+    private static function nullIfEmpty($v)
+    {
+        if (!isset($v)) return null;
+        $s = trim((string)$v);
+        return $s === '' ? null : $s;
+    }
+
+    // ... inside class ProgramsUndergraduateSettings extends Model
+
+/** Admin: fetch raw rows for editing. */
+public static function getAllCards(): array
+{
+    $db = self::db();
+    $sql = 'SELECT id, is_active, position, slug, badge, title, title_muted, summary,
+                   pillbox_title, pills, learn_more_url, learn_more_external,
+                   curriculum_url, curriculum_external, apply_url
+              FROM ' . self::CARDS_TABLE . '
+          ORDER BY position ASC, id ASC';
+    return $db->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
+/** Admin: update one card by id (normalizes fields, keeps slug unique). */
+public static function updateCardById(int $id, array $in): void
+{
+    if ($id <= 0) return;
+    $db = self::db();
+
+    // Load existing (needed for slug fallback)
+    $cur = $db->prepare('SELECT * FROM ' . self::CARDS_TABLE . ' WHERE id = ?');
+    $cur->execute([$id]);
+    $row = $cur->fetch(PDO::FETCH_ASSOC);
+    if (!$row) return;
+
+    // Normalize
+    $pos   = isset($in['position']) ? max(1, (int)$in['position']) : (int)$row['position'];
+    $act   = !empty($in['is_active']) ? 1 : 0;
+    $badge = self::nullIfEmpty($in['badge'] ?? null);
+    $title = trim((string)($in['title'] ?? ''));
+    if ($title === '') $title = (string)($row['title'] ?? ($badge ?? 'Program'));
+
+    $muted = self::nullIfEmpty($in['title_muted'] ?? null);
+
+    // Slug
+    $slugIn = trim((string)($in['slug'] ?? ''));
+    $slug   = $slugIn !== '' ? self::slugify($slugIn) : ($row['slug'] ?: self::slugify($title));
+    // ensure uniqueness excluding current row
+    $check = $db->prepare('SELECT 1 FROM ' . self::CARDS_TABLE . ' WHERE slug = ? AND id <> ? LIMIT 1');
+    $base  = $slug;
+    $i     = 2;
+    while (true) {
+        $check->execute([$slug, $id]);
+        if (!$check->fetchColumn()) break;
+        $slug = $base . '-' . $i++;
+        if ($i > 200) { $slug = $base . '-' . uniqid(); break; }
+    }
+
+    // Text blocks
+    $summary = self::nullIfEmpty($in['summary'] ?? null);
+    $pill_t  = self::nullIfEmpty($in['pillbox_title'] ?? null);
+    $pills   = self::normalizePills($in['pills'] ?? null);
+
+    // Links
+    $lm_url  = self::nullIfEmpty($in['learn_more_url'] ?? null);
+    $lm_ext  = self::bool01($in['learn_more_external'] ?? 0);
+    $cur_url = self::nullIfEmpty($in['curriculum_url'] ?? null);
+    $cur_ext = self::bool01($in['curriculum_external'] ?? 0);
+    $apply   = self::nullIfEmpty($in['apply_url'] ?? null);
+
+    $sql = 'UPDATE ' . self::CARDS_TABLE . '
+               SET is_active = :act,
+                   position = :pos,
+                   slug = :slug,
+                   badge = :badge,
+                   title = :title,
+                   title_muted = :muted,
+                   summary = :summary,
+                   pillbox_title = :pill_t,
+                   pills = :pills,
+                   learn_more_url = :lm_url,
+                   learn_more_external = :lm_ext,
+                   curriculum_url = :cur_url,
+                   curriculum_external = :cur_ext,
+                   apply_url = :apply
+             WHERE id = :id';
+    $stmt = $db->prepare($sql);
+    $stmt->execute([
+        ':act'   => $act,
+        ':pos'   => $pos,
+        ':slug'  => $slug,
+        ':badge' => $badge,
+        ':title' => $title,
+        ':muted' => $muted,
+        ':summary' => $summary,
+        ':pill_t'  => $pill_t,
+        ':pills'   => $pills,
+        ':lm_url'  => $lm_url,
+        ':lm_ext'  => $lm_ext,
+        ':cur_url' => $cur_url,
+        ':cur_ext' => $cur_ext,
+        ':apply'   => $apply,
+        ':id'    => $id,
+    ]);
+}
+
+/** Admin: delete one card by id. */
+public static function deleteCardById(int $id): void
+{
+    if ($id <= 0) return;
+    $db = self::db();
+    $stmt = $db->prepare('DELETE FROM ' . self::CARDS_TABLE . ' WHERE id = ?');
+    $stmt->execute([$id]);
+}
+
 }

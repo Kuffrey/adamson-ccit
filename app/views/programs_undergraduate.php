@@ -1,10 +1,29 @@
-
 <?php
-require_once __DIR__ . '/../models/ProgramsUndergraduateSettings.php';
-function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+// app/views/programs_undergraduate.php
+
+// Try not to redeclare e() if header already defined it
+if (!function_exists('e')) {
+  function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+}
+
+// ✅ Correct, robust path to the model (views -> app -> models)
+require_once dirname(__DIR__) . '/models/ProgramsUndergraduateSettings.php';
+
+// Settings (subhero, CTA, legacy grid)
 $settings = ProgramsUndergraduateSettings::getSettings();
-?>
-<!DOCTYPE html>
+
+// Active dynamic cards from ug_cards
+$cards = [];
+try {
+  $cards = ProgramsUndergraduateSettings::getCards(); // returns only active cards, ordered
+} catch (Throwable $e) {
+  error_log('[programs_undergraduate] getCards failed: ' . $e->getMessage());
+}
+
+// Helpers
+$extAttr = function ($flag) { return !empty($flag) ? ' target="_blank" rel="noopener"' : ''; };
+
+?><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -43,11 +62,70 @@ $settings = ProgramsUndergraduateSettings::getSettings();
     </div>
   </nav>
 
-  <!-- ============ PROGRAMS GRID ============ -->
+  <!-- ============ PROGRAMS GRID (dynamic first, legacy fallback) ============ -->
   <section class="content" aria-labelledby="programs-heading">
     <div class="container">
       <h2 id="programs-heading" class="sr-only">CCIT Undergraduate Programs</h2>
-      <?= $settings['programs_grid'] ?? '' ?>
+
+      <?php if (!empty($cards)): ?>
+        <div class="prog__grid">
+          <?php foreach ($cards as $c): ?>
+            <article class="prog__card" <?= !empty($c['slug']) ? 'id="'.e($c['slug']).'"' : '' ?>>
+              <!-- Header -->
+              <div class="prog__head">
+                <?php if (!empty($c['badge'])): ?>
+                  <span class="badge"><?= e($c['badge']) ?></span>
+                <?php endif; ?>
+                <h3 class="prog__title">
+                  <?= e($c['title']) ?>
+                  <?php if (!empty($c['muted'])): ?>
+                    <span class="prog__muted"><?= e($c['muted']) ?></span>
+                  <?php endif; ?>
+                </h3>
+              </div>
+
+              <!-- Summary -->
+              <?php if (!empty($c['summary'])): ?>
+                <p class="prog__summary"><?= e($c['summary']) ?></p>
+              <?php endif; ?>
+
+              <!-- Pillbox -->
+              <?php if (!empty($c['pill_t']) || !empty($c['pills'])): ?>
+                <div class="pillbox">
+                  <?php if (!empty($c['pill_t'])): ?>
+                    <h4 class="pillbox__title"><?= e($c['pill_t']) ?></h4>
+                  <?php endif; ?>
+                  <?php if (!empty($c['pills'])): ?>
+                    <ul class="pills" role="list">
+                      <?php foreach ($c['pills'] as $pl): ?>
+                        <li><?= e($pl) ?></li>
+                      <?php endforeach; ?>
+                    </ul>
+                  <?php endif; ?>
+                </div>
+              <?php endif; ?>
+
+              <!-- Footer actions -->
+              <div class="prog__footer">
+                <div class="mini-links">
+                  <?php if (!empty($c['lm_url'])): ?>
+                    <a class="ext" href="<?= e($c['lm_url']) ?>"<?= $extAttr($c['lm_ext']) ?>>Learn more</a>
+                  <?php endif; ?>
+                  <?php if (!empty($c['cur_url'])): ?>
+                    <a class="ext" href="<?= e($c['cur_url']) ?>"<?= $extAttr($c['cur_ext']) ?>>Curriculum</a>
+                  <?php endif; ?>
+                </div>
+                <?php if (!empty($c['apply'])): ?>
+                  <a class="btn btn--solid" href="<?= e($c['apply']) ?>">Apply</a>
+                <?php endif; ?>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <!-- Fallback to your legacy HTML grid if no dynamic cards yet -->
+        <?= $settings['programs_grid'] ?? '' ?>
+      <?php endif; ?>
     </div>
   </section>
 

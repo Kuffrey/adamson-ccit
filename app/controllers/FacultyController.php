@@ -19,4 +19,11 @@ class FacultyController {
         include __DIR__ . '/../views/faculty_manage_certifications.php';
         return ob_get_clean();
     }
+
+    // New portfolio method
+    public function portfolio(): string {
+        ob_start();
+        include __DIR__ . '/../views/faculty_portfolio.php';
+        return ob_get_clean();
+    }
 }

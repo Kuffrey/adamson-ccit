@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/Model.php';
+
 final class Research extends Model {
     public function create(array $d): int {
         $sql="INSERT INTO research (title, abstract, owner_user_id, department_id, status, requires_dean_approval, submitted_at, published_at)

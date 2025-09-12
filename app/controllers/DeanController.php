@@ -4,7 +4,7 @@ declare(strict_types=1);
 class DeanController {
     public function dashboard(): string {
         ob_start();
-        include __DIR__ . '/../views/dashboard_dean.php';
+        include __DIR__ . '/../views/dean_dashboard.php';
         return ob_get_clean();
     }
 

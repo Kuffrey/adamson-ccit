@@ -119,6 +119,10 @@ class Router {
             case 'login_admin':
                 include __DIR__ . '/../views/login_admin.php'; break;
 
+            case 'login_dean': 
+                include __DIR__ . '/../views/login_dean.php'; 
+                break;
+
             /* -------------------- STUDENT FEATURES (public site, gated) -------------------- */
             case 'student_profile':
                 Auth::requireRole(['student'], $base . 'login_guest_student');
@@ -150,6 +154,13 @@ class Router {
                 require_once __DIR__ . '/FacultyController.php';
                 $fc = new FacultyController();
                 echo $fc->manageCertifications(); break;
+
+            case 'faculty_portfolio':
+                Auth::requireRole(['faculty', 'admin', 'dean'], $base . 'login_faculty');
+                require_once __DIR__ . '/FacultyController.php';
+                $fc = new FacultyController();
+                echo $fc->portfolio();
+                break;
 
             // -------------------- ADMIN + DEAN CMS --------------------
             case 'admin_manage_homepage':
@@ -280,7 +291,7 @@ class Router {
 
 
             /* -------------------- DEAN -------------------- */
-            case 'dashboard_dean':
+            case 'dean_dashboard':
                 Auth::requireRole(['dean'], $base . 'login_faculty');
                 require_once __DIR__ . '/DeanController.php';
                 $dc = new DeanController();

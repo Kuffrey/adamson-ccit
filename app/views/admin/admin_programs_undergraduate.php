@@ -4,7 +4,9 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 if (empty($_SESSION['user']) || !in_array(($_SESSION['user']['role'] ?? ''), ['admin','dean'], true)) {
   header('Location: ?page=login_admin'); exit;
 }
-require_once __DIR__ . '/../../models/ProgramsUndergraduateSettings.php';
+
+// ✅ robust include
+require_once dirname(__DIR__, 2) . '/models/ProgramsUndergraduateSettings.php';
 
 function esc($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 $user     = $_SESSION['user'] ?? [];
@@ -13,17 +15,40 @@ $username = $user['username'] ?? 'Admin';
 $notice = '';
 $ugs = ProgramsUndergraduateSettings::getSettings();
 
-// Save
+/**
+ * Handle actions:
+ * - settings + optional add_card (insert one new card)
+ * - update existing card (one row)
+ * - delete existing card (one row)
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   try {
-    // Pass through everything; model should whitelist needed columns
-    ProgramsUndergraduateSettings::updateSettings($_POST['ugs'] ?? []);
+    $action = $_POST['action'] ?? 'save_settings';
+
+    if ($action === 'update_card') {
+      $id   = (int)($_POST['card_id'] ?? 0);
+      $data = $_POST['card'] ?? [];
+      ProgramsUndergraduateSettings::updateCardById($id, $data);
+      $notice = 'Card updated.';
+    } elseif ($action === 'delete_card') {
+      $id = (int)($_POST['card_id'] ?? 0);
+      ProgramsUndergraduateSettings::deleteCardById($id);
+      $notice = 'Card deleted.';
+    } else {
+      // default: save settings + maybe add a new card
+      ProgramsUndergraduateSettings::updateSettings($_POST['ugs'] ?? [], $_POST['add_card'] ?? null);
+      $notice = 'Undergraduate settings saved.';
+    }
+
+    // refresh snapshot after any action
     $ugs = ProgramsUndergraduateSettings::getSettings();
-    $notice = 'Undergraduate settings saved.';
   } catch (Throwable $e) {
     $notice = 'Error: ' . $e->getMessage();
   }
 }
+
+// 🔽 Fetch dynamic cards (raw rows for editing)
+$cards = ProgramsUndergraduateSettings::getAllCards();
 ?>
 <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
 <link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
@@ -43,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <section class="admin-cms-section">
       <h1 class="admin-cms-section__title">Undergraduate Page Settings</h1>
-      <p class="intro">Manage the sub-hero and the 1–4 program cards. HTML grid remains as a legacy fallback.</p>
+      <p class="intro">Manage the sub-hero and <strong>dynamic program cards</strong>. Legacy HTML grid remains as a fallback.</p>
 
       <?php if ($notice): ?>
         <p class="notice <?= str_starts_with($notice, 'Error:') ? 'error' : 'success' ?>"><?= esc($notice) ?></p>
@@ -57,11 +82,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <tbody>
             <tr><td>Subhero Lead</td><td><?= esc($ugs['subhero_lead'] ?? '—') ?></td></tr>
             <tr><td>CTA</td><td><?= esc(($ugs['cta_title'] ?? '').' / '.($ugs['cta_action_label'] ?? '')) ?></td></tr>
+            <tr><td>Dynamic Cards</td><td><?= count($cards) ?> total</td></tr>
           </tbody>
         </table>
       </div>
 
+      <!-- === Settings + Add-one-card === -->
       <form id="ugForm" method="post" class="admin-cms-form" autocomplete="off">
+        <input type="hidden" name="action" value="save_settings">
+
         <div class="cms-card">
           <fieldset id="sec-hero">
             <legend class="cms-card-legend">Subhero</legend>
@@ -78,178 +107,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </fieldset>
         </div>
 
-              <!-- Add Program Card (quick add into the first available slot) -->
-      <div class="cms-card">
-        <fieldset id="sec-add-card">
-          <legend class="cms-card-legend">Add Program Card</legend>
-          <p class="intro">Fill this and click <em>Save Changes</em>. I’ll place it in the first available slot (1–4).</p>
-
-          <div class="form-row">
-            <div class="field">
-              <label>Badge (short)</label>
-              <input type="text" name="add_card[badge]" placeholder="e.g., BSCS">
-            </div>
-            <div class="field">
-              <label>Title</label>
-              <input type="text" name="add_card[title]" placeholder="B.S. in Computer Science">
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="field">
-              <label>Muted (optional)</label>
-              <input type="text" name="add_card[title_muted]" placeholder="(Dual)">
-            </div>
-            <div class="field">
-              <label>Slug (optional)</label>
-              <input type="text" name="add_card[slug]" placeholder="bscs">
-              <span class="help">If empty, I’ll auto-generate from the Title.</span>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <div class="field">
-              <label>Summary</label>
-              <textarea name="add_card[summary]" rows="2" placeholder="Short blurb for the card."></textarea>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="field">
-              <label>Pillbox Title</label>
-              <input type="text" name="add_card[pillbox_title]" placeholder="CCIT Tracks">
-            </div>
-            <div class="field">
-              <label>Pills (one per line)</label>
-              <textarea name="add_card[pills]" rows="3" placeholder="Track 1&#10;Track 2&#10;Track 3"></textarea>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="field">
-              <label>Learn More URL</label>
-              <input type="text" name="add_card[learn_more_url]" placeholder="https://www.adamson.edu.ph/...">
-              <label class="mt-12" style="display:flex; align-items:center; gap:8px; font-weight:400;">
-                <input type="checkbox" name="add_card[learn_more_external]" value="1" checked> Open in new tab
-              </label>
-            </div>
-            <div class="field">
-              <label>Curriculum URL</label>
-              <input type="text" name="add_card[curriculum_url]" placeholder="https://www.adamson.edu.ph/...">
-              <label class="mt-12" style="display:flex; align-items:center; gap:8px; font-weight:400;">
-                <input type="checkbox" name="add_card[curriculum_external]" value="1" checked> Open in new tab
-              </label>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="field">
-              <label>Apply URL</label>
-              <input type="text" name="add_card[apply_url]" placeholder="/adamson-ccit/public/index.php?page=admission_freshman">
-            </div>
-          </div>
-        </fieldset>
-      </div>
-
-
         <div class="cms-card">
-          <fieldset id="sec-cards">
-            <legend class="cms-card-legend">Program Cards</legend>
-            <p class="intro">Each “pills” field accepts one item per line.</p>
+          <fieldset id="sec-add-card">
+            <legend class="cms-card-legend">Add Program Card</legend>
+            <p class="intro">Fill this and click <em>Save Changes</em>. I’ll add it as a new card (positioned last).</p>
 
-            <?php for ($i=1; $i<=4; $i++): $p="card{$i}_"; ?>
-              <div class="form-section" style="border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px;">
-                <div class="form-row">
-                  <div class="field">
-                    <label>Active</label>
-                    <input type="hidden" name="ugs[<?= $p ?>active]" value="0">
-                    <label style="display:flex;align-items:center;gap:8px;font-weight:400;">
-                      <input type="checkbox" name="ugs[<?= $p ?>active]" value="1" <?= !empty($ugs[$p.'active'])?'checked':''; ?>> Show
-                    </label>
-                  </div>
-                  <div class="field">
-                    <label>Position</label>
-                    <input type="number" name="ugs[<?= $p ?>position]" value="<?= esc($ugs[$p.'position'] ?? $i) ?>">
-                  </div>
-                  <div class="field">
-                    <label>Slug / ID</label>
-                    <input type="text" name="ugs[<?= $p ?>slug]" value="<?= esc($ugs[$p.'slug'] ?? '') ?>" placeholder="<?= ['bscs','dual-degree','bsis','bsit'][$i-1] ?? '' ?>">
-                  </div>
-                </div>
-
-                <div class="form-row">
-                  <div class="field">
-                    <label>Badge</label>
-                    <input type="text" name="ugs[<?= $p ?>badge]" value="<?= esc($ugs[$p.'badge'] ?? '') ?>">
-                  </div>
-                  <div class="field">
-                    <label>Title</label>
-                    <input type="text" name="ugs[<?= $p ?>title]" value="<?= esc($ugs[$p.'title'] ?? '') ?>">
-                  </div>
-                  <div class="field">
-                    <label>Title (Muted Suffix)</label>
-                    <input type="text" name="ugs[<?= $p ?>title_muted]" value="<?= esc($ugs[$p.'title_muted'] ?? '') ?>">
-                  </div>
-                </div>
-
-                <div class="form-section">
-                  <div class="field">
-                    <label>Summary</label>
-                    <textarea rows="2" name="ugs[<?= $p ?>summary]"><?= esc($ugs[$p.'summary'] ?? '') ?></textarea>
-                  </div>
-                </div>
-
-                <div class="form-row">
-                  <div class="field">
-                    <label>Pillbox Title</label>
-                    <input type="text" name="ugs[<?= $p ?>pillbox_title]" value="<?= esc($ugs[$p.'pillbox_title'] ?? '') ?>">
-                  </div>
-                  <div class="field">
-                    <label>Pills (one per line)</label>
-                    <textarea rows="3" name="ugs[<?= $p ?>pills]"><?= esc($ugs[$p.'pills'] ?? '') ?></textarea>
-                  </div>
-                </div>
-
-                <div class="form-row">
-                  <div class="field">
-                    <label>Learn More URL</label>
-                    <input type="text" name="ugs[<?= $p ?>learn_more_url]" value="<?= esc($ugs[$p.'learn_more_url'] ?? '') ?>">
-                  </div>
-                  <div class="field">
-                    <label>Learn More is External</label>
-                    <input type="hidden" name="ugs[<?= $p ?>learn_more_external]" value="0">
-                    <label style="display:flex;align-items:center;gap:8px;font-weight:400;">
-                      <input type="checkbox" name="ugs[<?= $p ?>learn_more_external]" value="1" <?= !empty($ugs[$p.'learn_more_external'])?'checked':''; ?>> Open in new tab
-                    </label>
-                  </div>
-                </div>
-
-                <div class="form-row">
-                  <div class="field">
-                    <label>Curriculum URL</label>
-                    <input type="text" name="ugs[<?= $p ?>curriculum_url]" value="<?= esc($ugs[$p.'curriculum_url'] ?? '') ?>">
-                  </div>
-                  <div class="field">
-                    <label>Curriculum is External</label>
-                    <input type="hidden" name="ugs[<?= $p ?>curriculum_external]" value="0">
-                    <label style="display:flex;align-items:center;gap:8px;font-weight:400;">
-                      <input type="checkbox" name="ugs[<?= $p ?>curriculum_external]" value="1" <?= !empty($ugs[$p.'curriculum_external'])?'checked':''; ?>> Open in new tab
-                    </label>
-                  </div>
-                </div>
-
-                <div class="form-row">
-                  <div class="field">
-                    <label>Apply URL</label>
-                    <input type="text" name="ugs[<?= $p ?>apply_url]" value="<?= esc($ugs[$p.'apply_url'] ?? '/adamson-ccit/public/index.php?page=admission_freshman') ?>">
-                  </div>
-                </div>
+            <div class="form-row">
+              <div class="field">
+                <label>Badge (short)</label>
+                <input type="text" name="add_card[badge]" placeholder="e.g., BSCS">
               </div>
-            <?php endfor; ?>
+              <div class="field">
+                <label>Title</label>
+                <input type="text" name="add_card[title]" placeholder="B.S. in Computer Science">
+              </div>
+            </div>
 
+            <div class="form-row">
+              <div class="field">
+                <label>Muted (optional)</label>
+                <input type="text" name="add_card[title_muted]" placeholder="(Software &amp; Data)">
+              </div>
+              <div class="field">
+                <label>Slug (optional)</label>
+                <input type="text" name="add_card[slug]" placeholder="bscs">
+                <span class="help">If empty, I’ll auto-generate from the Title.</span>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="field">
+                <label>Summary</label>
+                <textarea name="add_card[summary]" rows="2" placeholder="Short blurb for the card."></textarea>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label>Pillbox Title</label>
+                <input type="text" name="add_card[pillbox_title]" placeholder="CCIT Tracks">
+              </div>
+              <div class="field">
+                <label>Pills (one per line)</label>
+                <textarea name="add_card[pills]" rows="3" placeholder="Track 1&#10;Track 2&#10;Track 3"></textarea>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label>Learn More URL</label>
+                <input type="text" name="add_card[learn_more_url]" placeholder="https://www.adamson.edu.ph/...">
+                <label class="mt-12" style="display:flex; align-items:center; gap:8px; font-weight:400;">
+                  <input type="checkbox" name="add_card[learn_more_external]" value="1" checked> Open in new tab
+                </label>
+              </div>
+              <div class="field">
+                <label>Curriculum URL</label>
+                <input type="text" name="add_card[curriculum_url]" placeholder="https://www.adamson.edu.ph/...">
+                <label class="mt-12" style="display:flex; align-items:center; gap:8px; font-weight:400;">
+                  <input type="checkbox" name="add_card[curriculum_external]" value="1" checked> Open in new tab
+                </label>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label>Apply URL</label>
+                <input type="text" name="add_card[apply_url]" placeholder="/adamson-ccit/public/index.php?page=admission_freshman">
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Legacy HTML fallback -->
+        <div class="cms-card">
+          <fieldset id="sec-legacy">
+            <legend class="cms-card-legend">Legacy Programs Grid (HTML) — Optional</legend>
             <div class="form-section" style="border:1px dashed var(--line);border-radius:12px;padding:12px;">
               <div class="field">
-                <label>Legacy Programs Grid (HTML) — Optional</label>
+                <label>HTML (used only if no dynamic cards)</label>
                 <textarea rows="6" name="ugs[programs_grid]"><?= esc($ugs['programs_grid'] ?? '') ?></textarea>
               </div>
             </div>
@@ -269,16 +205,123 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
           </fieldset>
         </div>
-      </form>
 
-      <div class="savebar">
-        <div class="savebar__inner">
-          <span class="savebar__status" id="saveStatus">All changes saved</span>
-          <div class="savebar__actions">
-            <button type="submit" form="ugForm" class="btn btn--primary">Save Changes</button>
+        <div class="savebar">
+          <div class="savebar__inner">
+            <span class="savebar__status" id="saveStatus">All changes saved</span>
+            <div class="savebar__actions">
+              <button type="submit" class="btn btn--primary">Save Changes</button>
+            </div>
           </div>
         </div>
+      </form>
+
+      <!-- === Dynamic Cards (editable table) === -->
+      <div class="cms-card">
+        <fieldset id="sec-cards">
+          <legend class="cms-card-legend">Program Cards (Dynamic)</legend>
+
+          <?php if ($cards): ?>
+            <table class="admin-data-table">
+              <thead>
+                <tr>
+                  <th style="width:60px;">ID</th>
+                  <th style="width:72px;">Pos</th>
+                  <th style="width:80px;">Active</th>
+                  <th>Badge</th>
+                  <th>Title</th>
+                  <th>Muted</th>
+                  <th>Slug</th>
+                  <th>Links</th>
+                  <th style="width:180px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($cards as $c): ?>
+                  <tr>
+                    <form method="post" autocomplete="off">
+                      <input type="hidden" name="action" value="update_card">
+                      <input type="hidden" name="card_id" value="<?= (int)$c['id'] ?>">
+
+                      <td><?= (int)$c['id'] ?></td>
+
+                      <td><input type="number" name="card[position]" value="<?= esc($c['position']) ?>" style="width:72px"></td>
+
+                      <td>
+                        <input type="hidden" name="card[is_active]" value="0">
+                        <label style="display:flex;align-items:center;gap:6px;">
+                          <input type="checkbox" name="card[is_active]" value="1" <?= !empty($c['is_active']) ? 'checked' : '' ?>> Show
+                        </label>
+                      </td>
+
+                      <td><input type="text" name="card[badge]" value="<?= esc($c['badge']) ?>" placeholder="BSCS" style="min-width:90px"></td>
+                      <td><input type="text" name="card[title]" value="<?= esc($c['title']) ?>" placeholder="Full title"></td>
+                      <td><input type="text" name="card[title_muted]" value="<?= esc($c['title_muted']) ?>" placeholder="(optional)"></td>
+                      <td><input type="text" name="card[slug]" value="<?= esc($c['slug']) ?>" placeholder="slug-id"></td>
+
+                      <td style="font-size:12px; line-height:1.2;">
+                        <div>Learn: <input type="text" name="card[learn_more_url]" value="<?= esc($c['learn_more_url']) ?>" style="width:260px"></div>
+                        <label style="display:inline-flex;align-items:center;gap:6px;margin-right:8px;">
+                          <input type="hidden" name="card[learn_more_external]" value="0">
+                          <input type="checkbox" name="card[learn_more_external]" value="1" <?= !empty($c['learn_more_external'])?'checked':''; ?>> ext
+                        </label>
+                        <div>Curr: <input type="text" name="card[curriculum_url]" value="<?= esc($c['curriculum_url']) ?>" style="width:260px"></div>
+                        <label style="display:inline-flex;align-items:center;gap:6px;">
+                          <input type="hidden" name="card[curriculum_external]" value="0">
+                          <input type="checkbox" name="card[curriculum_external]" value="1" <?= !empty($c['curriculum_external'])?'checked':''; ?>> ext
+                        </label>
+                        <div>Apply: <input type="text" name="card[apply_url]" value="<?= esc($c['apply_url']) ?>" style="width:260px"></div>
+                      </td>
+
+                      <td>
+                        <button type="submit" class="btn">Update</button>
+                        <button
+                          type="submit"
+                          class="btn danger"
+                          name="action"
+                          value="delete_card"
+                          onclick="return confirm('Delete this card?');"
+                        >Delete</button>
+                      </td>
+                    </form>
+                  </tr>
+
+                  <!-- Optional expandable details (summary/pills) -->
+                  <tr>
+                    <td></td>
+                    <td colspan="8">
+                      <form method="post" autocomplete="off" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <input type="hidden" name="action" value="update_card">
+                        <input type="hidden" name="card_id" value="<?= (int)$c['id'] ?>">
+
+                        <div class="field">
+                          <label>Summary</label>
+                          <textarea name="card[summary]" rows="2"><?= esc($c['summary']) ?></textarea>
+                        </div>
+
+                        <div class="field">
+                          <label>Pillbox Title</label>
+                          <input type="text" name="card[pillbox_title]" value="<?= esc($c['pillbox_title']) ?>">
+                          <label style="margin-top:8px;">Pills (one per line)</label>
+                          <textarea name="card[pills]" rows="2"><?= esc($c['pills']) ?></textarea>
+                        </div>
+
+                        <div>
+                          <button type="submit" class="btn">Update Details</button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+            <p class="help">Reorder by changing “Pos”. Toggle visibility with “Active”. Use the second row to edit summary/pills.</p>
+          <?php else: ?>
+            <p class="intro">No cards yet. Use “Add Program Card” above and click <em>Save Changes</em>.</p>
+          <?php endif; ?>
+        </fieldset>
       </div>
+
     </section>
   </main>
 </div>

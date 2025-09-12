@@ -2,8 +2,6 @@
 require_once __DIR__ . '/../../app/lib/Auth.php';
 $user = Auth::user();
 
-
-
 /* NEW: get PDO via your Model and fetch companies + this student's certs */
 require_once __DIR__ . '/../../app/models/Model.php';
 class _DBX extends Model { public function d(){ return parent::db(); } }
