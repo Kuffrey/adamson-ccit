@@ -111,7 +111,15 @@ class Router {
 
             /* -------------------- AUTH VIEWS -------------------- */
             case 'login_guest_student':
-                include __DIR__ . '/../views/login_guest_student.php'; break;
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    require_once __DIR__ . '/StudentLoginController.php';
+                    $error = StudentLoginController::handle();
+                    // If login fails, show the view with error
+                    include __DIR__ . '/../views/login_guest_student.php';
+                } else {
+                    include __DIR__ . '/../views/login_guest_student.php';
+                }
+                break;
 
             case 'login_faculty':
                 include __DIR__ . '/../views/login_faculty.php'; break;
