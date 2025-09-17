@@ -13,9 +13,9 @@ final class User extends Model {
         return $r ?: null;
     }
 
-    public function findByUsername(string $u): ?array {
-        $st = parent::db()->prepare("SELECT * FROM users WHERE username=:u LIMIT 1");
-        $st->execute([':u'=>$u]);
+    public function findByUsername(string $email): ?array {
+        $st = parent::db()->prepare("SELECT * FROM users WHERE username=:email OR email=:email LIMIT 1");
+        $st->execute([':email'=>$email]);
         $r = $st->fetch();
         return $r ?: null;
     }

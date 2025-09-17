@@ -7,7 +7,12 @@ require_once __DIR__ . '/../models/News.php';
 require_once __DIR__ . '/../models/NewsPageSettings.php';
 
 // ---------- Helpers ----------
-function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+if (!function_exists('e')) {
+    function e(string $s): string {
+        return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+    }
+}
+
 function url_with(array $params): string {
     $base = '/adamson-ccit/public/index.php';
     $q = array_merge(['page' => 'news'], $params);

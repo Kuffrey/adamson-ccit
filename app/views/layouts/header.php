@@ -71,6 +71,9 @@ if (!$menus) {
 
 <!-- Small scoped styles for the user icon menu -->
 <style>
+    .site-header{
+    border-bottom: 1px solid var(--edgec, #e6e9ef);
+  }
   .user-menu{ position:relative; }
   .user-menu summary{
     list-style:none; cursor:pointer; border:1px solid #d1d5db; background:#fff; color:#0b234c;

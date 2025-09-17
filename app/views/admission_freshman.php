@@ -1,7 +1,9 @@
 
 <?php
 require_once __DIR__ . '/../models/AdmissionFreshmanSettings.php';
-function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+if (!function_exists('e')) {
+  function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+}
 $settings = AdmissionFreshmanSettings::getSettings();
 ?>
 <!DOCTYPE html>

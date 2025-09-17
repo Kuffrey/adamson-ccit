@@ -19,7 +19,7 @@ function postLogin($data) {
     // Tell cURL this is a POST request
     curl_setopt($ch, CURLOPT_POST, true);
 
-    // Provide the POST fields (e.g., ['username' => '...', 'password' => '...'])
+    // Provide the POST fields (e.g., ['email' => '...', 'password' => '...'])
     curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 
     // Follow HTTP redirects (302/303/etc.) so we land on the final page after login
@@ -49,26 +49,55 @@ test('student can login with correct credentials', function () {
         'username' => 'student',
         'password' => 'student123',
     ]);
-
-    // Assert final HTTP status is OK
     expect($info['http_code'])->toBe(200);
-
-    // Assert we ended up at the main index (typical post-login redirect)
     expect($info['url'])->toContain('/adamson-ccit/public/index.php');
 });
 
-/**
- * ❌ Negative path: login should fail with an incorrect password.
- * Expectation:
- *   - The response body should show the error message "Invalid credentials".
- *     (Many apps return 200 with an inline error on the same page.)
- */
-test('student login fails with wrong credentials', function () {
+test('student login fails with non-existing account', function () {
+    [$response, $info] = postLogin([
+        'username' => 'sampletest',
+        'password' => 'sampletestPass002',
+    ]);
+    expect($response)->toContain('Incorrect username or password.');
+});
+
+test('student login fails with empty credentials', function () {
+    [$response, $info] = postLogin([
+        'username' => '',
+        'password' => '',
+    ]);
+    expect($response)->toContain('Please enter your username and password.');
+});
+
+test('student login fails with empty username', function () {
+    [$response, $info] = postLogin([
+        'username' => '',
+        'password' => 'student123',
+    ]);
+    expect($response)->toContain('Please enter your username.');
+});
+
+test('student login fails with empty password', function () {
     [$response, $info] = postLogin([
         'username' => 'student',
-        'password' => 'wrongpassword',
+        'password' => '',
     ]);
+    expect($response)->toContain('Please enter your password.');
+});
 
-    // Assert the page displays a clear error message
-    expect($response)->toContain('Invalid credentials');
+test('student login fails with whitespace username', function () {
+    [$response, $info] = postLogin([
+        'username' => '   ',
+        'password' => 'student123',
+    ]);
+    expect($response)->toContain('Please enter your username.');
+});
+
+
+test('student login fails with both whitespace', function () {
+    [$response, $info] = postLogin([
+        'username' => '   ',
+        'password' => '   ',
+    ]);
+    expect($response)->toContain('Please enter your username and password.');
 });

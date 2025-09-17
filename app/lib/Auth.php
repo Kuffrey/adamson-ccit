@@ -42,6 +42,8 @@ final class Auth
             $p = session_get_cookie_params();
             setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
         }
+        // Don't remove the remember me cookies - they should persist after logout
+        // if they exist, so credentials are remembered on next visit
         session_destroy();
     }
 
