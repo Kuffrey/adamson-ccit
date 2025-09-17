@@ -17,23 +17,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<main>
-  <section class="content" style="padding:20px 0">
-    <div class="container">
-      <h2>Login — Admin CMS</h2>
-      <?php if ($error): ?>
-        <p style="color:red"><?= htmlspecialchars($error) ?></p>
-      <?php endif; ?>
-      <form method="post" action="/adamson-ccit/public/index.php?page=login_admin" autocomplete="on">
-        <label>Username:
-          <input type="text" name="username" required>
-        </label><br>
-        <label>Password:
-          <input type="password" name="password" required>
-        </label><br>
-        <button type="submit">Login</button>
-      </form>
-      <p style="color:#6b7280;margin-top:8px">Administrators only.</p>
+<main class="auth page-login">
+  <section class="content">
+    <div class="container auth__wrap">
+      <div class="auth__card" role="form" aria-labelledby="auth-title">
+        <header class="auth__head">
+          <h2 id="auth-title" class="auth__title">Login — Admin CMS</h2>
+          <p class="auth__sub">Administrators only</p>
+        </header>
+
+        <?php if (!empty($error)): ?>
+          <div class="alert alert--danger" role="alert" aria-live="polite">
+            <span class="alert__icon" aria-hidden="true"></span>
+            <span class="alert__text"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></span>
+          </div>
+        <?php endif; ?>
+
+        <form class="auth__form" method="post" action="/adamson-ccit/public/index.php?page=login_admin" autocomplete="on">
+          <div class="field">
+            <label for="username" class="field__label">Username</label>
+            <input id="username" class="input" type="text" name="username" required autocomplete="username" />
+          </div>
+
+          <div class="field">
+            <label for="password" class="field__label">Password</label>
+            <input id="password" class="input" type="password" name="password" required autocomplete="current-password" />
+          </div>
+
+          <button type="submit" class="btn btn--solid auth__submit">Login</button>
+        </form>
+
+        <p class="auth__note">Need access? Contact the CCIT web admin.</p>
+      </div>
     </div>
   </section>
 </main>

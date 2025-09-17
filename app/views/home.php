@@ -15,7 +15,7 @@
   <section class="hero">
     <div class="hero__media" aria-hidden="true">
       <!-- original asset, only scaled visually (no compression) -->
-      <img src="/adamson-ccit/public/assets/images/career-bg.jpg" alt="Adamson University campus" />
+      <img src="<?= htmlspecialchars($hero['bg'] ?: '/adamson-ccit/public/assets/images/career-bg.jpg', ENT_QUOTES, 'UTF-8') ?>" alt="Adamson University campus" />
     </div>
     <!-- solid scrim for readability -->
     <div class="hero__scrim" aria-hidden="true"></div>
@@ -93,7 +93,7 @@
       <div class="spotlight__copy">
         <span class="eyebrow"><?= htmlspecialchars($spotlight['eyebrow'] ?? '', ENT_QUOTES, 'UTF-8') ?></span>
         <h3><?= htmlspecialchars($spotlight['title'] ?? '', ENT_QUOTES, 'UTF-8') ?></h3>
-        <p><?= htmlspecialchars($spotlight['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+        <p><?= htmlspecialchars(($spotlight['description'] ?? $spotlight['blurb'] ?? $spotlight['spotlight_blurb'] ?? ''), ENT_QUOTES, 'UTF-8') ?></p>
         <div class="spotlight__actions">
           <?php foreach (($spotlight['actions'] ?? []) as $action): ?>
             <a href="<?= htmlspecialchars($action['url'], ENT_QUOTES, 'UTF-8') ?>" class="btn <?= htmlspecialchars($action['class'], ENT_QUOTES, 'UTF-8') ?>">
