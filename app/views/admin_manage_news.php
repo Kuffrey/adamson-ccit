@@ -1,214 +1,514 @@
 <?php
-// admin_manage_news.php — CMS for managing News
-require_once __DIR__ . '/../models/News.php';
-
-if (session_status() === PHP_SESSION_NONE) session_start();
-if (empty($_SESSION['user']) || ($_SESSION['user']['role'] ?? '') !== 'admin') {
-    header('Location: ?page=admin_login'); exit;
+// admin_manage_news.php — CMS for managing News with integrated settings
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+if (empty($_SESSION['user']) || !in_array(($_SESSION['user']['role'] ?? ''), ['admin','dean'], true)) {
+  header('Location: ?page=login_admin'); exit;
 }
 
-$username = $_SESSION['user']['username'] ?? 'Admin';
-$status   = $_GET['status'] ?? 'all';
-$news     = News::list($status);
-$counts   = News::statusCounts();
+require_once __DIR__ . '/../models/News.php';
+require_once __DIR__ . '/../models/NewsPageSettings.php';
 
-$tabs = [
-    'all'       => 'All ('.$counts['all'].')',
-    'draft'     => 'Drafts ('.$counts['draft'].')',
-    'published' => 'Published ('.$counts['published'].')',
-    'archived'  => 'Archived ('.$counts['archived'].')',
-];
-
-function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
-
-// Handle Add News form submission
+function esc($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+$user = $_SESSION['user'] ?? [];
+$username = $user['username'] ?? 'Admin';
 $notice = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['add_news'])) {
-    $title    = trim($_POST['title'] ?? '');
-    $content  = trim($_POST['content'] ?? '');
-    $category = $_POST['category'] ?? 'news';
-    $nstatus  = $_POST['status'] ?? 'draft';
-    $imageUrl = null;
 
-    if (!empty($_FILES['image']['tmp_name'])) {
-        $imgTmp  = $_FILES['image']['tmp_name'];
-        $imgName = basename($_FILES['image']['name']);
-        $destDir = __DIR__ . '/../../public/uploads/news/';
-        if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
-        $dest    = $destDir . $imgName;
-        if (move_uploaded_file($imgTmp, $dest)) {
-            $imageUrl = '/adamson-ccit/public/uploads/news/' . $imgName;
-        }
+// Get current data
+try {
+  $status = $_GET['status'] ?? 'all';
+  $news = News::list($status);
+  $counts = News::statusCounts();
+  $settings = class_exists('NewsPageSettings') ? NewsPageSettings::getSettings() : [];
+} catch (Exception $e) {
+  $notice = 'Error loading data: ' . $e->getMessage();
+  $news = [];
+  $counts = ['all' => 0, 'draft' => 0, 'published' => 0, 'archived' => 0];
+  $settings = [];
+}
+
+/* ---------- Handle POST (CRUD) ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  try {
+    // Update news settings
+    if (!empty($_POST['settings']) && class_exists('NewsPageSettings')) {
+      NewsPageSettings::saveSettings($_POST['settings']);
+      $notice = 'Settings updated successfully!';
     }
 
-    $nid = News::create($title, $content, $nstatus, $category, $imageUrl);
-    $notice = $nid ? 'News added successfully.' : 'Failed to add news.';
-    $news = News::list($status); // reload after add
+    // Add new news
+    if (!empty($_POST['add_news']) && !empty($_POST['title'])) {
+      $title = trim($_POST['title']);
+      $content = trim($_POST['content'] ?? '');
+      $category = $_POST['category'] ?? 'news';
+      $nstatus = $_POST['status'] ?? 'draft';
+      $imageUrl = null;
+
+      // Handle image upload
+      if (!empty($_FILES['image']['tmp_name'])) {
+        $imgTmp = $_FILES['image']['tmp_name'];
+        $imgName = time() . '-' . basename($_FILES['image']['name']);
+        $destDir = __DIR__ . '/../../public/uploads/news/';
+        if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
+        $dest = $destDir . $imgName;
+        if (move_uploaded_file($imgTmp, $dest)) {
+          $imageUrl = '/adamson-ccit/public/uploads/news/' . $imgName;
+        }
+      }
+
+      $nid = News::create($title, $content, $nstatus, $category, $imageUrl);
+      $notice = $nid ? 'News added successfully!' : 'Failed to add news.';
+    }
+
+    // Update news status
+    if (!empty($_POST['update_status']) && !empty($_POST['id'])) {
+      News::updateStatus((int)$_POST['id'], $_POST['update_status']);
+      $notice = 'Status updated successfully!';
+    }
+
+    // Delete news
+    if (!empty($_POST['delete_news'])) {
+      News::delete((int)$_POST['delete_news']);
+      $notice = 'News deleted successfully!';
+    }
+
+    // Edit news
+    if (!empty($_POST['edit_news']) && !empty($_POST['id'])) {
+      $content = trim($_POST['content'] ?? '');
+      $data = [
+        'title' => trim($_POST['title'] ?? ''),
+        'category' => $_POST['category'] ?? 'news',
+        'status' => $_POST['edit_status'] ?? 'draft'
+      ];
+      
+      // Add content to the correct field (body or content depending on table structure)
+      $data[News::getBodyColumnName()] = $content;
+      
+      News::update((int)$_POST['id'], $data);
+      $notice = 'News updated successfully!';
+    }
+
+    // Redirect to prevent double submission
+    if ($notice) {
+      header('Location: ?page=admin_manage_news&status=' . urlencode($status) . '&success=' . urlencode($notice));
+      exit;
+    }
+  } catch (Exception $e) {
+    $notice = 'Error: ' . $e->getMessage();
+  }
+}
+
+// Handle success message from redirect
+if (!empty($_GET['success'])) {
+  $notice = $_GET['success'];
+}
+
+// Refresh data after operations
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $news = News::list($status);
+  $counts = News::statusCounts();
+  $settings = class_exists('NewsPageSettings') ? NewsPageSettings::getSettings() : [];
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Manage News | CCIT CMS</title>
-  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
-  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
-</head>
-<body>
+<link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
+<link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-faculty.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
 <div class="admin-cms-layout">
   <?php include __DIR__ . '/admin/_admin_sidebar.php'; ?>
 
   <main class="admin-main">
-    <!-- Topbar -->
     <header class="admin-topbar">
-      <span class="admin-topbar__title">Manage News</span>
+      <span class="admin-topbar__title">News → Management</span>
       <div class="admin-topbar__spacer"></div>
       <div class="admin-topbar__user">
-        <span class="admin-topbar__avatar"><?= e(strtoupper($username[0] ?? 'A')) ?></span>
-        <span class="admin-topbar__name"><?= e($username) ?></span>
+        <span class="admin-topbar__avatar"><?= esc(strtoupper($username[0] ?? 'A')) ?></span>
+        <span class="admin-topbar__name"><?= esc($username) ?></span>
       </div>
     </header>
 
     <section class="admin-cms-section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h1 class="admin-cms-section__title mb-1">News Management</h1>
+          <p class="text-muted mb-0">Manage news articles, events, and page settings</p>
+        </div>
+        <div class="d-flex gap-2">
+          <div class="badge bg-primary">Total: <?= $counts['all'] ?></div>
+          <div class="badge bg-success">Published: <?= $counts['published'] ?></div>
+          <div class="badge bg-warning text-dark">Drafts: <?= $counts['draft'] ?></div>
+        </div>
+      </div>
+      
       <?php if ($notice): ?>
-        <p class="notice success"><?= e($notice) ?></p>
+        <div class="alert <?= str_starts_with($notice, 'Error') ? 'alert-danger' : 'alert-success' ?> alert-dismissible fade show" role="alert">
+          <?= esc($notice) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
       <?php endif; ?>
 
-      <!-- Tabs -->
-      <nav class="tbar" aria-label="News filters">
-        <div class="tbar__inner">
-          <?php foreach ($tabs as $key => $label): ?>
-            <a class="pill<?= $status === $key ? ' is-active' : '' ?>"
-               href="?page=admin_manage_news&status=<?= e($key) ?>"><?= e($label) ?></a>
-          <?php endforeach; ?>
+      <!-- Current Data Preview Card -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0"><i class="fas fa-eye me-2"></i>Current Data Preview</h5>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                    data-bs-target="#currentDataCard" aria-expanded="false" aria-controls="currentDataCard">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
         </div>
-      </nav>
-
-      <!-- Add News Form -->
-      <div class="cms-card">
-        <h2 class="cms-card-legend">Add News</h2>
-        <form class="admin-cms-form" method="post" enctype="multipart/form-data">
-          <input type="hidden" name="add_news" value="1">
-          <div class="form-section">
-            <div class="field">
-              <label>Title</label>
-              <input type="text" name="title" required>
+        
+        <div class="collapse" id="currentDataCard">
+          <div class="card-body">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              Manage <strong>news articles and page settings</strong>. Control content visibility and page layout.
             </div>
-            <div class="field">
-              <label>Content</label>
-              <textarea name="content" rows="5" required></textarea>
-            </div>
-            <div class="field">
-              <label>Category</label>
-              <select name="category">
-                <option value="news">News</option>
-                <option value="research">Research</option>
-                <option value="achievement">Achievement</option>
-                <option value="student">Student Life</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Status</label>
-              <select name="status">
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Image</label>
-              <input type="file" name="image" accept="image/*">
-            </div>
-            <div class="form-actions">
-              <button class="btn btn--primary" type="submit">Add News</button>
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr><th>Field</th><th>Value</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Total News</td><td><?= $counts['all'] ?></td></tr>
+                  <tr><td>Published</td><td><?= $counts['published'] ?></td></tr>
+                  <tr><td>Drafts</td><td><?= $counts['draft'] ?></td></tr>
+                  <tr><td>Archived</td><td><?= $counts['archived'] ?></td></tr>
+                  <tr><td>Page Title</td><td><?= esc($settings['page_title'] ?? '—') ?></td></tr>
+                  <tr><td>Hero Lead</td><td><?= esc($settings['hero_lead'] ?? '—') ?></td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
-        </form>
+        </div>
       </div>
 
-      <!-- News List -->
-      <div class="cms-card">
-        <h2 class="cms-card-legend">News List</h2>
-        <?php if (empty($news)): ?>
-          <p>No news in this tab.</p>
-        <?php else: ?>
-          <?php foreach ($news as $n): ?>
-            <?php
-              $s = strtolower($n['status'] ?? 'draft');
-              $statusClass = [
-                'draft'     => 'status--draft',
-                'published' => 'status--published',
-                'archived'  => 'status--archived',
-              ][$s] ?? 'status--draft';
-            ?>
-            <div class="cms-card-item">
-              <div class="cms-card-item__thumb">
-                <?php if (!empty($n['image_url'])): ?>
-                  <img src="<?= e($n['image_url']) ?>" alt="">
-                <?php else: ?>
-                  <div class="cms-card-item__placeholder" aria-hidden="true">📰</div>
-                <?php endif; ?>
+      <!-- Content Management Form -->
+      <form id="newsForm" method="post" enctype="multipart/form-data" autocomplete="off">
+
+        <!-- News Page Settings -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0"><i class="fas fa-cog me-2"></i>News Page Settings</h5>
+              <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                      data-bs-target="#settingsCollapse" aria-expanded="false" aria-controls="settingsCollapse">
+                <i class="fas fa-chevron-down"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="collapse" id="settingsCollapse">
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Page Title</label>
+                  <input type="text" class="form-control" name="settings[page_title]" value="<?= esc($settings['page_title'] ?? '') ?>" placeholder="News & Updates">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Hero Lead Text</label>
+                  <input type="text" class="form-control" name="settings[hero_lead]" value="<?= esc($settings['hero_lead'] ?? '') ?>" placeholder="Stay updated with the latest news">
+                </div>
               </div>
-
-              <div class="cms-card-item__body">
-                <h3><?= e($n['title'] ?? 'Untitled') ?></h3>
-                <p class="meta">
-                  <span class="status-badge <?= e($statusClass) ?>"><?= e(ucfirst($s)) ?></span>
-                  • <?= e(ucfirst($n['category'] ?? 'news')) ?>
-                  <?php if (!empty($n['display_date'] ?? $n['created_at'])): ?>
-                    • <small><?= e(date('M j, Y', strtotime($n['display_date'] ?? $n['created_at']))) ?></small>
-                  <?php endif; ?>
-                  <?php if (!empty($n['author'])): ?> • <small><?= e($n['author']) ?></small><?php endif; ?>
-                </p>
-                <?php if (!empty($n['excerpt'])): ?>
-                  <p class="excerpt"><?= e($n['excerpt']) ?></p>
-                <?php endif; ?>
-              </div>
-
-              <!-- Contextual Actions -->
-              <div class="cms-card-item__actions">
-                <?php if ($s !== 'draft'): ?>
-                  <form method="post" style="display:inline">
-                    <input type="hidden" name="id" value="<?= (int)$n['id'] ?>">
-                    <button class="btn btn--ghost" name="update_status" value="draft" type="submit" title="Move to Draft">→ Draft</button>
-                  </form>
-                <?php endif; ?>
-
-                <?php if ($s !== 'published'): ?>
-                  <form method="post" style="display:inline">
-                    <input type="hidden" name="id" value="<?= (int)$n['id'] ?>">
-                    <button class="btn btn--success" name="update_status" value="published" type="submit" title="Publish this article">✓ Publish</button>
-                  </form>
-                <?php endif; ?>
-
-                <?php if ($s !== 'archived'): ?>
-                  <form method="post" style="display:inline">
-                    <input type="hidden" name="id" value="<?= (int)$n['id'] ?>">
-                    <button class="btn btn--outline" name="update_status" value="archived" type="submit" title="Archive (hide from public)">⤺ Archive</button>
-                  </form>
-                <?php endif; ?>
-
-                <a class="btn btn--danger"
-                   href="?page=admin_manage_news&delete=<?= (int)$n['id'] ?>&status=<?= e($status) ?>"
-                   onclick="return confirm('Delete this news?')"
-                   title="Delete">Delete</a>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Hero Background Image URL</label>
+                  <input type="text" class="form-control" name="settings[hero_bg_image]" value="<?= esc($settings['hero_bg_image'] ?? '') ?>" placeholder="/path/to/image.jpg">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Items Per Page</label>
+                  <input type="number" class="form-control" name="settings[items_per_page]" value="<?= esc($settings['items_per_page'] ?? '12') ?>" min="1" max="50">
+                </div>
               </div>
             </div>
-          <?php endforeach; ?>
-        <?php endif; ?>
+          </div>
+        </div>
+
+        <!-- Add New News -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0"><i class="fas fa-plus me-2"></i>Add New News</h5>
+              <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                      data-bs-target="#addNewsCollapse" aria-expanded="false" aria-controls="addNewsCollapse">
+                <i class="fas fa-chevron-down"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="collapse" id="addNewsCollapse">
+            <div class="card-body">
+              <input type="hidden" name="add_news" value="1">
+              <div class="row">
+                <div class="col-md-8 mb-3">
+                  <label class="form-label">Title</label>
+                  <input type="text" name="title" class="form-control" placeholder="News title" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Status</label>
+                  <select name="status" class="form-select">
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Category</label>
+                  <select name="category" class="form-select">
+                    <option value="news">News</option>
+                    <option value="announcement">Announcement</option>
+                    <option value="event">Event</option>
+                    <option value="update">Update</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Featured Image</label>
+                  <input type="file" name="image" class="form-control" accept="image/*">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Content</label>
+                <textarea name="content" class="form-control" rows="4" placeholder="News content"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- News List with Status Filter -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">News Articles</h5>
+            <div class="d-flex align-items-center">
+              <div class="btn-group me-3" role="group" aria-label="Status filter">
+                <a href="?page=admin_manage_news&status=all" class="btn btn-sm <?= $status === 'all' ? 'btn-primary' : 'btn-outline-primary' ?>">
+                  All <span class="badge bg-light text-dark ms-1"><?= $counts['all'] ?></span>
+                </a>
+                <a href="?page=admin_manage_news&status=published" class="btn btn-sm <?= $status === 'published' ? 'btn-success' : 'btn-outline-success' ?>">
+                  Published <span class="badge bg-light text-dark ms-1"><?= $counts['published'] ?></span>
+                </a>
+                <a href="?page=admin_manage_news&status=draft" class="btn btn-sm <?= $status === 'draft' ? 'btn-warning' : 'btn-outline-warning' ?>">
+                  Drafts <span class="badge bg-light text-dark ms-1"><?= $counts['draft'] ?></span>
+                </a>
+                <a href="?page=admin_manage_news&status=archived" class="btn btn-sm <?= $status === 'archived' ? 'btn-secondary' : 'btn-outline-secondary' ?>">
+                  Archived <span class="badge bg-light text-dark ms-1"><?= $counts['archived'] ?></span>
+                </a>
+              </div>
+              <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                      data-bs-target="#newsTableCollapse" aria-expanded="true" aria-controls="newsTableCollapse">
+                <i class="fas fa-chevron-down"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="collapse show" id="newsTableCollapse">
+          <div class="card-body">
+            <?php if (empty($news)): ?>
+              <div class="alert alert-warning" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>No news found for status: <?= esc($status) ?>
+              </div>
+            <?php else: ?>
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Status</th>
+                      <th>Title</th>
+                      <th>Category</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php foreach ($news as $n): ?>
+                      <tr>
+                        <td><?= esc($n['id']) ?></td>
+                        <td>
+                          <span class="badge bg-<?= $n['status'] === 'published' ? 'success' : ($n['status'] === 'draft' ? 'warning' : 'secondary') ?>">
+                            <?= esc(ucfirst($n['status'])) ?>
+                          </span>
+                        </td>
+                        <td>
+                          <strong><?= esc($n['title']) ?></strong>
+                          <?php if (!empty($n['body']) || !empty($n['content'])): ?>
+                            <br><small class="text-muted"><?= esc(substr(strip_tags($n['body'] ?? $n['content'] ?? ''), 0, 60)) ?>...</small>
+                          <?php endif; ?>
+                        </td>
+                        <td><span class="badge bg-info"><?= esc($n['category'] ?? 'news') ?></span></td>
+                        <td><small><?= date('M j, Y', strtotime($n['created_at'] ?? 'now')) ?></small></td>
+                        <td>
+                          <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-warning edit-news-btn" 
+                                    data-news-id="<?= $n['id'] ?>" 
+                                    title="Edit News">
+                              <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Change Status">
+                              <i class="fas fa-exchange-alt"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                              <?php foreach (['draft', 'published', 'archived'] as $st): ?>
+                                <?php if ($st !== $n['status']): ?>
+                                  <li>
+                                    <form method="post" class="d-inline">
+                                      <input type="hidden" name="update_status" value="<?= $st ?>">
+                                      <input type="hidden" name="id" value="<?= $n['id'] ?>">
+                                      <button type="submit" class="dropdown-item">
+                                        <?= ucfirst($st) ?>
+                                      </button>
+                                    </form>
+                                  </li>
+                                <?php endif; ?>
+                              <?php endforeach; ?>
+                            </ul>
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    onclick="if(confirm('Really delete this news?')) { document.getElementById('deleteForm<?= $n['id'] ?>').submit(); }" 
+                                    title="Delete News">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </div>
+                          <form id="deleteForm<?= $n['id'] ?>" method="post" class="d-none">
+                            <input type="hidden" name="delete_news" value="<?= (int)$n['id'] ?>">
+                          </form>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  </tbody>
+                </table>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
       </div>
+
+      <div class="page-end-spacer" style="height:160px" aria-hidden="true"></div>
+
+      <div class="savebar">
+        <div class="savebar__inner">
+          <span class="savebar__status" id="saveStatus">All changes saved</span>
+          <div class="savebar__actions">
+            <button type="button" class="btn" id="discardBtn">Discard</button>
+            <button type="submit" form="newsForm" class="btn btn--primary">Save Changes</button>
+            <a class="btn btn-outline-secondary" href="?page=admin_manage_events">Events</a>
+            <a class="btn btn-outline-secondary" href="?page=admin_manage_announcements">Announcements</a>
+          </div>
+        </div>
+      </div>
+
     </section>
   </main>
 </div>
 
+<!-- Edit News Modals -->
+<?php foreach ($news as $n): ?>
+<div class="modal fade" id="editNewsModal<?= $n['id'] ?>" tabindex="-1" aria-labelledby="editNewsModalLabel<?= $n['id'] ?>" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="post">
+        <input type="hidden" name="edit_news" value="1">
+        <input type="hidden" name="id" value="<?= $n['id'] ?>">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editNewsModalLabel<?= $n['id'] ?>">Edit News: <?= esc($n['title']) ?></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-8 mb-3">
+              <label class="form-label">Title</label>
+              <input type="text" name="title" class="form-control" value="<?= esc($n['title']) ?>" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Status</label>
+              <select name="edit_status" class="form-select">
+                <option value="draft" <?= $n['status'] === 'draft' ? 'selected' : '' ?>>Draft</option>
+                <option value="published" <?= $n['status'] === 'published' ? 'selected' : '' ?>>Published</option>
+                <option value="archived" <?= $n['status'] === 'archived' ? 'selected' : '' ?>>Archived</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Category</label>
+            <select name="category" class="form-select">
+              <option value="news" <?= ($n['category'] ?? '') === 'news' ? 'selected' : '' ?>>News</option>
+              <option value="announcement" <?= ($n['category'] ?? '') === 'announcement' ? 'selected' : '' ?>>Announcement</option>
+              <option value="event" <?= ($n['category'] ?? '') === 'event' ? 'selected' : '' ?>>Event</option>
+              <option value="update" <?= ($n['category'] ?? '') === 'update' ? 'selected' : '' ?>>Update</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Content</label>
+            <textarea name="content" class="form-control" rows="8"><?= esc($n['body'] ?? $n['content'] ?? '') ?></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<?php endforeach; ?>
+
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const notices = document.querySelectorAll(".notice");
-  if (notices.length) {
-    setTimeout(() => { notices.forEach(n => n.style.display = "none"); }, 4000);
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('newsForm');
+  const saveStatus = document.getElementById('saveStatus');
+  let dirty = false;
+
+  // Manual modal handling for edit buttons
+  document.querySelectorAll('.edit-news-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const newsId = btn.getAttribute('data-news-id');
+      const modalId = `editNewsModal${newsId}`;
+      const modalElement = document.getElementById(modalId);
+      
+      if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+      } else {
+        console.error('Modal not found:', modalId);
+      }
+    });
+  });
+
+  // Track changes
+  form?.addEventListener('input', () => {
+    dirty = true;
+    saveStatus.textContent = 'Unsaved changes';
+  });
+
+  form?.addEventListener('submit', () => {
+    dirty = false;
+    saveStatus.textContent = 'Saving...';
+  });
+
+  // Prevent accidental navigation
+  window.addEventListener('beforeunload', (e) => { if(dirty){ e.preventDefault(); e.returnValue = ''; } });
+
+  document.getElementById('discardBtn')?.addEventListener('click', () => {
+    if(!dirty || confirm('Discard all unsaved changes?')) location.reload();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
+      e.preventDefault();
+      document.querySelector('.savebar [type="submit"]')?.click();
+    }
+  });
+
+  const notices = document.querySelectorAll('.alert');
+  if (notices.length) setTimeout(() => { notices.forEach(n => n.style.display='none'); }, 4000);
 });
 </script>
-</body>
-</html>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

@@ -95,6 +95,16 @@ class Router {
             case 'student_testimonials':
                 include __DIR__ . '/../views/student_testimonials.php'; break;
 
+            /* -------------------- PUBLIC: FACULTY -------------------- */
+            case 'faculty_profile':
+                include __DIR__ . '/../views/faculty_profile.php'; break;
+
+            case 'faculty_research':
+                include __DIR__ . '/../views/faculty_research.php'; break;
+
+            case 'faculty_certifications':
+                include __DIR__ . '/../views/faculty_certifications.php'; break;
+
             /* -------------------- PUBLIC TOOL -------------------- */
             case 'career_pathway_generator':
                 include __DIR__ . '/../views/career_pathway_generator.php'; break;
@@ -167,18 +177,56 @@ class Router {
 
             case 'admin_manage_programs':
                 Auth::requireRole(['admin','dean'], $base . 'login_admin');
-                require_once __DIR__ . '/AdminController.php';
-                echo (new AdminController())->managePrograms(); break;
+                include __DIR__ . '/../views/admin_manage_programs.php'; break;
 
             case 'admin_programs_undergraduate':
                 Auth::requireRole(['admin','dean'], $base . 'login_admin');
-                require_once __DIR__ . '/AdminController.php';
-                echo (new AdminController())->programsUndergraduate(); break;
+                include __DIR__ . '/../views/admin/admin_programs_undergraduate.php'; break;
 
             case 'admin_programs_graduate':
                 Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                include __DIR__ . '/../views/admin/admin_programs_graduate.php'; break;
+                
+            case 'admin_debug':
+                Auth::requireRole(['admin'], $base . 'login_admin');
+                include __DIR__ . '/../views/admin/debug.php'; break;
+
+            case 'admin_student_organizations':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
                 require_once __DIR__ . '/AdminController.php';
-                echo (new AdminController())->programsGraduate(); break;
+                echo (new AdminController())->studentOrganizations(); break;
+
+            case 'admin_student_scholarships':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminController.php';
+                echo (new AdminController())->studentScholarships(); break;
+
+            case 'admin_student_research':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminController.php';
+                echo (new AdminController())->studentResearch(); break;
+
+            case 'admin_student_certifications':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminController.php';
+                echo (new AdminController())->studentCertifications(); break;
+
+            case 'admin_student_testimonials':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/AdminController.php';
+                echo (new AdminController())->studentTestimonials(); break;
+
+            case 'admin_faculty_profile':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                include __DIR__ . '/../views/admin/admin_faculty_profile.php'; break;
+
+            case 'admin_faculty_research':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                include __DIR__ . '/../views/admin/admin_faculty_research.php'; break;
+
+            case 'admin_faculty_certifications':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                include __DIR__ . '/../views/admin/admin_faculty_certifications.php'; break;
 
             case 'admin_manage_faculty':
                 Auth::requireRole(['admin'], $base . 'login_admin');

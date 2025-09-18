@@ -14,10 +14,16 @@ class Program extends Model {
 
     // New: create with all columns (optional)
     public static function createFull(array $data) {
-        $sql = 'INSERT INTO programs (name, description, image, image_alt, url, is_active)
-                VALUES (:name, :description, :image, :image_alt, :url, :is_active)';
+        // Auto-generate slug if not provided
+        if (empty($data['slug']) && !empty($data['name'])) {
+            $data['slug'] = self::generateSlug($data['name']);
+        }
+        
+        $sql = 'INSERT INTO programs (slug, name, description, image, image_alt, url, is_active)
+                VALUES (:slug, :name, :description, :image, :image_alt, :url, :is_active)';
         $stmt = self::db()->prepare($sql);
         return $stmt->execute([
+            ':slug'       => trim($data['slug'] ?? ''),
             ':name'       => trim($data['name'] ?? ''),
             ':description'=> trim($data['description'] ?? ''),
             ':image'      => trim($data['image'] ?? ''),
@@ -27,12 +33,26 @@ class Program extends Model {
         ]);
     }
 
+    // Helper: generate URL-safe slug from name
+    private static function generateSlug($name) {
+        $slug = strtolower(trim($name));
+        $slug = preg_replace('/[^a-z0-9-]/', '-', $slug);
+        $slug = preg_replace('/-+/', '-', $slug);
+        return trim($slug, '-');
+    }
+
     // New: update any subset of columns (safe allowlist)
     public static function update($id, array $data) {
         $id = (int)$id;
-        $allow = ['name','description','image','image_alt','url','is_active'];
+        $allow = ['slug','name','description','image','image_alt','url','is_active'];
         $set = [];
         $params = [];
+        
+        // Auto-generate slug if name is being updated but slug is not provided
+        if (array_key_exists('name', $data) && !array_key_exists('slug', $data)) {
+            $data['slug'] = self::generateSlug($data['name']);
+        }
+        
         foreach ($allow as $col) {
             if (array_key_exists($col, $data)) {
                 $set[] = "$col = :$col";

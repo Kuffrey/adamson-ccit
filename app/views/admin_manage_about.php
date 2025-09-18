@@ -24,22 +24,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Edit About Page | CCIT CMS</title>
-  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
-  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
-</head>
-<body>
+<link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
+<link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-faculty.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
 <div class="admin-cms-layout">
   <?php include __DIR__ . '/admin/_admin_sidebar.php'; ?>
 
   <main class="admin-main">
     <header class="admin-topbar">
-      <span class="admin-topbar__title">Edit About Page Content</span>
+      <span class="admin-topbar__title">About → Management</span>
       <div class="admin-topbar__spacer"></div>
       <div class="admin-topbar__user">
         <span class="admin-topbar__avatar"><?= esc(strtoupper($username[0] ?? 'A')) ?></span>
@@ -48,207 +43,280 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </header>
 
     <section class="admin-cms-section">
-      <h1 class="admin-cms-section__title">About Page Editor</h1>
-      <p class="intro">Edit About page sections: Subhero, Intro, Facts, Origins, Leaders, Identity & Values, and CTA.</p>
-
-      <!-- Sticky Section Subnav -->
-      <nav class="cms-subnav" aria-label="About sections">
-        <a href="#sec-subhero">Subhero</a>
-        <a href="#sec-intro">Intro</a>
-        <a href="#sec-facts">Facts</a>
-        <a href="#sec-origins">Origins</a>
-        <a href="#sec-leaders">Leaders</a>
-        <a href="#sec-identity">Identity</a>
-        <a href="#sec-cta">CTA</a>
-      </nav>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h1 class="admin-cms-section__title mb-1">About Page Management</h1>
+          <p class="text-muted mb-0">Edit About page sections, content, and settings</p>
+        </div>
+        <div class="d-flex gap-2">
+          <div class="badge bg-info">About Content Editor</div>
+        </div>
+      </div>
 
       <?php if ($success): ?>
-        <p class="notice success">Changes saved successfully.</p>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          Changes saved successfully!
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
       <?php elseif ($error): ?>
-        <p class="notice error"><?= esc($error) ?></p>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <?= esc($error) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
       <?php endif; ?>
 
-      <!-- Current Data Preview -->
-      <div class="cms-card">
-        <h2 class="cms-card-legend">Current About Page Data</h2>
-        <table class="admin-data-table">
-          <thead>
-            <tr><th>Field</th><th>Value</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Subhero Lead</td><td><?= esc($about['subhero_lead'] ?? '—') ?></td></tr>
-            <tr><td>Intro Title</td><td><?= esc($about['intro_title'] ?? '—') ?></td></tr>
-            <tr><td>Intro Lead</td><td><?= esc($about['intro_lead'] ?? '—') ?></td></tr>
-            <tr><td>Fact Title</td><td><?= esc($about['fact_title'] ?? '—') ?></td></tr>
-            <tr><td>Fact 2</td><td><?= esc($about['fact_2'] ?? '—') ?></td></tr>
-            <tr><td>Fact 3</td><td><?= esc($about['fact_3'] ?? '—') ?></td></tr>
-            <tr><td>Origins Title</td><td><?= esc($about['origins_title'] ?? '—') ?></td></tr>
-            <tr><td>Origins Body</td><td><?= esc($about['origins_body'] ?? '—') ?></td></tr>
-            <tr><td>Leaders Title</td><td><?= esc($about['leaders_title'] ?? '—') ?></td></tr>
-            <tr><td>Leaders List</td><td><?= esc(strip_tags($about['leaders_list'] ?? '—')) ?></td></tr>
-            <tr><td>Academic Leads Title</td><td><?= esc($about['academic_leads_title'] ?? '—') ?></td></tr>
-            <tr><td>Academic Leads List</td><td><?= esc(strip_tags($about['academic_leads_list'] ?? '—')) ?></td></tr>
-            <tr><td>Identity Title</td><td><?= esc($about['identity_title'] ?? '—') ?></td></tr>
-            <tr><td>Identity Items</td><td><?= esc(strip_tags($about['identity_items'] ?? '—')) ?></td></tr>
-            <tr><td>CTA Title</td><td><?= esc($about['cta_title'] ?? '—') ?></td></tr>
-            <tr><td>CTA Body</td><td><?= esc($about['cta_body'] ?? '—') ?></td></tr>
-            <tr><td>CTA Button Label</td><td><?= esc($about['cta_btn_label'] ?? '—') ?></td></tr>
-            <tr><td>CTA Button URL</td><td><?= esc($about['cta_btn_url'] ?? '#') ?></td></tr>
-          </tbody>
-        </table>
+      <!-- Current Data Preview Card -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0"><i class="fas fa-eye me-2"></i>Current Data Preview</h5>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                    data-bs-target="#currentDataCard" aria-expanded="false" aria-controls="currentDataCard">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="collapse" id="currentDataCard">
+          <div class="card-body">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              Manage <strong>About page content and sections</strong>. Control page narrative, facts, leadership information, and call-to-action elements.
+            </div>
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr><th>Field</th><th>Value</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Subhero Lead</td><td><?= esc($about['subhero_lead'] ?? '—') ?></td></tr>
+                  <tr><td>Intro Title</td><td><?= esc($about['intro_title'] ?? '—') ?></td></tr>
+                  <tr><td>Intro Lead</td><td><?= esc($about['intro_lead'] ?? '—') ?></td></tr>
+                  <tr><td>Fact Title</td><td><?= esc($about['fact_title'] ?? '—') ?></td></tr>
+                  <tr><td>Fact 2</td><td><?= esc($about['fact_2'] ?? '—') ?></td></tr>
+                  <tr><td>Fact 3</td><td><?= esc($about['fact_3'] ?? '—') ?></td></tr>
+                  <tr><td>Origins Title</td><td><?= esc($about['origins_title'] ?? '—') ?></td></tr>
+                  <tr><td>Origins Body</td><td><?= esc(substr($about['origins_body'] ?? '—', 0, 60)) ?>...</td></tr>
+                  <tr><td>Leaders Title</td><td><?= esc($about['leaders_title'] ?? '—') ?></td></tr>
+                  <tr><td>Leaders List</td><td><?= esc(substr(strip_tags($about['leaders_list'] ?? '—'), 0, 60)) ?>...</td></tr>
+                  <tr><td>Academic Leads Title</td><td><?= esc($about['academic_leads_title'] ?? '—') ?></td></tr>
+                  <tr><td>Academic Leads List</td><td><?= esc(substr(strip_tags($about['academic_leads_list'] ?? '—'), 0, 60)) ?>...</td></tr>
+                  <tr><td>Identity Title</td><td><?= esc($about['identity_title'] ?? '—') ?></td></tr>
+                  <tr><td>Identity Items</td><td><?= esc(substr(strip_tags($about['identity_items'] ?? '—'), 0, 60)) ?>...</td></tr>
+                  <tr><td>CTA Title</td><td><?= esc($about['cta_title'] ?? '—') ?></td></tr>
+                  <tr><td>CTA Body</td><td><?= esc(substr($about['cta_body'] ?? '—', 0, 60)) ?>...</td></tr>
+                  <tr><td>CTA Button Label</td><td><?= esc($about['cta_btn_label'] ?? '—') ?></td></tr>
+                  <tr><td>CTA Button URL</td><td><?= esc($about['cta_btn_url'] ?? '#') ?></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sticky Section Navigation -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title mb-0"><i class="fas fa-list me-2"></i>Quick Navigation</h5>
+        </div>
+        <div class="card-body">
+          <nav class="d-flex flex-wrap gap-2" aria-label="About sections">
+            <a href="#sec-subhero" class="btn btn-sm btn-outline-primary">Subhero</a>
+            <a href="#sec-intro" class="btn btn-sm btn-outline-primary">Intro</a>
+            <a href="#sec-facts" class="btn btn-sm btn-outline-primary">Facts</a>
+            <a href="#sec-origins" class="btn btn-sm btn-outline-primary">Origins</a>
+            <a href="#sec-leaders" class="btn btn-sm btn-outline-primary">Leaders</a>
+            <a href="#sec-identity" class="btn btn-sm btn-outline-primary">Identity</a>
+            <a href="#sec-cta" class="btn btn-sm btn-outline-primary">CTA</a>
+          </nav>
+        </div>
       </div>
 
       <!-- Edit Form -->
-      <form id="aboutForm" method="post" action="?page=admin_manage_about" class="admin-cms-form">
+      <form id="aboutForm" method="post" action="?page=admin_manage_about" class="mb-4">
 
-        <!-- Subhero -->
-        <div class="cms-card">
-          <fieldset id="sec-subhero">
-            <legend class="cms-card-legend">Subhero Section</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Subhero Lead</label>
-                <input type="text" name="subhero_lead" value="<?= esc($about['subhero_lead'] ?? '') ?>">
-              </div>
+        <!-- Subhero Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0" id="sec-subhero"><i class="fas fa-star me-2"></i>Subhero Section</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="subhero_lead" class="form-label">Subhero Lead</label>
+              <input type="text" class="form-control" id="subhero_lead" name="subhero_lead" 
+                     value="<?= esc($about['subhero_lead'] ?? '') ?>" 
+                     placeholder="Enter the main subhero text">
             </div>
-          </fieldset>
+          </div>
         </div>
 
-        <!-- Intro -->
-        <div class="cms-card">
-          <fieldset id="sec-intro">
-            <legend class="cms-card-legend">Intro Section</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Intro Title</label>
-                <input type="text" name="intro_title" value="<?= esc($about['intro_title'] ?? '') ?>">
-              </div>
-              <div class="field">
-                <label>Intro Lead</label>
-                <textarea name="intro_lead" rows="2"><?= esc($about['intro_lead'] ?? '') ?></textarea>
-              </div>
+        <!-- Intro Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0" id="sec-intro"><i class="fas fa-info-circle me-2"></i>Intro Section</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="intro_title" class="form-label">Intro Title</label>
+              <input type="text" class="form-control" id="intro_title" name="intro_title" 
+                     value="<?= esc($about['intro_title'] ?? '') ?>" 
+                     placeholder="Enter intro section title">
             </div>
-          </fieldset>
+            <div class="mb-3">
+              <label for="intro_lead" class="form-label">Intro Lead</label>
+              <textarea class="form-control" id="intro_lead" name="intro_lead" rows="3" 
+                        placeholder="Enter intro lead text"><?= esc($about['intro_lead'] ?? '') ?></textarea>
+            </div>
+          </div>
         </div>
 
-        <!-- Facts -->
-        <div class="cms-card">
-          <fieldset id="sec-facts">
-            <legend class="cms-card-legend">Facts</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Fact Title</label>
-                <input type="text" name="fact_title" value="<?= esc($about['fact_title'] ?? '') ?>">
+        <!-- Facts Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0" id="sec-facts"><i class="fas fa-chart-bar me-2"></i>Facts Section</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="fact_title" class="form-label">Fact Title</label>
+                <input type="text" class="form-control" id="fact_title" name="fact_title" 
+                       value="<?= esc($about['fact_title'] ?? '') ?>" 
+                       placeholder="Main fact title">
               </div>
-              <div class="field">
-                <label>Fact 2</label>
-                <input type="text" name="fact_2" value="<?= esc($about['fact_2'] ?? '') ?>">
+              <div class="col-md-4 mb-3">
+                <label for="fact_2" class="form-label">Fact 2</label>
+                <input type="text" class="form-control" id="fact_2" name="fact_2" 
+                       value="<?= esc($about['fact_2'] ?? '') ?>" 
+                       placeholder="Second fact">
               </div>
-              <div class="field">
-                <label>Fact 3</label>
-                <input type="text" name="fact_3" value="<?= esc($about['fact_3'] ?? '') ?>">
-              </div>
-            </div>
-          </fieldset>
-        </div>
-
-        <!-- Origins -->
-        <div class="cms-card">
-          <fieldset id="sec-origins">
-            <legend class="cms-card-legend">Origins</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Origins Title</label>
-                <input type="text" name="origins_title" value="<?= esc($about['origins_title'] ?? '') ?>">
-              </div>
-              <div class="field">
-                <label>Origins Body</label>
-                <textarea name="origins_body" rows="3"><?= esc($about['origins_body'] ?? '') ?></textarea>
+              <div class="col-md-4 mb-3">
+                <label for="fact_3" class="form-label">Fact 3</label>
+                <input type="text" class="form-control" id="fact_3" name="fact_3" 
+                       value="<?= esc($about['fact_3'] ?? '') ?>" 
+                       placeholder="Third fact">
               </div>
             </div>
-          </fieldset>
+          </div>
         </div>
 
-        <!-- Leaders -->
-        <div class="cms-card">
-          <fieldset id="sec-leaders">
-            <legend class="cms-card-legend">Leaders</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Leaders Title</label>
-                <input type="text" name="leaders_title" value="<?= esc($about['leaders_title'] ?? '') ?>">
+        <!-- Origins Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0" id="sec-origins"><i class="fas fa-history me-2"></i>Origins Section</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="origins_title" class="form-label">Origins Title</label>
+              <input type="text" class="form-control" id="origins_title" name="origins_title" 
+                     value="<?= esc($about['origins_title'] ?? '') ?>" 
+                     placeholder="Enter origins section title">
+            </div>
+            <div class="mb-3">
+              <label for="origins_body" class="form-label">Origins Body</label>
+              <textarea class="form-control" id="origins_body" name="origins_body" rows="4" 
+                        placeholder="Enter the origins story content"><?= esc($about['origins_body'] ?? '') ?></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Leaders Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0" id="sec-leaders"><i class="fas fa-users me-2"></i>Leaders Section</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="leaders_title" class="form-label">Leaders Title</label>
+              <input type="text" class="form-control" id="leaders_title" name="leaders_title" 
+                     value="<?= esc($about['leaders_title'] ?? '') ?>" 
+                     placeholder="Enter leaders section title">
+            </div>
+            <div class="mb-3">
+              <label for="leaders_list" class="form-label">Leaders List</label>
+              <textarea class="form-control" id="leaders_list" name="leaders_list" rows="3" 
+                        placeholder="Enter leaders information"><?= esc($about['leaders_list'] ?? '') ?></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="academic_leads_title" class="form-label">Academic Leads Title</label>
+              <input type="text" class="form-control" id="academic_leads_title" name="academic_leads_title" 
+                     value="<?= esc($about['academic_leads_title'] ?? '') ?>" 
+                     placeholder="Enter academic leads section title">
+            </div>
+            <div class="mb-3">
+              <label for="academic_leads_list" class="form-label">Academic Leads List</label>
+              <textarea class="form-control" id="academic_leads_list" name="academic_leads_list" rows="3" 
+                        placeholder="Enter academic leads information"><?= esc($about['academic_leads_list'] ?? '') ?></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Identity & Values Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0" id="sec-identity"><i class="fas fa-heart me-2"></i>Identity & Values</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="identity_title" class="form-label">Identity Title</label>
+              <input type="text" class="form-control" id="identity_title" name="identity_title" 
+                     value="<?= esc($about['identity_title'] ?? '') ?>" 
+                     placeholder="Enter identity section title">
+            </div>
+            <div class="mb-3">
+              <label for="identity_items" class="form-label">Identity Items</label>
+              <textarea class="form-control" id="identity_items" name="identity_items" rows="4" 
+                        placeholder="Enter identity and values content"><?= esc($about['identity_items'] ?? '') ?></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0" id="sec-cta"><i class="fas fa-bullhorn me-2"></i>Call-to-Action Section</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="cta_title" class="form-label">CTA Title</label>
+                <input type="text" class="form-control" id="cta_title" name="cta_title" 
+                       value="<?= esc($about['cta_title'] ?? '') ?>" 
+                       placeholder="Enter CTA title">
               </div>
-              <div class="field">
-                <label>Leaders List</label>
-                <textarea name="leaders_list" rows="2"><?= esc($about['leaders_list'] ?? '') ?></textarea>
-              </div>
-              <div class="field">
-                <label>Academic Leads Title</label>
-                <input type="text" name="academic_leads_title" value="<?= esc($about['academic_leads_title'] ?? '') ?>">
-              </div>
-              <div class="field">
-                <label>Academic Leads List</label>
-                <textarea name="academic_leads_list" rows="2"><?= esc($about['academic_leads_list'] ?? '') ?></textarea>
+              <div class="col-md-6 mb-3">
+                <label for="cta_btn_label" class="form-label">CTA Button Label</label>
+                <input type="text" class="form-control" id="cta_btn_label" name="cta_btn_label" 
+                       value="<?= esc($about['cta_btn_label'] ?? '') ?>" 
+                       placeholder="Enter button text">
               </div>
             </div>
-          </fieldset>
-        </div>
-
-        <!-- Identity & Values -->
-        <div class="cms-card">
-          <fieldset id="sec-identity">
-            <legend class="cms-card-legend">Identity &amp; Values</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Identity Title</label>
-                <input type="text" name="identity_title" value="<?= esc($about['identity_title'] ?? '') ?>">
-              </div>
-              <div class="field">
-                <label>Identity Items</label>
-                <textarea name="identity_items" rows="2"><?= esc($about['identity_items'] ?? '') ?></textarea>
-              </div>
+            <div class="mb-3">
+              <label for="cta_body" class="form-label">CTA Body</label>
+              <textarea class="form-control" id="cta_body" name="cta_body" rows="3" 
+                        placeholder="Enter call-to-action content"><?= esc($about['cta_body'] ?? '') ?></textarea>
             </div>
-          </fieldset>
-        </div>
-
-        <!-- CTA -->
-        <div class="cms-card">
-          <fieldset id="sec-cta">
-            <legend class="cms-card-legend">CTA Section</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>CTA Title</label>
-                <input type="text" name="cta_title" value="<?= esc($about['cta_title'] ?? '') ?>">
-              </div>
-              <div class="field">
-                <label>CTA Body</label>
-                <textarea name="cta_body" rows="2"><?= esc($about['cta_body'] ?? '') ?></textarea>
-              </div>
-              <div class="field">
-                <label>CTA Button Label</label>
-                <input type="text" name="cta_btn_label" value="<?= esc($about['cta_btn_label'] ?? '') ?>">
-              </div>
-              <div class="field">
-                <label>CTA Button URL</label>
-                <input type="text" name="cta_btn_url" value="<?= esc($about['cta_btn_url'] ?? '') ?>">
-              </div>
+            <div class="mb-3">
+              <label for="cta_btn_url" class="form-label">CTA Button URL</label>
+              <input type="url" class="form-control" id="cta_btn_url" name="cta_btn_url" 
+                     value="<?= esc($about['cta_btn_url'] ?? '') ?>" 
+                     placeholder="Enter button link URL">
             </div>
-          </fieldset>
+          </div>
         </div>
 
-        <!-- No inline Save button (use sticky Save Bar) -->
       </form>
 
-      <!-- Spacer so last anchor (CTA) can sit under sticky bars -->
       <div class="page-end-spacer" style="height:160px" aria-hidden="true"></div>
 
-      <!-- Sticky Save Bar -->
       <div class="savebar">
         <div class="savebar__inner">
           <span class="savebar__status" id="saveStatus">All changes saved</span>
           <div class="savebar__actions">
             <button type="button" class="btn" id="discardBtn">Discard</button>
             <button type="submit" form="aboutForm" class="btn btn--primary">Save Changes</button>
+            <a class="btn btn-outline-secondary" href="?page=admin_manage_news">News</a>
+            <a class="btn btn-outline-secondary" href="?page=admin_manage_events">Events</a>
+            <a class="btn btn-outline-secondary" href="?page=admin_manage_announcements">Announcements</a>
           </div>
         </div>
       </div>
@@ -257,6 +325,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </main>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('aboutForm');

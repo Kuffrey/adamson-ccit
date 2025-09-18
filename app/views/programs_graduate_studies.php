@@ -4,7 +4,10 @@ require_once __DIR__ . '/../models/ProgramsGraduateSettings.php';
 if (!function_exists('e')) {
   function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 }
+
+// Get graduate settings and cards
 $settings = ProgramsGraduateSettings::getSettings();
+$cards = ProgramsGraduateSettings::getCards($settings, false); // Frontend mode = false for active only
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -49,7 +52,75 @@ $settings = ProgramsGraduateSettings::getSettings();
   <section class="content" aria-labelledby="grad-heading">
     <div class="container">
       <h2 id="grad-heading" class="sr-only">CCIT Graduate Programs</h2>
-      <?= $settings['programs_grid'] ?? '' ?>
+      
+      <?php if (!empty($cards)): ?>
+        <div class="prog__grid">
+          <?php foreach ($cards as $card): ?>
+            <article class="prog__card" <?= $card['slug'] ? 'id="' . e($card['slug']) . '"' : '' ?>>
+              <!-- Header -->
+              <div class="prog__head">
+                <?php if ($card['badge']): ?>
+                  <span class="badge"><?= e($card['badge']) ?></span>
+                <?php endif; ?>
+                <h3 class="prog__title">
+                  <?= e($card['title']) ?>
+                  <?php if ($card['muted']): ?>
+                    <span class="prog__muted"><?= e($card['muted']) ?></span>
+                  <?php endif; ?>
+                </h3>
+              </div>
+
+              <!-- Summary -->
+              <?php if ($card['summary']): ?>
+                <p class="prog__summary"><?= e($card['summary']) ?></p>
+              <?php endif; ?>
+
+              <!-- Pillbox -->
+              <?php if (!empty($card['pill_t']) || !empty($card['pills'])): ?>
+                <div class="pillbox">
+                  <?php if ($card['pill_t']): ?>
+                    <h4 class="pillbox__title"><?= e($card['pill_t']) ?></h4>
+                  <?php endif; ?>
+                  <?php if (!empty($card['pills'])): ?>
+                    <ul class="pills" role="list">
+                      <?php 
+                      $pills = is_array($card['pills']) ? $card['pills'] : explode("\n", $card['pills']);
+                      foreach ($pills as $pill): 
+                        $pill = trim($pill);
+                        if ($pill):
+                      ?>
+                        <li><?= e($pill) ?></li>
+                      <?php 
+                        endif;
+                      endforeach; 
+                      ?>
+                    </ul>
+                  <?php endif; ?>
+                </div>
+              <?php endif; ?>
+
+              <!-- Footer actions -->
+              <div class="prog__footer">
+                <div class="mini-links">
+                  <?php if ($card['lm_url']): ?>
+                    <a class="ext" href="<?= e($card['lm_url']) ?>"<?= $card['lm_ext'] ? ' target="_blank" rel="noopener"' : '' ?>>Learn more</a>
+                  <?php endif; ?>
+                  <?php if ($card['cur_url']): ?>
+                    <a class="ext" href="<?= e($card['cur_url']) ?>"<?= $card['cur_ext'] ? ' target="_blank" rel="noopener"' : '' ?>>Curriculum</a>
+                  <?php endif; ?>
+                </div>
+                <?php if ($card['apply']): ?>
+                  <a class="btn btn--solid" href="<?= e($card['apply']) ?>">Apply</a>
+                <?php endif; ?>
+              </div>
+            </article>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <div class="empty-state">
+          <p>No graduate programs are currently available. Please check back later.</p>
+        </div>
+      <?php endif; ?>
     </div>
   </section>
 
@@ -60,7 +131,11 @@ $settings = ProgramsGraduateSettings::getSettings();
         <h2><?= e($settings['cta_title'] ?? 'Chart your next step.') ?></h2>
         <p><?= e($settings['cta_description'] ?? 'Ask us about MIT schedules, requirements, and scholarships.') ?></p>
       </div>
-      <a class="btn btn--solid" href="<?= e($settings['cta_action_url'] ?? '/adamson-ccit/public/index.php?page=contact') ?>"><?= e($settings['cta_action_label'] ?? 'Contact CCIT') ?></a>
+      <?php if (!empty($settings['cta_action_url'])): ?>
+        <a class="btn btn--solid" href="<?= e($settings['cta_action_url']) ?>"><?= e($settings['cta_action_label'] ?? 'Contact CCIT') ?></a>
+      <?php else: ?>
+        <a class="btn btn--solid" href="/adamson-ccit/public/index.php?page=contact">Contact CCIT</a>
+      <?php endif; ?>
     </div>
   </section>
 

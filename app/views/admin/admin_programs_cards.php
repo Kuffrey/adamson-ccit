@@ -133,6 +133,7 @@ $title = $level === 'graduate' ? 'Programs → Graduate Studies' : 'Programs →
               <form method="post" class="admin-cms-form mt-12">
                 <input type="hidden" name="edit_card" value="1">
                 <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
+                <input type="hidden" name="card[status]" value="<?= esc($c['status']) ?>">
                 <div class="form-section">
                   <div class="field"><label>Position</label><input type="number" name="card[position]" value="<?= (int)$c['position'] ?>"></div>
                   <div class="field"><label>Slug</label><input type="text" name="card[slug]" value="<?= esc($c['slug']) ?>"></div>

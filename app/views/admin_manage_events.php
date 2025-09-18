@@ -1,304 +1,539 @@
 <?php
-// admin_manage_events.php — CMS for managing Events
-declare(strict_types=1);
-require_once __DIR__ . '/../models/Event.php';
-
-if (session_status() === PHP_SESSION_NONE) session_start();
+// admin_manage_events.php — CMS for managing Events with consistent layout
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 if (empty($_SESSION['user']) || !in_array(($_SESSION['user']['role'] ?? ''), ['admin','dean'], true)) {
   header('Location: ?page=login_admin'); exit;
 }
 
-function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+require_once __DIR__ . '/../models/Event.php';
+
+function esc($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+$user = $_SESSION['user'] ?? [];
+$username = $user['username'] ?? 'Admin';
+$notice = '';
+
+// Get current data
+try {
+  $status = $_GET['status'] ?? 'all';
+  $events = Event::list($status);
+  $counts = Event::statusCounts();
+} catch (Exception $e) {
+  $notice = 'Error loading data: ' . $e->getMessage();
+  $events = [];
+  $counts = ['all' => 0, 'draft' => 0, 'published' => 0, 'archived' => 0];
+}
+
+// Helper function for dates
 function dtfix(?string $v): ?string {
   $v = trim((string)$v);
-  if ($v === '') return null;                 // allow NULL
-  $v = str_replace('T', ' ', $v);             // from datetime-local
-  if (strlen($v) === 16) $v .= ':00';         // add seconds if missing
-  return $v;                                   // "YYYY-MM-DD HH:MM:SS"
+  if ($v === '') return null;
+  $v = str_replace('T', ' ', $v);
+  if (strlen($v) === 16) $v .= ':00';
+  return $v;
 }
 
-$username = $_SESSION['user']['username'] ?? 'Admin';
-$allowedStatuses = ['all','draft','published','archived'];
-$status = $_GET['status'] ?? 'all';
-$status = in_array($status, $allowedStatuses, true) ? $status : 'all';
-
-// ------- actions (create / status updates / delete) -------
-// Use PRG so we never re-post if user refreshes
+/* ---------- Handle POST (CRUD) ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  try {
+    // Add new event
+    if (!empty($_POST['add_event']) && !empty($_POST['title'])) {
+      $title = trim($_POST['title']);
+      $description = trim($_POST['description'] ?? '');
+      $category = $_POST['category'] ?? 'career';
+      $location = trim($_POST['location'] ?? '');
+      $registration = trim($_POST['registration_url'] ?? '');
+      $start = dtfix($_POST['start_at'] ?? null);
+      $end = dtfix($_POST['end_at'] ?? null);
+      $nstatus = $_POST['status'] ?? 'draft';
+      $imageUrl = null;
 
-  // CREATE
-  if (!empty($_POST['add_event'])) {
-    $title = trim($_POST['title'] ?? '');
-    $desc  = trim($_POST['description'] ?? '');
-    $cat   = $_POST['category'] ?? 'career';
-    $loc   = trim($_POST['location'] ?? '');
-    $reg   = trim($_POST['registration_url'] ?? '');
-    $start = dtfix($_POST['start_at'] ?? null);
-    $end   = dtfix($_POST['end_at']   ?? null);
-    $st    = $_POST['status']   ?? 'draft';
-    $st    = in_array($st, ['draft','published','archived'], true) ? $st : 'draft';
-    $imageUrl = null;
+      // Ensure end >= start
+      if ($start && $end && strtotime($end) < strtotime($start)) $end = $start;
 
-    // ensure end >= start
-    if ($start && $end && strtotime($end) < strtotime($start)) $end = $start;
-
-    // image upload (optional)
-    if (!empty($_FILES['image']['name']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
-      $tmp  = $_FILES['image']['tmp_name'];
-      $okTypes = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'];
-      $type = @mime_content_type($tmp) ?: '';
-      if (isset($okTypes[$type])) {
-        $ext      = $okTypes[$type];
-        $safeBase = preg_replace('~[^a-zA-Z0-9_-]+~', '-', strtolower(pathinfo($_FILES['image']['name'], PATHINFO_FILENAME)));
-        $name     = date('Ymd_His') . '_' . ($safeBase ?: 'event') . '.' . $ext;
-        $dir      = __DIR__ . '/../../public/uploads/events/';
-        if (!is_dir($dir)) { @mkdir($dir, 0777, true); }
-        $dest     = $dir . $name;
-        if (move_uploaded_file($tmp, $dest)) {
-          $imageUrl = '/adamson-ccit/public/uploads/events/' . $name;
+      // Handle image upload
+      if (!empty($_FILES['image']['tmp_name'])) {
+        $imgTmp = $_FILES['image']['tmp_name'];
+        $imgName = time() . '-' . basename($_FILES['image']['name']);
+        $destDir = __DIR__ . '/../../public/uploads/events/';
+        if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
+        $dest = $destDir . $imgName;
+        if (move_uploaded_file($imgTmp, $dest)) {
+          $imageUrl = '/adamson-ccit/public/uploads/events/' . $imgName;
         }
       }
+
+      $data = [
+        'title' => $title,
+        'description' => $description,
+        'location' => $location,
+        'category' => $category,
+        'image_url' => $imageUrl,
+        'start_at' => $start,
+        'end_at' => $end,
+        'registration_url' => $registration ?: null,
+        'status' => $nstatus,
+      ];
+
+      $eid = Event::create($data);
+      $notice = $eid ? 'Event added successfully!' : 'Failed to add event.';
     }
 
-    // Most models prefer an associative array
-    $ok = false;
-    if (method_exists('Event','create')) {
-      $ok = Event::create([
-        'title'            => $title,
-        'description'      => $desc,
-        'location'         => $loc,
-        'category'         => $cat,
-        'image_url'        => $imageUrl,
-        'start_at'         => $start,
-        'end_at'           => $end,
-        'registration_url' => $reg ?: null,
-        'status'           => $st,
-      ]);
+    // Update event status
+    if (!empty($_POST['update_status']) && !empty($_POST['id'])) {
+      Event::updateStatus((int)$_POST['id'], $_POST['update_status']);
+      $notice = 'Status updated successfully!';
     }
 
-    $goto = '?page=admin_manage_events&status=' . urlencode($st) . '&ok=' . ($ok ? '1' : '0') . '&act=add';
-    header('Location: ' . $goto); exit;
+    // Delete event
+    if (!empty($_POST['delete_event'])) {
+      Event::delete((int)$_POST['delete_event']);
+      $notice = 'Event deleted successfully!';
+    }
+
+    // Edit event
+    if (!empty($_POST['edit_event']) && !empty($_POST['id'])) {
+      $data = [
+        'title' => trim($_POST['title'] ?? ''),
+        'description' => trim($_POST['description'] ?? ''),
+        'location' => trim($_POST['location'] ?? ''),
+        'category' => $_POST['category'] ?? 'career',
+        'start_at' => dtfix($_POST['start_at'] ?? null),
+        'end_at' => dtfix($_POST['end_at'] ?? null),
+        'registration_url' => trim($_POST['registration_url'] ?? '') ?: null,
+        'status' => $_POST['edit_status'] ?? 'draft'
+      ];
+      Event::update((int)$_POST['id'], $data);
+      $notice = 'Event updated successfully!';
+    }
+
+    // Redirect to prevent double submission
+    if ($notice) {
+      header('Location: ?page=admin_manage_events&status=' . urlencode($status) . '&success=' . urlencode($notice));
+      exit;
+    }
+  } catch (Exception $e) {
+    $notice = 'Error: ' . $e->getMessage();
   }
-
-  // STATUS CHANGE
-  if (!empty($_POST['update_status']) && !empty($_POST['id'])) {
-    $id   = (int)$_POST['id'];
-    $to   = $_POST['update_status'];
-    if (!in_array($to, ['draft','published','archived'], true)) $to = 'draft';
-    $ok   = method_exists('Event','updateStatus') ? Event::updateStatus($id, $to) : false;
-    $goto = '?page=admin_manage_events&status=' . urlencode($to) . '&ok=' . ($ok ? '1' : '0') . '&act=status';
-    header('Location: ' . $goto); exit;
-  }
 }
 
-// DELETE (soft/hard per your model)
-if (!empty($_GET['delete'])) {
-  $id  = (int)$_GET['delete'];
-  $ok  = method_exists('Event','delete') ? Event::delete($id) : false;
-  $goto = '?page=admin_manage_events&status=' . urlencode($status) . '&ok=' . ($ok ? '1' : '0') . '&act=del';
-  header('Location: ' . $goto); exit;
+// Handle success message from redirect
+if (!empty($_GET['success'])) {
+  $notice = $_GET['success'];
 }
 
-// ------- data listing -------
-$events = method_exists('Event','list') ? Event::list($status) : [];
-$counts = method_exists('Event','statusCounts') ? Event::statusCounts() : ['all'=>0,'draft'=>0,'published'=>0,'archived'=>0];
-
-$tabs = [
-  'all'       => 'All ('.(int)($counts['all'] ?? 0).')',
-  'draft'     => 'Drafts ('.(int)($counts['draft'] ?? 0).')',
-  'published' => 'Published ('.(int)($counts['published'] ?? 0).')',
-  'archived'  => 'Archived ('.(int)($counts['archived'] ?? 0).')',
-];
-
-// categories used on public Events
-$cats = [
-  'career' => 'Career',
-  'forum'  => 'Forum',
-  'workshop' => 'Workshop',
-  'competition' => 'Competition',
-  'community' => 'Community',
-];
-
-// Friendly notice text
-$notice = '';
-if (isset($_GET['ok'], $_GET['act'])) {
-  $ok = $_GET['ok'] === '1';
-  $act = $_GET['act'];
-  $notice = match ($act) {
-    'add'    => $ok ? 'Event added successfully.' : 'Failed to add event.',
-    'status' => $ok ? 'Status updated.' : 'Failed to update status.',
-    'del'    => $ok ? 'Event deleted.' : 'Failed to delete event.',
-    default  => ''
-  };
+// Refresh data after operations
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  $events = Event::list($status);
+  $counts = Event::statusCounts();
 }
+
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Manage Events | CCIT CMS</title>
-  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
-  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
-</head>
-<body>
+<link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
+<link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-faculty.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
 <div class="admin-cms-layout">
   <?php include __DIR__ . '/admin/_admin_sidebar.php'; ?>
 
   <main class="admin-main">
     <header class="admin-topbar">
-      <span class="admin-topbar__title">Manage Events</span>
+      <span class="admin-topbar__title">Events → Management</span>
       <div class="admin-topbar__spacer"></div>
       <div class="admin-topbar__user">
-        <span class="admin-topbar__avatar"><?= e(strtoupper($username[0] ?? 'A')) ?></span>
-        <span class="admin-topbar__name"><?= e($username) ?></span>
+        <span class="admin-topbar__avatar"><?= esc(strtoupper($username[0] ?? 'A')) ?></span>
+        <span class="admin-topbar__name"><?= esc($username) ?></span>
       </div>
     </header>
 
     <section class="admin-cms-section">
-      <?php if ($notice): ?><p class="notice success"><?= e($notice) ?></p><?php endif; ?>
-
-      <!-- Tabs -->
-      <nav class="tbar" aria-label="Events filters">
-        <div class="tbar__inner">
-          <?php foreach ($tabs as $key => $label): ?>
-            <a class="pill<?= $status === $key ? ' is-active' : '' ?>"
-               href="?page=admin_manage_events&status=<?= e($key) ?>"><?= e($label) ?></a>
-          <?php endforeach; ?>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h1 class="admin-cms-section__title mb-1">Event Management</h1>
+          <p class="text-muted mb-0">Manage upcoming events, schedules, and registrations</p>
         </div>
-      </nav>
+        <div class="d-flex gap-2">
+          <div class="badge bg-primary">Total: <?= $counts['all'] ?></div>
+          <div class="badge bg-success">Published: <?= $counts['published'] ?></div>
+          <div class="badge bg-warning text-dark">Drafts: <?= $counts['draft'] ?></div>
+        </div>
+      </div>
+      
+      <?php if ($notice): ?>
+        <div class="alert <?= str_starts_with($notice, 'Error') ? 'alert-danger' : 'alert-success' ?> alert-dismissible fade show" role="alert">
+          <?= esc($notice) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <?php endif; ?>
 
-      <!-- Add Event -->
-      <div class="cms-card">
-        <h2 class="cms-card-legend">Add Event</h2>
-        <form class="admin-cms-form" method="post" enctype="multipart/form-data">
-          <input type="hidden" name="add_event" value="1">
-          <div class="form-section">
-            <div class="field">
-              <label>Title</label>
-              <input type="text" name="title" required>
+      <!-- Current Data Preview Card -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0"><i class="fas fa-eye me-2"></i>Current Data Preview</h5>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                    data-bs-target="#currentDataCard" aria-expanded="false" aria-controls="currentDataCard">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="collapse" id="currentDataCard">
+          <div class="card-body">
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              Manage <strong>events and their visibility</strong>. Control event schedules and registration details.
             </div>
-            <div class="field">
-              <label>Description</label>
-              <textarea name="description" rows="5"></textarea>
-            </div>
-            <div class="field">
-              <label>Category</label>
-              <select name="category">
-                <?php foreach ($cats as $k=>$v): ?>
-                  <option value="<?= e($k) ?>"><?= e($v) ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-            <div class="field">
-              <label>Status</label>
-              <select name="status">
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Location</label>
-              <input type="text" name="location" placeholder="e.g. Ozanam Bldg, Rm 405">
-            </div>
-            <div class="field">
-              <label>Registration URL (optional)</label>
-              <input type="url" name="registration_url" placeholder="https://…">
-            </div>
-            <div class="field">
-              <label>Start Date & Time</label>
-              <input type="datetime-local" name="start_at">
-            </div>
-            <div class="field">
-              <label>End Date & Time</label>
-              <input type="datetime-local" name="end_at">
-            </div>
-            <div class="field">
-              <label>Image</label>
-              <input type="file" name="image" accept="image/*">
-            </div>
-            <div class="form-actions">
-              <button class="btn btn--primary" type="submit">Add Event</button>
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr><th>Field</th><th>Value</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Total Events</td><td><?= $counts['all'] ?></td></tr>
+                  <tr><td>Published</td><td><?= $counts['published'] ?></td></tr>
+                  <tr><td>Drafts</td><td><?= $counts['draft'] ?></td></tr>
+                  <tr><td>Archived</td><td><?= $counts['archived'] ?></td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
-        </form>
+        </div>
       </div>
 
-      <!-- Events List -->
-      <div class="cms-card">
-        <h2 class="cms-card-legend">Events List</h2>
-        <?php if (empty($events)): ?>
-          <p>No events in this tab.</p>
-        <?php else: foreach ($events as $ev):
-          $s = strtolower($ev['status'] ?? 'draft');
-          $statusClass = [
-            'draft'=>'status--draft', 'published'=>'status--published', 'archived'=>'status--archived'
-          ][$s] ?? 'status--draft';
-          $dateTxt = '';
-          if (!empty($ev['start_at'])) $dateTxt = date('M j, Y g:ia', strtotime($ev['start_at']));
-          if (!empty($ev['end_at']))   $dateTxt .= ' – ' . date('M j, Y g:ia', strtotime($ev['end_at']));
-        ?>
-        <div class="cms-card-item">
-          <div class="cms-card-item__thumb">
-            <?php if (!empty($ev['image_url'])): ?>
-              <img src="<?= e($ev['image_url']) ?>" alt="">
+      <!-- Content Management Form -->
+      <form id="eventsForm" method="post" enctype="multipart/form-data" autocomplete="off">
+
+        <!-- Add New Event -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0"><i class="fas fa-plus me-2"></i>Add New Event</h5>
+              <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                      data-bs-target="#addEventCollapse" aria-expanded="false" aria-controls="addEventCollapse">
+                <i class="fas fa-chevron-down"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="collapse" id="addEventCollapse">
+            <div class="card-body">
+              <input type="hidden" name="add_event" value="1">
+              <div class="row">
+                <div class="col-md-8 mb-3">
+                  <label class="form-label">Title</label>
+                  <input type="text" name="title" class="form-control" placeholder="Event title" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Status</label>
+                  <select name="status" class="form-select">
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Category</label>
+                  <select name="category" class="form-select">
+                    <option value="career">Career</option>
+                    <option value="forum">Forum</option>
+                    <option value="workshop">Workshop</option>
+                    <option value="competition">Competition</option>
+                    <option value="community">Community</option>
+                  </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Location</label>
+                  <input type="text" name="location" class="form-control" placeholder="e.g. Ozanam Bldg, Rm 405">
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label">Featured Image</label>
+                  <input type="file" name="image" class="form-control" accept="image/*">
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Start Date & Time</label>
+                  <input type="datetime-local" name="start_at" class="form-control">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">End Date & Time</label>
+                  <input type="datetime-local" name="end_at" class="form-control">
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Registration URL (optional)</label>
+                <input type="url" name="registration_url" class="form-control" placeholder="https://...">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" rows="4" placeholder="Event description"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Events List with Status Filter -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0"><i class="fas fa-table me-2"></i>Events</h5>
+            <div class="d-flex align-items-center">
+              <div class="btn-group me-3" role="group" aria-label="Status filter">
+                <a href="?page=admin_manage_events&status=all" class="btn btn-sm <?= $status === 'all' ? 'btn-primary' : 'btn-outline-primary' ?>">
+                  <i class="fas fa-list me-1"></i>All <span class="badge bg-light text-dark ms-1"><?= $counts['all'] ?></span>
+                </a>
+                <a href="?page=admin_manage_events&status=published" class="btn btn-sm <?= $status === 'published' ? 'btn-success' : 'btn-outline-success' ?>">
+                  <i class="fas fa-check-circle me-1"></i>Published <span class="badge bg-light text-dark ms-1"><?= $counts['published'] ?></span>
+                </a>
+                <a href="?page=admin_manage_events&status=draft" class="btn btn-sm <?= $status === 'draft' ? 'btn-warning' : 'btn-outline-warning' ?>">
+                  <i class="fas fa-edit me-1"></i>Drafts <span class="badge bg-light text-dark ms-1"><?= $counts['draft'] ?></span>
+                </a>
+                <a href="?page=admin_manage_events&status=archived" class="btn btn-sm <?= $status === 'archived' ? 'btn-secondary' : 'btn-outline-secondary' ?>">
+                  <i class="fas fa-archive me-1"></i>Archived <span class="badge bg-light text-dark ms-1"><?= $counts['archived'] ?></span>
+                </a>
+              </div>
+              <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                      data-bs-target="#eventsTableCollapse" aria-expanded="true" aria-controls="eventsTableCollapse">
+                <i class="fas fa-chevron-down"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="collapse show" id="eventsTableCollapse">
+          <div class="card-body">
+            <?php if (empty($events)): ?>
+              <div class="alert alert-warning" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>No events found for status: <?= esc($status) ?>
+              </div>
             <?php else: ?>
-              <div class="cms-card-item__placeholder" aria-hidden="true">📅</div>
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Status</th>
+                      <th>Event Details</th>
+                      <th>Schedule</th>
+                      <th>Location</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php foreach ($events as $ev): ?>
+                      <tr>
+                        <td><?= esc($ev['id']) ?></td>
+                        <td>
+                          <span class="badge bg-<?= $ev['status'] === 'published' ? 'success' : ($ev['status'] === 'draft' ? 'warning' : 'secondary') ?>">
+                            <?= esc(ucfirst($ev['status'])) ?>
+                          </span>
+                        </td>
+                        <td>
+                          <strong><?= esc($ev['title']) ?></strong>
+                          <br><span class="badge bg-info"><?= esc($ev['category'] ?? 'career') ?></span>
+                          <?php if (!empty($ev['description'])): ?>
+                            <br><small class="text-muted"><?= esc(substr(strip_tags($ev['description']), 0, 60)) ?>...</small>
+                          <?php endif; ?>
+                        </td>
+                        <td>
+                          <?php 
+                          $startText = !empty($ev['start_at']) ? date('M j, Y g:ia', strtotime($ev['start_at'])) : '—';
+                          $endText = !empty($ev['end_at']) ? date('M j, Y g:ia', strtotime($ev['end_at'])) : '';
+                          ?>
+                          <small><?= esc($startText) ?></small>
+                          <?php if ($endText): ?><br><small class="text-muted">to <?= esc($endText) ?></small><?php endif; ?>
+                        </td>
+                        <td><small><?= esc($ev['location'] ?? '—') ?></small></td>
+                        <td>
+                          <button class="btn btn-sm btn-warning me-1 edit-event-btn" 
+                                  data-event-id="<?= $ev['id'] ?>" 
+                                  title="Edit Event">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <div class="btn-group me-1">
+                            <button class="btn btn-sm btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                              <i class="fas fa-exchange-alt"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                              <?php foreach (['draft', 'published', 'archived'] as $st): ?>
+                                <?php if ($st !== $ev['status']): ?>
+                                  <li>
+                                    <form method="post" class="d-inline">
+                                      <input type="hidden" name="update_status" value="<?= $st ?>">
+                                      <input type="hidden" name="id" value="<?= $ev['id'] ?>">
+                                      <button type="submit" class="dropdown-item"><?= ucfirst($st) ?></button>
+                                    </form>
+                                  </li>
+                                <?php endif; ?>
+                              <?php endforeach; ?>
+                            </ul>
+                          </div>
+                          <form method="post" class="d-inline">
+                            <button type="submit" name="delete_event" value="<?= (int)$ev['id'] ?>" class="btn btn-sm btn-danger" 
+                                    onclick="return confirm('Really delete this event?')" title="Delete Event">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                    <?php endforeach; ?>
+                  </tbody>
+                </table>
+              </div>
             <?php endif; ?>
-          </div>
-          <div class="cms-card-item__body">
-            <h3><?= e($ev['title'] ?? 'Untitled') ?></h3>
-            <p class="meta">
-              <span class="status-badge <?= e($statusClass) ?>"><?= e(ucfirst($s)) ?></span>
-              <?php if (!empty($ev['category'])): ?> • <?= e(ucfirst($ev['category'])) ?><?php endif; ?>
-              <?php if ($dateTxt): ?> • <small><?= e($dateTxt) ?></small><?php endif; ?>
-              <?php if (!empty($ev['location'])): ?> • <small><?= e($ev['location']) ?></small><?php endif; ?>
-            </p>
-            <?php if (!empty($ev['description'])): ?>
-              <p class="excerpt">
-                <?= e(mb_substr(strip_tags((string)$ev['description']),0,160)) ?><?= strlen((string)$ev['description'])>160?'…':'' ?>
-              </p>
-            <?php endif; ?>
-            <?php if (!empty($ev['registration_url'])): ?>
-              <p class="meta"><small>Reg: <a href="<?= e($ev['registration_url']) ?>" target="_blank" rel="noopener">link</a></small></p>
-            <?php endif; ?>
-          </div>
-          <div class="cms-card-item__actions">
-            <?php if ($s !== 'draft'): ?>
-              <form method="post">
-                <input type="hidden" name="id" value="<?= (int)$ev['id'] ?>">
-                <button class="btn btn--ghost" name="update_status" value="draft" type="submit" title="Move to Draft">→ Draft</button>
-              </form>
-            <?php endif; ?>
-            <?php if ($s !== 'published'): ?>
-              <form method="post">
-                <input type="hidden" name="id" value="<?= (int)$ev['id'] ?>">
-                <button class="btn btn--success" name="update_status" value="published" type="submit" title="Publish">✓ Publish</button>
-              </form>
-            <?php endif; ?>
-            <?php if ($s !== 'archived'): ?>
-              <form method="post">
-                <input type="hidden" name="id" value="<?= (int)$ev['id'] ?>">
-                <button class="btn btn--outline" name="update_status" value="archived" type="submit" title="Archive">⤺ Archive</button>
-              </form>
-            <?php endif; ?>
-            <a class="btn btn--danger"
-               href="?page=admin_manage_events&delete=<?= (int)$ev['id'] ?>&status=<?= e($status) ?>"
-               onclick="return confirm('Delete this event?')">Delete</a>
           </div>
         </div>
-        <?php endforeach; endif; ?>
       </div>
+
+      <div class="page-end-spacer" style="height:160px" aria-hidden="true"></div>
+
+      <div class="savebar">
+        <div class="savebar__inner">
+          <span class="savebar__status" id="saveStatus">All changes saved</span>
+          <div class="savebar__actions">
+            <button type="button" class="btn" id="discardBtn">Discard</button>
+            <button type="submit" form="eventsForm" class="btn btn--primary">Save Changes</button>
+            <a class="btn btn-outline-secondary" href="?page=admin_manage_news">News</a>
+            <a class="btn btn-outline-secondary" href="?page=admin_manage_announcements">Announcements</a>
+          </div>
+        </div>
+      </div>
+
     </section>
   </main>
 </div>
 
+<!-- Edit Event Modals -->
+<?php foreach ($events as $ev): ?>
+<div class="modal fade" id="editEventModal<?= $ev['id'] ?>" tabindex="-1" aria-labelledby="editEventModalLabel<?= $ev['id'] ?>" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="post">
+        <input type="hidden" name="edit_event" value="1">
+        <input type="hidden" name="id" value="<?= $ev['id'] ?>">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editEventModalLabel<?= $ev['id'] ?>">Edit Event: <?= esc($ev['title']) ?></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-8 mb-3">
+              <label class="form-label">Title</label>
+              <input type="text" name="title" class="form-control" value="<?= esc($ev['title']) ?>" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Status</label>
+              <select name="edit_status" class="form-select">
+                <option value="draft" <?= $ev['status'] === 'draft' ? 'selected' : '' ?>>Draft</option>
+                <option value="published" <?= $ev['status'] === 'published' ? 'selected' : '' ?>>Published</option>
+                <option value="archived" <?= $ev['status'] === 'archived' ? 'selected' : '' ?>>Archived</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Category</label>
+              <select name="category" class="form-select">
+                <option value="career" <?= ($ev['category'] ?? '') === 'career' ? 'selected' : '' ?>>Career</option>
+                <option value="forum" <?= ($ev['category'] ?? '') === 'forum' ? 'selected' : '' ?>>Forum</option>
+                <option value="workshop" <?= ($ev['category'] ?? '') === 'workshop' ? 'selected' : '' ?>>Workshop</option>
+                <option value="competition" <?= ($ev['category'] ?? '') === 'competition' ? 'selected' : '' ?>>Competition</option>
+                <option value="community" <?= ($ev['category'] ?? '') === 'community' ? 'selected' : '' ?>>Community</option>
+              </select>
+            </div>
+            <div class="col-md-8 mb-3">
+              <label class="form-label">Location</label>
+              <input type="text" name="location" class="form-control" value="<?= esc($ev['location'] ?? '') ?>">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Start Date & Time</label>
+              <input type="datetime-local" name="start_at" class="form-control" 
+                     value="<?= !empty($ev['start_at']) ? date('Y-m-d\TH:i', strtotime($ev['start_at'])) : '' ?>">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">End Date & Time</label>
+              <input type="datetime-local" name="end_at" class="form-control" 
+                     value="<?= !empty($ev['end_at']) ? date('Y-m-d\TH:i', strtotime($ev['end_at'])) : '' ?>">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Registration URL</label>
+            <input type="url" name="registration_url" class="form-control" value="<?= esc($ev['registration_url'] ?? '') ?>">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control" rows="4"><?= esc($ev['description'] ?? '') ?></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<?php endforeach; ?>
+
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const notices = document.querySelectorAll(".notice");
-  if (notices.length) setTimeout(() => notices.forEach(n => n.style.display = "none"), 4000);
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('eventsForm');
+  const saveStatus = document.getElementById('saveStatus');
+  let dirty = false;
+
+  // Manual modal handling for edit buttons
+  document.querySelectorAll('.edit-event-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const eventId = btn.getAttribute('data-event-id');
+      const modalId = `editEventModal${eventId}`;
+      const modalElement = document.getElementById(modalId);
+      
+      if (modalElement) {
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+      } else {
+        console.error('Modal not found:', modalId);
+      }
+    });
+  });
+
+  // Track changes
+  form?.addEventListener('input', () => {
+    dirty = true;
+    saveStatus.textContent = 'Unsaved changes';
+  });
+
+  form?.addEventListener('submit', () => {
+    dirty = false;
+    saveStatus.textContent = 'Saving...';
+  });
+
+  // Prevent accidental navigation
+  window.addEventListener('beforeunload', (e) => { if(dirty){ e.preventDefault(); e.returnValue = ''; } });
+
+  document.getElementById('discardBtn')?.addEventListener('click', () => {
+    if(!dirty || confirm('Discard all unsaved changes?')) location.reload();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
+      e.preventDefault();
+      document.querySelector('.savebar [type="submit"]')?.click();
+    }
+  });
+
+  const notices = document.querySelectorAll('.alert');
+  if (notices.length) setTimeout(() => { notices.forEach(n => n.style.display='none'); }, 4000);
 });
 </script>
-</body>
-</html>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

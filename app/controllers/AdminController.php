@@ -1,5 +1,11 @@
 <?php declare(strict_types=1);
 
+// Include debug helper if it exists
+$debugHelper = __DIR__ . '/../lib/debug_helper.php';
+if (file_exists($debugHelper)) {
+    include_once $debugHelper;
+}
+
 class AdminController
 {
     /** Ensure session exists */
@@ -390,53 +396,151 @@ class AdminController
     public function programsUndergraduate(): string
     {
         $this->requireAdminOrDean();
-        require_once __DIR__ . '/../models/ProgramCard.php';
+        
+        // Include debug helper if available and not already included
+        $debugHelper = __DIR__ . '/../lib/debug_helper.php';
+        if (file_exists($debugHelper) && !function_exists('is_debug_enabled')) {
+            include_once $debugHelper;
+        }
+        
+        require_once __DIR__ . '/../models/ProgramsUndergraduateSettings.php';
+        
+        // First handle the programs cards view if that's what we want to show
+        if (isset($_GET['cards'])) {
+            require_once __DIR__ . '/../models/ProgramCard.php';
 
-        $level  = 'undergraduate';
-        $status = $_GET['status'] ?? 'all';
-        if (!in_array($status, ['all','draft','published','archived'], true)) $status = 'all';
+            $level  = 'undergraduate';
+            $status = $_GET['status'] ?? 'all';
+            if (!in_array($status, ['all','draft','published','archived'], true)) $status = 'all';
+            $notice = '';
+
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                try {
+                    if (!empty($_POST['add_card'])) {
+                        $d = $_POST['card'] ?? [];
+                        $d['level'] = $level;
+                        ProgramCard::create($d);
+                        header('Location: ?page=admin_programs_undergraduate&cards=1&status='.urlencode($d['status'] ?? 'draft').'&ok=1&act=add'); exit;
+                    }
+                    if (!empty($_POST['update_status']) && !empty($_POST['id'])) {
+                        ProgramCard::updateStatus((int)$_POST['id'], $_POST['update_status']);
+                        header('Location: ?page=admin_programs_undergraduate&cards=1&status='.urlencode($_POST['update_status']).'&ok=1&act=status'); exit;
+                    }
+                    if (!empty($_POST['edit_card']) && !empty($_POST['id'])) {
+                        ProgramCard::update((int)$_POST['id'], $_POST['card'] ?? []);
+                        header('Location: ?page=admin_programs_undergraduate&cards=1&status='.urlencode($status).'&ok=1&act=edit'); exit;
+                    }
+                } catch (\Throwable $e) {
+                    $notice = 'Error: '.$e->getMessage();
+                }
+            }
+
+            if (!empty($_GET['delete'])) {
+                ProgramCard::delete((int)$_GET['delete']);
+                header('Location: ?page=admin_programs_undergraduate&cards=1&status='.urlencode($status).'&ok=1&act=del'); exit;
+            }
+
+            $cards   = ProgramCard::list($level, $status);
+            $counts  = ProgramCard::statusCounts($level);
+            $username = $_SESSION['user']['username'] ?? 'Admin';
+
+            if (!$notice && isset($_GET['ok'], $_GET['act'])) {
+                $ok = $_GET['ok'] === '1';
+                $notice = $ok ? match($_GET['act']) {
+                    'add'=>'Card added.', 'status'=>'Status updated.', 'edit'=>'Card saved.', 'del'=>'Card deleted.', default=>'',
+                } : 'Operation failed.';
+            }
+
+            ob_start();
+            extract(compact('cards','counts','status','username','level','notice'), EXTR_SKIP);
+            include __DIR__ . '/../views/admin/admin_programs_cards.php';
+            return ob_get_clean();
+        }
+        
+        // Otherwise show the main undergraduate programs admin view
+        $user = $_SESSION['user'] ?? [];
+        $username = $user['username'] ?? 'Admin';
         $notice = '';
-
+        $ugs = ProgramsUndergraduateSettings::getSettings();
+        
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
-                if (!empty($_POST['add_card'])) {
-                    $d = $_POST['card'] ?? [];
-                    $d['level'] = $level;
-                    ProgramCard::create($d);
-                    header('Location: ?page=admin_programs_undergraduate&status='.urlencode($d['status'] ?? 'draft').'&ok=1&act=add'); exit;
+                $action = $_POST['action'] ?? 'save_settings';
+
+                if ($action === 'update_card') {
+                    $id = (int)($_POST['card_id'] ?? 0);
+                    $data = $_POST['card'] ?? [];
+                    
+                    // Show more debug info if available
+                    if (function_exists('debug_log')) {
+                        debug_log("AdminController: Updating card ID $id", ['data' => $data]);
+                    }
+                    
+                    try {
+                        $result = ProgramsUndergraduateSettings::updateCardById($id, $data);
+                        
+                        // Get result message
+                        if (is_array($result) && isset($result['message'])) {
+                            $notice = $result['message'];
+                        } else {
+                            $notice = 'Card updated successfully.';
+                        }
+                        
+                        // Add debug info if enabled
+                        if (function_exists('is_debug_enabled') && is_debug_enabled()) {
+                            if (is_array($result)) {
+                                $debugInfo = json_encode($result, JSON_PRETTY_PRINT);
+                                $notice .= ' <small><a href="#" onclick="alert(\'Debug info: ' . addslashes($debugInfo) . '\'); return false;">[Debug]</a></small>';
+                            }
+                        }
+                        
+                    } catch (\Throwable $e) {
+                        $notice = 'Error updating card: ' . $e->getMessage();
+                        
+                        // Log the error
+                        error_log('Card update error in AdminController: ' . $e->getMessage());
+                        
+                        if (function_exists('debug_log')) {
+                            debug_log("Card update error", [
+                                'error' => $e->getMessage(),
+                                'trace' => $e->getTraceAsString()
+                            ]);
+                        }
+                    }
+                    
+                } elseif ($action === 'delete_card') {
+                    $id = (int)($_POST['card_id'] ?? 0);
+                    try {
+                        ProgramsUndergraduateSettings::deleteCardById($id);
+                        $notice = 'Card deleted successfully.';
+                    } catch (\Throwable $e) {
+                        $notice = 'Error deleting card: ' . $e->getMessage();
+                        error_log('Card delete error: ' . $e->getMessage());
+                    }
+                } else {
+                    // default: save settings + maybe add a new card
+                    try {
+                        ProgramsUndergraduateSettings::updateSettings($_POST['ugs'] ?? [], $_POST['add_card'] ?? null);
+                        $notice = 'Undergraduate settings saved successfully.';
+                    } catch (\Throwable $e) {
+                        $notice = 'Error saving settings: ' . $e->getMessage();
+                        error_log('Settings update error: ' . $e->getMessage());
+                    }
                 }
-                if (!empty($_POST['update_status']) && !empty($_POST['id'])) {
-                    ProgramCard::updateStatus((int)$_POST['id'], $_POST['update_status']);
-                    header('Location: ?page=admin_programs_undergraduate&status='.urlencode($_POST['update_status']).'&ok=1&act=status'); exit;
-                }
-                if (!empty($_POST['edit_card']) && !empty($_POST['id'])) {
-                    ProgramCard::update((int)$_POST['id'], $_POST['card'] ?? []);
-                    header('Location: ?page=admin_programs_undergraduate&status='.urlencode($status).'&ok=1&act=edit'); exit;
-                }
+
+                // refresh snapshot after any action
+                $ugs = ProgramsUndergraduateSettings::getSettings();
             } catch (\Throwable $e) {
-                $notice = 'Error: '.$e->getMessage();
+                $notice = 'Error: ' . $e->getMessage();
             }
         }
 
-        if (!empty($_GET['delete'])) {
-            ProgramCard::delete((int)$_GET['delete']);
-            header('Location: ?page=admin_programs_undergraduate&status='.urlencode($status).'&ok=1&act=del'); exit;
-        }
-
-        $cards   = ProgramCard::list($level, $status);
-        $counts  = ProgramCard::statusCounts($level);
-        $username = $_SESSION['user']['username'] ?? 'Admin';
-
-        if (!$notice && isset($_GET['ok'], $_GET['act'])) {
-            $ok = $_GET['ok'] === '1';
-            $notice = $ok ? match($_GET['act']) {
-                'add'=>'Card added.', 'status'=>'Status updated.', 'edit'=>'Card saved.', 'del'=>'Card deleted.', default=>'',
-            } : 'Operation failed.';
-        }
-
+        // Fetch dynamic cards (raw rows for editing)
+        $cards = ProgramsUndergraduateSettings::getAllCards();
+        
         ob_start();
-        extract(compact('cards','counts','status','username','level','notice'), EXTR_SKIP);
-        include __DIR__ . '/../views/admin/admin_programs_cards.php';
+        extract(compact('user', 'username', 'notice', 'ugs', 'cards'), EXTR_SKIP);
+        include __DIR__ . '/../views/admin/admin_programs_undergraduate.php';
         return ob_get_clean();
     }
 
@@ -491,6 +595,48 @@ class AdminController
         ob_start();
         extract(compact('cards','counts','status','username','level','notice'), EXTR_SKIP);
         include __DIR__ . '/../views/admin/admin_programs_cards.php';
+        return ob_get_clean();
+    }
+
+    /** ==================== STUDENT ADMIN METHODS ==================== */
+
+    public function studentOrganizations(): string
+    {
+        $this->requireAdminOrDean();
+        ob_start();
+        include __DIR__ . '/../views/admin/admin_student_organizations.php';
+        return ob_get_clean();
+    }
+
+    public function studentScholarships(): string
+    {
+        $this->requireAdminOrDean();
+        ob_start();
+        include __DIR__ . '/../views/admin/admin_student_scholarships.php';
+        return ob_get_clean();
+    }
+
+    public function studentResearch(): string
+    {
+        $this->requireAdminOrDean();
+        ob_start();
+        include __DIR__ . '/../views/admin/admin_student_research.php';
+        return ob_get_clean();
+    }
+
+    public function studentCertifications(): string
+    {
+        $this->requireAdminOrDean();
+        ob_start();
+        include __DIR__ . '/../views/admin/admin_student_certifications.php';
+        return ob_get_clean();
+    }
+
+    public function studentTestimonials(): string
+    {
+        $this->requireAdminOrDean();
+        ob_start();
+        include __DIR__ . '/../views/admin/admin_student_testimonials.php';
         return ob_get_clean();
     }
 }

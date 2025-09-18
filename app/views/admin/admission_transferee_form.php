@@ -2,7 +2,9 @@
 // app/views/admin/admission_transferee_form.php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-function esc($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+if (!function_exists('esc')) {
+    function esc($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+}
 
 // Prefer username from Auth if available (keeps header consistent)
 $user = class_exists('Auth') ? (Auth::user() ?? []) : [];
@@ -13,15 +15,17 @@ $username = $user['username'] ?? ($_SESSION['user']['username'] ?? 'Admin');
 $success = !empty($msg);
 $error = '';
 ?>
-<link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
 <link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
+<link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-faculty.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
 <div class="admin-cms-layout">
   <?php include __DIR__ . '/_admin_sidebar.php'; ?>
 
   <main class="admin-main">
     <header class="admin-topbar">
-      <span class="admin-topbar__title">Edit Admissions: Transferee</span>
+      <span class="admin-topbar__title">Admissions → Transferee</span>
       <div class="admin-topbar__spacer"></div>
       <div class="admin-topbar__user">
         <span class="admin-topbar__avatar"><?= esc(strtoupper($username[0] ?? 'A')) ?></span>
@@ -30,173 +34,193 @@ $error = '';
     </header>
 
     <section class="admin-cms-section">
-      <h1 class="admin-cms-section__title">Transferee Admission Editor</h1>
-      <p class="intro">Update content for the Transferee Admissions page. HTML is allowed where noted.</p>
-
-      <!-- Sticky local subnav -->
-      <nav class="cms-subnav" aria-label="Admission sections">
-        <a href="#sec-subhero">Subhero</a>
-        <a href="#sec-apply">How to Apply</a>
-        <a href="#sec-requirements">Requirements</a>
-        <a href="#sec-enrollment">Enrollment Procedure</a>
-        <a href="#sec-enrollment-note">Enrollment Note</a>
-        <a href="#sec-sidebar">Sidebar</a>
-        <a href="#sec-cta">CTA</a>
-      </nav>
-
+      <h1 class="admin-cms-section__title">Transferee Admission Management</h1>
+      
       <?php if ($success): ?>
-        <p class="notice success"><?= esc($msg) ?></p>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <?= esc($msg) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
       <?php elseif ($error): ?>
-        <p class="notice error"><?= esc($error) ?></p>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <?= esc($error) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
       <?php endif; ?>
 
-      <!-- Preview -->
-      <div class="cms-card">
-        <h2 class="cms-card-legend">Current Data</h2>
-        <table class="admin-data-table">
-          <thead><tr><th>Field</th><th>Value</th></tr></thead>
-          <tbody>
-            <tr><td>Subhero Lead</td><td><?= esc($settings['subhero_lead'] ?? '—') ?></td></tr>
-            <tr><td>How to Apply (HTML)</td><td><?= esc($settings['how_to_apply'] ?? '—') ?></td></tr>
-            <tr><td>Requirements (HTML)</td><td><?= esc($settings['requirements'] ?? '—') ?></td></tr>
-            <tr><td>Enrollment Procedure (HTML)</td><td><?= esc($settings['enrollment_procedure'] ?? '—') ?></td></tr>
-            <tr><td>Enrollment Note (HTML)</td><td><?= esc($settings['enrollment_note'] ?? '—') ?></td></tr>
-            <tr><td>Sidebar Office (HTML)</td><td><?= esc($settings['sidebar_office'] ?? '—') ?></td></tr>
-            <tr><td>Sidebar Links (HTML)</td><td><?= esc($settings['sidebar_links'] ?? '—') ?></td></tr>
-            <tr><td>Sidebar Image URL</td><td><?= esc($settings['sidebar_image_url'] ?? '—') ?></td></tr>
-            <tr><td>Sidebar Image Caption</td><td><?= esc($settings['sidebar_image_caption'] ?? '—') ?></td></tr>
-            <tr><td>CTA Title</td><td><?= esc($settings['cta_title'] ?? '—') ?></td></tr>
-            <tr><td>CTA Description</td><td><?= esc($settings['cta_description'] ?? '—') ?></td></tr>
-            <tr><td>CTA Action Label</td><td><?= esc($settings['cta_action_label'] ?? '—') ?></td></tr>
-            <tr><td>CTA Action URL</td><td><?= esc($settings['cta_action_url'] ?? '—') ?></td></tr>
-          </tbody>
-        </table>
+      <!-- Current Data Preview Card -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0"><i class="fas fa-eye me-2"></i>Current Data Preview</h5>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                    data-bs-target="#currentDataCard" aria-expanded="false" aria-controls="currentDataCard">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="collapse" id="currentDataCard">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Field</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Subhero Lead</td><td><?= esc($settings['subhero_lead'] ?? '—') ?></td></tr>
+                  <tr><td>How to Apply (HTML)</td><td><?= esc($settings['how_to_apply'] ?? '—') ?></td></tr>
+                  <tr><td>Requirements (HTML)</td><td><?= esc($settings['requirements'] ?? '—') ?></td></tr>
+                  <tr><td>Enrollment Procedure (HTML)</td><td><?= esc($settings['enrollment_procedure'] ?? '—') ?></td></tr>
+                  <tr><td>Enrollment Note (HTML)</td><td><?= esc($settings['enrollment_note'] ?? '—') ?></td></tr>
+                  <tr><td>Sidebar Office (HTML)</td><td><?= esc($settings['sidebar_office'] ?? '—') ?></td></tr>
+                  <tr><td>Sidebar Links (HTML)</td><td><?= esc($settings['sidebar_links'] ?? '—') ?></td></tr>
+                  <tr><td>Sidebar Image URL</td><td><?= esc($settings['sidebar_image_url'] ?? '—') ?></td></tr>
+                  <tr><td>Sidebar Image Caption</td><td><?= esc($settings['sidebar_image_caption'] ?? '—') ?></td></tr>
+                  <tr><td>CTA Title</td><td><?= esc($settings['cta_title'] ?? '—') ?></td></tr>
+                  <tr><td>CTA Description</td><td><?= esc($settings['cta_description'] ?? '—') ?></td></tr>
+                  <tr><td>CTA Action Label</td><td><?= esc($settings['cta_action_label'] ?? '—') ?></td></tr>
+                  <tr><td>CTA Action URL</td><td><?= esc($settings['cta_action_url'] ?? '—') ?></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Editor -->
+      <!-- Content Management Form -->
       <form id="admTransForm" method="post" action="?page=admin_admission_transferee" class="admin-cms-form" autocomplete="off">
 
-        <!-- Subhero -->
-        <div class="cms-card">
-          <fieldset id="sec-subhero">
-            <legend class="cms-card-legend">Subhero</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Subhero Lead</label>
-                <input type="text" name="subhero_lead" value="<?= esc($settings['subhero_lead'] ?? '') ?>" maxlength="255" required>
-              </div>
+        <!-- Subhero Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0" id="sec-subhero"><i class="fas fa-heading me-2"></i>Subhero</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Subhero Lead</label>
+              <input type="text" name="subhero_lead" class="form-control" value="<?= esc($settings['subhero_lead'] ?? '') ?>" maxlength="255" required>
             </div>
-          </fieldset>
+          </div>
         </div>
 
-        <!-- How to Apply -->
-        <div class="cms-card">
-          <fieldset id="sec-apply">
-            <legend class="cms-card-legend">How to Apply (HTML allowed)</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Body (HTML)</label>
-                <textarea name="how_to_apply" rows="4"><?= esc($settings['how_to_apply'] ?? '') ?></textarea>
-              </div>
+        <!-- How to Apply Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0" id="sec-apply"><i class="fas fa-clipboard-list me-2"></i>How to Apply <small class="text-muted">(HTML allowed)</small></h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Body (HTML)</label>
+              <textarea name="how_to_apply" class="form-control" rows="4"><?= esc($settings['how_to_apply'] ?? '') ?></textarea>
             </div>
-          </fieldset>
+          </div>
         </div>
 
-        <!-- Requirements -->
-        <div class="cms-card">
-          <fieldset id="sec-requirements">
-            <legend class="cms-card-legend">Requirements (HTML allowed)</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Requirements (HTML)</label>
-                <textarea name="requirements" rows="5"><?= esc($settings['requirements'] ?? '') ?></textarea>
-              </div>
+        <!-- Requirements Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0" id="sec-requirements"><i class="fas fa-list-check me-2"></i>Requirements <small class="text-muted">(HTML allowed)</small></h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Requirements (HTML)</label>
+              <textarea name="requirements" class="form-control" rows="5"><?= esc($settings['requirements'] ?? '') ?></textarea>
             </div>
-          </fieldset>
+          </div>
         </div>
 
-        <!-- Enrollment -->
-        <div class="cms-card">
-          <fieldset id="sec-enrollment">
-            <legend class="cms-card-legend">Enrollment Procedure (HTML allowed)</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Procedure (HTML)</label>
-                <textarea name="enrollment_procedure" rows="5"><?= esc($settings['enrollment_procedure'] ?? '') ?></textarea>
-              </div>
+        <!-- Enrollment Procedure Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0" id="sec-enrollment"><i class="fas fa-tasks me-2"></i>Enrollment Procedure <small class="text-muted">(HTML allowed)</small></h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Procedure (HTML)</label>
+              <textarea name="enrollment_procedure" class="form-control" rows="5"><?= esc($settings['enrollment_procedure'] ?? '') ?></textarea>
             </div>
-          </fieldset>
+          </div>
         </div>
 
-        <!-- Enrollment Note -->
-        <div class="cms-card">
-          <fieldset id="sec-enrollment-note">
-            <legend class="cms-card-legend">Enrollment Note (HTML allowed)</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Note (HTML)</label>
-                <textarea name="enrollment_note" rows="3"><?= esc($settings['enrollment_note'] ?? '') ?></textarea>
-              </div>
+        <!-- Enrollment Note Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0" id="sec-enrollment-note"><i class="fas fa-sticky-note me-2"></i>Enrollment Note <small class="text-muted">(HTML allowed)</small></h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Note (HTML)</label>
+              <textarea name="enrollment_note" class="form-control" rows="3"><?= esc($settings['enrollment_note'] ?? '') ?></textarea>
             </div>
-          </fieldset>
+          </div>
         </div>
 
-        <!-- Sidebar -->
-        <div class="cms-card">
-          <fieldset id="sec-sidebar">
-            <legend class="cms-card-legend">Sidebar</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>Office Info (HTML)</label>
-                <textarea name="sidebar_office" rows="3"><?= esc($settings['sidebar_office'] ?? '') ?></textarea>
+        <!-- Sidebar Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0" id="sec-sidebar"><i class="fas fa-sidebar me-2"></i>Sidebar</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">Office Info (HTML)</label>
+              <textarea name="sidebar_office" class="form-control" rows="3"><?= esc($settings['sidebar_office'] ?? '') ?></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Quick Links (HTML)</label>
+              <textarea name="sidebar_links" class="form-control" rows="3"><?= esc($settings['sidebar_links'] ?? '') ?></textarea>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Image URL</label>
+                  <input type="text" name="sidebar_image_url" class="form-control" value="<?= esc($settings['sidebar_image_url'] ?? '') ?>">
+                  <div class="form-text">Absolute or site-relative URL</div>
+                </div>
               </div>
-              <div class="field">
-                <label>Quick Links (HTML)</label>
-                <textarea name="sidebar_links" rows="3"><?= esc($settings['sidebar_links'] ?? '') ?></textarea>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Image Caption</label>
+                  <input type="text" name="sidebar_image_caption" class="form-control" value="<?= esc($settings['sidebar_image_caption'] ?? '') ?>">
+                </div>
               </div>
             </div>
-            <div class="form-row">
-              <div class="field">
-                <label>Image URL</label>
-                <input type="text" name="sidebar_image_url" value="<?= esc($settings['sidebar_image_url'] ?? '') ?>">
-                <span class="help">Absolute or site-relative URL</span>
-              </div>
-              <div class="field">
-                <label>Image Caption</label>
-                <input type="text" name="sidebar_image_caption" value="<?= esc($settings['sidebar_image_caption'] ?? '') ?>">
-              </div>
-            </div>
-          </fieldset>
+          </div>
         </div>
 
-        <!-- CTA -->
-        <div class="cms-card">
-          <fieldset id="sec-cta">
-            <legend class="cms-card-legend">Call to Action</legend>
-            <div class="form-section">
-              <div class="field">
-                <label>CTA Title</label>
-                <input type="text" name="cta_title" value="<?= esc($settings['cta_title'] ?? '') ?>">
+        <!-- Call to Action Section -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0" id="sec-cta"><i class="fas fa-bullhorn me-2"></i>Call to Action</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label">CTA Title</label>
+              <input type="text" name="cta_title" class="form-control" value="<?= esc($settings['cta_title'] ?? '') ?>">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">CTA Description</label>
+              <input type="text" name="cta_description" class="form-control" value="<?= esc($settings['cta_description'] ?? '') ?>">
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Action Label</label>
+                  <input type="text" name="cta_action_label" class="form-control" value="<?= esc($settings['cta_action_label'] ?? '') ?>">
+                </div>
               </div>
-              <div class="field">
-                <label>CTA Description</label>
-                <input type="text" name="cta_description" value="<?= esc($settings['cta_description'] ?? '') ?>">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">Action URL</label>
+                  <input type="text" name="cta_action_url" class="form-control" value="<?= esc($settings['cta_action_url'] ?? '') ?>">
+                </div>
               </div>
             </div>
-            <div class="form-row">
-              <div class="field">
-                <label>Action Label</label>
-                <input type="text" name="cta_action_label" value="<?= esc($settings['cta_action_label'] ?? '') ?>">
-              </div>
-              <div class="field">
-                <label>Action URL</label>
-                <input type="text" name="cta_action_url" value="<?= esc($settings['cta_action_url'] ?? '') ?>">
-              </div>
-            </div>
-          </fieldset>
+          </div>
         </div>
-
-        <!-- Only sticky Save Bar is used -->
       </form>
 
       <div class="page-end-spacer" style="height:160px" aria-hidden="true"></div>
@@ -322,3 +346,5 @@ document.addEventListener('DOMContentLoaded', () => {
   if (notices.length) setTimeout(() => { notices.forEach(n => n.style.display='none'); }, 4000);
 });
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

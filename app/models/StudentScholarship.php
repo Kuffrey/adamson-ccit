@@ -16,4 +16,47 @@ class StudentScholarship extends Model {
         $stmt->execute([':id' => $id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+
+    public static function create($data) {
+        $db = self::db();
+        $sql = 'INSERT INTO ' . self::$table . ' 
+                (name, type, summary, conditions, requirements, examples, learn_more_url) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)';
+        $stmt = $db->prepare($sql);
+        return $stmt->execute([
+            $data['name'] ?? '',
+            $data['type'] ?? '',
+            $data['summary'] ?? '',
+            $data['conditions'] ?? '',
+            $data['requirements'] ?? '',
+            $data['examples'] ?? '',
+            $data['learn_more_url'] ?? ''
+        ]);
+    }
+
+    public static function update($id, $data) {
+        $db = self::db();
+        $sql = 'UPDATE ' . self::$table . ' SET 
+                name = ?, type = ?, summary = ?, conditions = ?, requirements = ?, 
+                examples = ?, learn_more_url = ? 
+                WHERE id = ?';
+        $stmt = $db->prepare($sql);
+        return $stmt->execute([
+            $data['name'] ?? '',
+            $data['type'] ?? '',
+            $data['summary'] ?? '',
+            $data['conditions'] ?? '',
+            $data['requirements'] ?? '',
+            $data['examples'] ?? '',
+            $data['learn_more_url'] ?? '',
+            $id
+        ]);
+    }
+
+    public static function delete($id) {
+        $db = self::db();
+        $sql = 'DELETE FROM ' . self::$table . ' WHERE id = ?';
+        $stmt = $db->prepare($sql);
+        return $stmt->execute([$id]);
+    }
 }

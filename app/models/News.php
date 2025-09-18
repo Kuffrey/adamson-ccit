@@ -21,6 +21,8 @@ final class News extends Model
     }
     private static function has(string $col): bool { return in_array($col, self::cols(), true); }
     private static function bodyCol(): string { return self::has('body') ? 'body' : (self::has('content') ? 'content' : 'body'); }
+    
+    public static function getBodyColumnName(): string { return self::bodyCol(); }
 
     /** Prefer `date` if exists, else `published_at`, else `created_at` */
     private static function dateExpr(): string {
@@ -144,9 +146,67 @@ final class News extends Model
         return $st->execute([':s'=>$status, ':id'=>$id]);
     }
 
+    public static function update(int $id, array $data): bool {
+        try {
+            $db = parent::db();
+            $cols = self::cols();
+            $setClauses = [];
+            $params = [':id' => $id];
+            
+            // Build SET clauses for valid columns
+            foreach ($data as $field => $value) {
+                if (in_array($field, $cols) && $field !== 'id') {
+                    $setClauses[] = "$field = :$field";
+                    $params[":$field"] = $value;
+                }
+            }
+            
+            if (empty($setClauses)) {
+                return false; // No valid fields to update
+            }
+            
+            // Add updated_at if it exists
+            if (self::has('updated_at')) {
+                $setClauses[] = "updated_at = NOW()";
+            }
+            
+            $sql = "UPDATE news SET " . implode(', ', $setClauses) . " WHERE id = :id";
+            $stmt = $db->prepare($sql);
+            return $stmt->execute($params);
+            
+        } catch (\Throwable $e) {
+            error_log("News::update error: " . $e->getMessage());
+            return false;
+        }
+    }
+
     public static function delete(int|string $id): bool {
         $st = parent::db()->prepare("DELETE FROM news WHERE id=:id");
         return $st->execute([':id'=>(int)$id]);
+    }
+
+    public static function findById(int $id): ?array {
+        try {
+            $db = parent::db();
+            $bodyCol = self::bodyCol();
+            $imgExpr = self::has('image_url') ? 'image_url' : 'NULL AS image_url';
+            
+            $sql = "SELECT id, title, excerpt, COALESCE($bodyCol,'') AS content, 
+                           category, status, author, $imgExpr,
+                           " . self::dateExpr() . " AS display_date,
+                           created_at, updated_at
+                    FROM news 
+                    WHERE id = :id";
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute([':id' => $id]);
+            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            return $result ?: null;
+        } catch (\Throwable $e) {
+            error_log("News::findById error: " . $e->getMessage());
+            return null;
+        }
     }
 
     /** For small admin lists */

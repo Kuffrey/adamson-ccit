@@ -2,6 +2,8 @@
 // app/models/FacultyCertification.php
 require_once __DIR__ . '/Model.php';
 class FacultyCertification extends Model {
+    protected string $table = 'faculty_certification_award';
+    
     // Grouped by year > issuer > certification > faculty
     public static function getGrouped() {
         $db = self::db();
@@ -30,5 +32,103 @@ class FacultyCertification extends Model {
             $grouped[$year][$issuer][$cert]['faculty'][] = $row['faculty_name'];
         }
         return $grouped;
+    }
+    
+    public function create($data) {
+        $requiredFields = ['faculty_id', 'certification_id', 'year_earned', 'status'];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field]) || $data[$field] === '') {
+                throw new Exception("Field '$field' is required");
+            }
+        }
+        
+        $db = self::db();
+        $sql = 'INSERT INTO faculty_certification_award (faculty_id, certification_id, year_earned, year_expiry, status) 
+                VALUES (:faculty_id, :certification_id, :year_earned, :year_expiry, :status)';
+        $stmt = $db->prepare($sql);
+        
+        return $stmt->execute([
+            ':faculty_id' => $data['faculty_id'],
+            ':certification_id' => $data['certification_id'],
+            ':year_earned' => $data['year_earned'],
+            ':year_expiry' => $data['year_expiry'] ?? null,
+            ':status' => $data['status']
+        ]);
+    }
+    
+    public function update($id, $data) {
+        if (!$id) {
+            throw new Exception("ID is required for update");
+        }
+        
+        $db = self::db();
+        $sql = 'UPDATE faculty_certification_award 
+                SET faculty_id = :faculty_id, certification_id = :certification_id, 
+                    year_earned = :year_earned, year_expiry = :year_expiry, status = :status 
+                WHERE id = :id';
+        $stmt = $db->prepare($sql);
+        
+        return $stmt->execute([
+            ':id' => $id,
+            ':faculty_id' => $data['faculty_id'],
+            ':certification_id' => $data['certification_id'],
+            ':year_earned' => $data['year_earned'],
+            ':year_expiry' => $data['year_expiry'] ?? null,
+            ':status' => $data['status']
+        ]);
+    }
+    
+    public function delete($id) {
+        if (!$id) {
+            throw new Exception("ID is required for delete");
+        }
+        
+        $db = self::db();
+        $sql = 'DELETE FROM faculty_certification_award WHERE id = :id';
+        $stmt = $db->prepare($sql);
+        
+        return $stmt->execute([':id' => $id]);
+    }
+    
+    public function getById($id) {
+        if (!$id) {
+            return null;
+        }
+        
+        $db = self::db();
+        $sql = 'SELECT fca.*, c.cert_title, c.issuer, f.name as faculty_name 
+                FROM faculty_certification_award fca
+                LEFT JOIN certification c ON fca.certification_id = c.id
+                LEFT JOIN faculty f ON fca.faculty_id = f.id
+                WHERE fca.id = :id';
+        $stmt = $db->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    public static function getAllCertifications() {
+        $db = self::db();
+        $sql = 'SELECT * FROM certification ORDER BY issuer, cert_title';
+        $stmt = $db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    public static function getAllFaculty() {
+        $db = self::db();
+        $sql = 'SELECT id, name, dept FROM faculty ORDER BY name';
+        $stmt = $db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    public function getAll() {
+        $db = self::db();
+        $sql = 'SELECT fca.*, c.cert_title, c.issuer, f.name as faculty_name 
+                FROM faculty_certification_award fca
+                LEFT JOIN certification c ON fca.certification_id = c.id
+                LEFT JOIN faculty f ON fca.faculty_id = f.id
+                ORDER BY fca.year_earned DESC, f.name, c.cert_title';
+        $stmt = $db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

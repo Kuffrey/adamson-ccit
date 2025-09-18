@@ -11,7 +11,7 @@ final class ProgramCard extends Model
     // badge, title, title_muted, summary, pillbox_title, pills TEXT,
     // learn_more_url, learn_more_external TINYINT(1),
     // curriculum_url, curriculum_external TINYINT(1),
-    // apply_url, thumb_url,
+    // apply_url, image_url,
     // status ENUM('draft','published','archived'),
     // created_at, updated_at
 
@@ -42,7 +42,7 @@ final class ProgramCard extends Model
         $x['curriculum_url']      = trim((string)($d['curriculum_url'] ?? ''));
         $x['curriculum_external'] = !empty($d['curriculum_external']) ? 1 : 0;
         $x['apply_url']           = trim((string)($d['apply_url'] ?? ''));
-        $x['thumb_url']           = trim((string)($d['thumb_url'] ?? ''));
+        $x['image_url']           = trim((string)($d['image_url'] ?? ''));
         return $x;
     }
 
@@ -59,6 +59,17 @@ final class ProgramCard extends Model
     }
 
     public static function update(int $id, array $d): bool {
+        // First get the existing card to preserve level if not provided
+        $st = parent::db()->prepare("SELECT level FROM program_cards WHERE id=:id");
+        $st->execute([':id'=>$id]);
+        $existing = $st->fetch(\PDO::FETCH_ASSOC);
+        if (!$existing) return false;
+        
+        // Preserve level if not explicitly provided in update data
+        if (!isset($d['level'])) {
+            $d['level'] = $existing['level'];
+        }
+        
         $d = self::clean($d);
         $set = implode(', ', array_map(fn($f)=>"$f=:$f", array_keys($d)));
         $sql = "UPDATE program_cards SET $set, updated_at=NOW() WHERE id=:id";

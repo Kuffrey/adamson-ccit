@@ -180,7 +180,17 @@ final class HomeController
     {
         $list = [];
         try {
-            $list = array_slice(News::all(), 0, 3);
+            // Use searchPublished instead of all() to only show published news
+            if (method_exists(News::class, 'searchPublished')) {
+                $result = News::searchPublished([], ['page' => 1, 'perPage' => 3]);
+                $list = $result['items'] ?? [];
+            } else {
+                // Fallback: Filter out non-published news
+                $list = array_values(array_filter(News::all(), function($item) {
+                    return strtolower($item['status'] ?? '') === 'published';
+                }));
+                $list = array_slice($list, 0, 3);
+            }
         } catch (\Throwable $e) {
             $list = [];
         }
