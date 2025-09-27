@@ -9,6 +9,7 @@ $roleName = ucfirst($user['role'] ?? 'Administrator');
 $pg = $_GET['page'] ?? '';
 
 $aboutOpen    = in_array($pg, ['admin_manage_about','admin_about_vision_mission'], true) ? ' open' : '';
+$homepageOpen = in_array($pg, ['admin_manage_homepage','admin_manage_quick_actions'], true) ? ' open' : '';
 $newsOpen     = in_array($pg, ['admin_news_settings','admin_manage_news','admin_manage_events','admin_manage_announcements'], true) ? ' open' : '';
 $admitOpen    = in_array($pg, ['admin_admission_freshman','admin_admission_transferee','admin_admission_graduate'], true) ? ' open' : '';
 $programsOpen = in_array($pg, ['admin_manage_programs','admin_programs_undergraduate','admin_programs_graduate'], true) ? ' open' : '';
@@ -26,9 +27,20 @@ $facultyOpen  = in_array($pg, ['admin_faculty_profile','admin_faculty_research',
        class="nav__link<?= $pg === 'admin_dashboard' ? ' is-active' : '' ?>">
        Dashboard</a>
 
-    <a href="?page=admin_manage_homepage"
-       class="nav__link<?= $pg === 'admin_manage_homepage' ? ' is-active' : '' ?>">
-       Homepage</a>
+    <!-- Homepage -->
+    <div class="nav__dropdown<?= $homepageOpen ?>">
+      <button class="nav__link nav__toggle" type="button">
+        Homepage <span class="caret">▾</span>
+      </button>
+      <div class="nav__submenu">
+        <a href="?page=admin_manage_homepage"
+           class="nav__sublink<?= $pg === 'admin_manage_homepage' ? ' is-active' : '' ?>">
+           Homepage Content</a>
+        <a href="?page=admin_manage_quick_actions"
+           class="nav__sublink<?= $pg === 'admin_manage_quick_actions' ? ' is-active' : '' ?>">
+           Quick Actions</a>
+      </div>
+    </div>
 
     <!-- About -->
     <div class="nav__dropdown<?= $aboutOpen ?>">

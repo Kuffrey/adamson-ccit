@@ -28,7 +28,7 @@ $faculty = FacultyProfile::getAll();
       <p class="subhero__lead"><?= htmlspecialchars($settings['subhero_lead'] ?? 'College of Computing & Information Technology — administration and faculty roster.') ?></p>
     </div>
   </section>
-  <!-- ============ LOCAL SUBNAV (Faculty) ============ -->
+  <!-- ============ LOCAL SUBNAV ============ -->
   <nav class="subnav" aria-label="Faculty sub-navigation">
     <div class="container">
       <ul class="subnav__list" role="list">
@@ -45,18 +45,17 @@ $faculty = FacultyProfile::getAll();
     </div>
   </nav>
   <!-- ============ FILTER BAR ============ -->
-  <section class="fbar section-sep" aria-labelledby="filt-head">
-    <div class="container fbar__inner">
-      <h2 id="filt-head" class="sr-only">Filter directory</h2>
-      <div class="fbar__left">
-        <div class="fpills" role="tablist" aria-label="Filter by department">
+  <section class="nbar">
+    <div class="container nbar__inner">
+      <div class="nbar__left">
+        <div class="ncats" role="tablist" aria-label="Filter by department">
           <button class="pill is-active" data-dept="all" role="tab" aria-selected="true">All</button>
           <button class="pill" data-dept="admin" role="tab">Administration</button>
           <button class="pill" data-dept="itis" role="tab">IT&amp;IS</button>
           <button class="pill" data-dept="cs" role="tab">CS</button>
         </div>
-        <label class="frole">
-          <span class="sr-only">Filter by role</span>
+        
+        <form class="nyear" method="get" action="#" onsubmit="return false;">
           <select id="fRole" aria-label="Filter by role">
             <option value="all">All Roles</option>
             <option value="dean">Dean</option>
@@ -65,59 +64,76 @@ $faculty = FacultyProfile::getAll();
             <option value="part">Part-Time Faculty</option>
             <option value="lecturer">Special Lecturer</option>
           </select>
-        </label>
+        </form>
       </div>
-      <form class="fsearch" role="search" aria-label="Search directory">
+      
+      <form class="nsearch" role="search" aria-label="Search directory">
         <input id="fQuery" type="search" placeholder="Search name, degree, title…" aria-label="Search directory"/>
-        <button class="btn btn--solid" type="submit">Search</button>
+        <button class="btn btn--solid" type="submit"></button>
       </form>
     </div>
   </section>
   <!-- ============ DIRECTORY ============ -->
-  <section class="content flist" aria-labelledby="dir-head">
+  <section class="rlist">
     <div class="container">
-      <div id="fCount" class="fcount">Showing all people</div>
-      <div id="fGrid" class="fgrid">
-        <?php foreach ($faculty as $f): ?>
-        <article class="f" data-dept="<?= htmlspecialchars($f['dept']) ?>" data-role="<?= htmlspecialchars($f['role']) ?>">
-          <?php if (!empty($f['avatar_url'])): ?>
-            <img class="f__avatar" src="<?= htmlspecialchars($f['avatar_url']) ?>" alt="Portrait of <?= htmlspecialchars($f['name']) ?>">
-          <?php else: ?>
-            <div class="f__avatar f__avatar--ph" aria-hidden="true"><?= htmlspecialchars($f['avatar_initials'] ?? substr($f['name'],0,2)) ?></div>
-          <?php endif; ?>
-          <div class="f__body">
-            <h3 class="f__name"><?= htmlspecialchars($f['name']) ?></h3>
-            <p class="f__title"><?= htmlspecialchars($f['title']) ?></p>
-            <div class="fbadges">
-              <?php
-                $badges = array_map('trim', explode(',', $f['badges'] ?? ''));
-                foreach ($badges as $b) {
-                  if ($b === '') continue;
-                  $isDept = in_array($b, ['Administration','IT&IS','CS']);
-                  echo '<span class="fbadge'.($isDept?' fbadge--dept':'').'">'.htmlspecialchars($b).'</span>';
-                }
-              ?>
+      <div id="fCount" class="rcount">Showing all people</div>
+      <div id="fGrid" class="cards">
+        <?php if (empty($faculty)): ?>
+          <!-- Fallback static content -->
+          <article class="f" data-dept="admin" data-role="dean">
+            <img class="f__avatar" src="/adamson-ccit/public/assets/images/avatar-placeholder.jpg" alt="Portrait of Dr. Sample Dean">
+            <div class="f__body">
+              <h3 class="f__name">Dr. Maria Santos</h3>
+              <p class="f__title">Dean, College of Computing & Information Technology</p>
+              <div class="fbadges">
+                <span class="fbadge fbadge--dept">Administration</span>
+                <span class="fbadge">PhD in Computer Science</span>
+              </div>
             </div>
-          </div>
-        </article>
-        <?php endforeach; ?>
+          </article>
+        <?php else: ?>
+          <?php foreach ($faculty as $f): ?>
+          <article class="f" data-dept="<?= htmlspecialchars($f['dept']) ?>" data-role="<?= htmlspecialchars($f['role']) ?>">
+            <?php if (!empty($f['avatar_url'])): ?>
+              <img class="f__avatar" src="<?= htmlspecialchars($f['avatar_url']) ?>" alt="Portrait of <?= htmlspecialchars($f['name']) ?>" 
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <div class="f__avatar f__avatar--ph" style="display:none;" aria-hidden="true">
+                <?= htmlspecialchars($f['avatar_initials'] ?? substr($f['name'],0,2)) ?>
+              </div>
+            <?php else: ?>
+              <div class="f__avatar f__avatar--ph" aria-hidden="true">
+                <?= htmlspecialchars($f['avatar_initials'] ?? substr($f['name'],0,2)) ?>
+              </div>
+            <?php endif; ?>
+            <div class="f__body">
+              <h3 class="f__name"><?= htmlspecialchars($f['name']) ?></h3>
+              <p class="f__title"><?= htmlspecialchars($f['title']) ?></p>
+              <div class="fbadges">
+                <?php
+                  $badges = array_map('trim', explode(',', $f['badges'] ?? ''));
+                  foreach ($badges as $b) {
+                    if ($b === '') continue;
+                    $isDept = in_array($b, ['Administration','IT&IS','CS']);
+                    echo '<span class="fbadge'.($isDept?' fbadge--dept':'').'">'.htmlspecialchars($b).'</span>';
+                  }
+                ?>
+              </div>
+            </div>
+          </article>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </div>
-      <!-- Optional pager (static for now) -->
-      <nav class="pager" aria-label="Faculty pagination">
-        <button class="pg" disabled>« Prev</button>
-        <span class="pg__status">Page 1 of 1</span>
-        <button class="pg" disabled>Next »</button>
-      </nav>
-      <div id="fEmpty" class="fempty" hidden>No people match your filters.</div>
+      
+      <div id="fEmpty" class="nempty" hidden>No people match your filters.</div>
     </div>
   </section>
 </main>
 <script>
 (function(){
-  const pills = Array.from(document.querySelectorAll('.fpills .pill'));
+  const pills = Array.from(document.querySelectorAll('.ncats .pill'));
   const roleSel = document.getElementById('fRole');
   const qInput = document.getElementById('fQuery');
-  const form = document.querySelector('.fsearch');
+  const form = document.querySelector('.nsearch');
   const grid = document.getElementById('fGrid');
   const cards = Array.from(grid.querySelectorAll('.f'));
   const count = document.getElementById('fCount');

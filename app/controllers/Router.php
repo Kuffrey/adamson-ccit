@@ -30,6 +30,18 @@ class Router {
                 else { echo $c->index(); }
                 break;
 
+            /* -------------------- QUICK ACTIONS MANAGEMENT -------------------- */
+            case 'admin_manage_quick_actions':
+                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                require_once __DIR__ . '/QuickActionsController.php';
+                $c = new QuickActionsController();
+                if (($_POST['action'] ?? '') === 'save' || ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') { 
+                    echo $c->save(); 
+                } else { 
+                    echo $c->index(); 
+                }
+                break;
+
             /* -------------------- PUBLIC: ABOUT -------------------- */
             case 'about_history':
                 include __DIR__ . '/../views/about_history.php'; break;
@@ -47,6 +59,9 @@ class Router {
             /* -------------------- PUBLIC: NEWS/EVENTS/ANNOUNCEMENTS -------------------- */
             case 'news':
                 include __DIR__ . '/../views/news.php'; break;
+
+            case 'news_article':
+                include __DIR__ . '/../views/news_article.php'; break;
 
             case 'events':
                 include __DIR__ . '/../views/events.php'; break;
@@ -108,6 +123,9 @@ class Router {
             /* -------------------- PUBLIC TOOL -------------------- */
             case 'career_pathway_generator':
                 include __DIR__ . '/../views/career_pathway_generator.php'; break;
+
+            case 'virtual_tour':
+                include __DIR__ . '/../views/virtual_tour.php'; break;
 
             /* -------------------- AUTH VIEWS -------------------- */
             case 'login_guest_student':

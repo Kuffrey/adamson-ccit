@@ -41,6 +41,7 @@ $username = $user['username'] ?? ($_SESSION['user']['username'] ?? 'Admin');
         <a href="#sec-spotlight">Spotlight</a>
         <a href="#sec-programs">Programs</a>
         <a href="#sec-cta">CTA</a>
+        <a href="?page=admin_manage_quick_actions" style="background: #007bff; color: white; border-radius: 4px;">Manage Quick Actions →</a>
       </nav>
 
       <?php if ($success): ?>

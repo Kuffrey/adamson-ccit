@@ -13,10 +13,12 @@ if (!function_exists('e')) {
     }
 }
 
-function url_with(array $params): string {
-    $base = '/adamson-ccit/public/index.php';
-    $q = array_merge(['page' => 'news'], $params);
-    return $base . '?' . http_build_query($q);
+if (!function_exists('url_with')) {
+    function url_with(array $params): string {
+        $base = '/adamson-ccit/public/index.php';
+        $q = array_merge(['page' => 'news'], $params);
+        return $base . '?' . http_build_query($q);
+    }
 }
 
 $settings = NewsPageSettings::getSettings();
@@ -106,6 +108,12 @@ $chipClass = [
 
 <main>
 
+  <style>
+    /* Consistent container padding */
+    .content > .container { padding: 16px 20px clamp(24px,5vw,48px); }
+    .ngrid { padding: 16px 0 clamp(32px,6vw,56px); }
+  </style>
+
   <!-- ============ SUB-HERO ============ -->
   <section class="subhero">
     <div class="subhero__media" aria-hidden="true">
@@ -188,7 +196,7 @@ $chipClass = [
         <input type="hidden" name="cat" value="<?= e($cat) ?>">
         <input type="hidden" name="year" value="<?= e($year) ?>">
         <input id="nQuery" name="q" type="search" value="<?= e($q) ?>" placeholder="Search news…" aria-label="Search news" />
-        <button class="btn btn--solid" type="submit">Search</button>
+        <button class="btn btn--solid" type="submit"></button>
       </form>
     </div>
   </section>
@@ -229,7 +237,7 @@ $chipClass = [
             $img    = (string)($row['image_url'] ?? '/adamson-ccit/public/assets/images/news/sample1.jpg');
             $date   = (string)($row['date'] ?? $row['published_at'] ?? '');
             $author = (string)($row['author'] ?? 'CCIT Communications');
-            $viewUrl= '/adamson-ccit/public/index.php?page=news#'.($id ?: 'item');
+            $viewUrl= '/adamson-ccit/public/index.php?page=news_article&id=' . $id;
             $editUrl= '/adamson-ccit/public/index.php?page=admin_manage_news&action=edit&id='.$id;
           ?>
           <article class="n" data-cat="<?= e($catKey ?: 'news') ?>" data-year="<?= e(substr($date,0,4) ?: '') ?>">

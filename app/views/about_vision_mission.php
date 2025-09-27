@@ -14,8 +14,8 @@ $about = (new AboutVisionMission())->get();
     <div class="subhero__scrim" aria-hidden="true"></div>
     <div class="container subhero__inner">
       <p class="eyebrow">About CCIT</p>
-  <h1 class="subhero__title">Vision &amp; Mission</h1>
-  <p class="subhero__lead"><?= htmlspecialchars($about['main_intro'] ?? 'Our purpose, our promise, and the departmental directions that guide CCIT.') ?></p>
+      <h1 class="subhero__title">Vision &amp; Mission</h1>
+      <p class="subhero__lead"><?= htmlspecialchars($about['main_intro'] ?? 'Our purpose, our promise, and the departmental directions that guide CCIT.') ?></p>
     </div>
   </section>
 
@@ -33,83 +33,94 @@ $about = (new AboutVisionMission())->get();
     </div>
   </nav>
 
-  <!-- ============ CCIT MISSION & VISION (Top) ============ -->
-  <section class="mv">
-    <div class="container">
-      <header class="sec__head">
-        <h2>College of Computing &amp; Information Technology (CCIT)</h2>
-        <p class="sec__kicker">College-wide mission and vision</p>
-      </header>
+  <!-- ============ CONTENT ============ -->
+  <section class="content">
+    <div class="container content__grid">
 
-      <div class="mv__grid">
-        <article class="card">
-            <h3 class="card__title">Vision</h3>
-            <p><?= nl2br(htmlspecialchars($about['main_vision'] ?? '')) ?></p>
-        </article>
+      <article class="content__main">
+        <header class="stack">
+          <h2 class="h2">College of Computing &amp; Information Technology</h2>
+          <p class="lead">Our institutional commitment to excellence in computing education</p>
+        </header>
 
-        <article class="card">
-            <h3 class="card__title">Mission</h3>
-            <p><?= nl2br(htmlspecialchars($about['main_mission'] ?? '')) ?></p>
-        </article>
-      </div>
-    </div>
-  </section>
+        <section class="card vision-card">
+          <h3>Our Vision</h3>
+          <p class="vision-text"><?= nl2br(htmlspecialchars($about['main_vision'] ?? '')) ?></p>
+        </section>
 
-  <!-- ============ DEPARTMENTS OVERVIEW ============ -->
-  <section class="depts">
-    <div class="container">
-      <header class="sec__head">
-        <h2>Departments</h2>
-        <p class="sec__kicker">CCIT houses two departments that advance our mission.</p>
-      </header>
+        <section class="card mission-card">
+          <h3>Our Mission</h3>
+          <p class="mission-text"><?= nl2br(htmlspecialchars($about['main_mission'] ?? '')) ?></p>
+        </section>
 
-      <div class="depts__grid">
-        <!-- IT & IS Department -->
-        <article class="dept card" id="it-is">
-          <header class="dept__head">
-            <h3 class="dept__title"><?= htmlspecialchars($about['dept1_title'] ?? 'Information Technology & Information Systems') ?></h3>
-            <span class="dept__tag" aria-hidden="true">IT &amp; IS</span>
-          </header>
-
-          <div class="dept__body">
-            <h4>Vision</h4>
-            <p><?= nl2br(htmlspecialchars($about['dept1_vision'] ?? '')) ?></p>
-
-            <h4>Mission</h4>
-            <p><?= nl2br(htmlspecialchars($about['dept1_mission'] ?? '')) ?></p>
-
-            <h4>Objectives</h4>
-            <p><?= nl2br(htmlspecialchars($about['dept1_objectives'] ?? '')) ?></p>
+        <section class="card">
+          <h3>Departments</h3>
+          
+          <div class="department">
+            <h4><?= htmlspecialchars($about['dept1_title'] ?? 'Information Technology & Information Systems') ?></h4>
+            
+            <div class="dept-section">
+              <h5>Vision</h5>
+              <p><?= nl2br(htmlspecialchars($about['dept1_vision'] ?? '')) ?></p>
+            </div>
+            
+            <div class="dept-section">
+              <h5>Mission</h5>
+              <p><?= nl2br(htmlspecialchars($about['dept1_mission'] ?? '')) ?></p>
+            </div>
+            
+            <div class="dept-section">
+              <h5>Objectives</h5>
+              <p><?= nl2br(htmlspecialchars($about['dept1_objectives'] ?? '')) ?></p>
+            </div>
           </div>
-
-          <footer class="dept__foot">
-            <a class="btn btn--outline-blue" href="/adamson-ccit/public/index.php?page=programs_undergraduate">See Programs</a>
-          </footer>
-        </article>
-
-        <!-- Computer Science Department -->
-        <article class="dept card" id="compsci">
-          <header class="dept__head">
-            <h3 class="dept__title"><?= htmlspecialchars($about['dept2_title'] ?? 'Computer Science') ?></h3>
-            <span class="dept__tag" aria-hidden="true">CS</span>
-          </header>
-
-          <div class="dept__body">
-            <h4>Vision</h4>
-            <p><?= nl2br(htmlspecialchars($about['dept2_vision'] ?? '')) ?></p>
-
-            <h4>Mission</h4>
-            <p><?= nl2br(htmlspecialchars($about['dept2_mission'] ?? '')) ?></p>
-
-            <h4>Objectives</h4>
-            <p><?= nl2br(htmlspecialchars($about['dept2_objectives'] ?? '')) ?></p>
+          
+          <div class="department">
+            <h4><?= htmlspecialchars($about['dept2_title'] ?? 'Computer Science') ?></h4>
+            
+            <div class="dept-section">
+              <h5>Vision</h5>
+              <p><?= nl2br(htmlspecialchars($about['dept2_vision'] ?? '')) ?></p>
+            </div>
+            
+            <div class="dept-section">
+              <h5>Mission</h5>
+              <p><?= nl2br(htmlspecialchars($about['dept2_mission'] ?? '')) ?></p>
+            </div>
+            
+            <div class="dept-section">
+              <h5>Objectives</h5>
+              <p><?= nl2br(htmlspecialchars($about['dept2_objectives'] ?? '')) ?></p>
+            </div>
           </div>
+        </section>
+      </article>
 
-          <footer class="dept__foot">
-            <a class="btn btn--outline-blue" href="/adamson-ccit/public/index.php?page=programs_undergraduate">Explore BSCS</a>
-          </footer>
-        </article>
-      </div>
+      <aside class="content__aside">
+        <div class="fact">
+          <h3>Quick Links</h3>
+          <ul>
+            <li><a href="/adamson-ccit/public/index.php?page=about_history">CCIT History</a></li>
+            <li><a href="/adamson-ccit/public/index.php?page=programs_undergraduate">Academic Programs</a></li>
+            <li><a href="/adamson-ccit/public/index.php?page=admission_freshman">Admissions</a></li>
+          </ul>
+        </div>
+        
+        <div class="fact">
+          <h3>By the Numbers</h3>
+          <ul>
+            <li>2 specialized departments</li>
+            <li>3 undergraduate programs</li>
+            <li>Expert faculty and staff</li>
+          </ul>
+        </div>
+
+        <figure class="content__photo">
+          <img src="/adamson-ccit/public/assets/images/hero-campus.jpg" alt="CCIT Students">
+          <figcaption>Students collaborating in our modern computing facilities.</figcaption>
+        </figure>
+      </aside>
+
     </div>
   </section>
 
@@ -117,10 +128,10 @@ $about = (new AboutVisionMission())->get();
   <section class="cta">
     <div class="container cta__inner">
       <div>
-        <h2>Discover Where CCIT Can Take You</h2>
-        <p>Browse our programs and see how our mission becomes your pathway.</p>
+        <h2>Ready to Join Our Mission?</h2>
+        <p>Explore our programs and become part of CCIT's vision for the future of computing education.</p>
       </div>
-      <a class="btn btn--solid" href="/adamson-ccit/public/index.php?page=programs_undergraduate">View Programs</a>
+      <a class="btn btn--solid" href="/adamson-ccit/public/index.php?page=programs_undergraduate">Explore Programs</a>
     </div>
   </section>
 

@@ -8,6 +8,7 @@ final class HomeController
     {
         require_once __DIR__ . '/../models/Model.php';
         require_once __DIR__ . '/../models/HomepageSettings.php';
+        require_once __DIR__ . '/../models/QuickAction.php';
         // Optional data models used on the homepage:
         require_once __DIR__ . '/../models/Program.php';
         require_once __DIR__ . '/../models/Partner.php';
@@ -43,39 +44,21 @@ final class HomeController
 
     private function buildQuickActions(): array
     {
-        // Kept static for now; trivial to back with a table later.
-        return [
-            [
-                'label' => 'Admissions',
-                'icon'  => '<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M5 4h14a1 1 0 0 1 1 1v13l-3-2-3 2-3-2-3 2-3-2V5a1 1 0 0 1 1-1z"/></svg>',
-                'url'   => '/adamson-ccit/public/index.php?page=admission_requirements',
-            ],
-            [
-                'label' => 'Programs',
-                'icon'  => '<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>',
-                'url'   => '/adamson-ccit/public/index.php?page=programs_undergraduate',
-            ],
-            [
-                'label' => 'Scholarships',
-                'icon'  => '<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 2a7 7 0 1 1-4.95 2.05A7 7 0 0 1 12 2zm-1 8h2v6h-2zm0 8h2v2h-2z"/></svg>',
-                'url'   => '/adamson-ccit/public/index.php?page=student_scholarships',
-            ],
-            [
-                'label' => 'Student Life',
-                'icon'  => '<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 2a5 5 0 1 1-5 5 5 5 0 0 1 5-5Zm8 18v-2H4v-2a6 6 0 0 1 8-5.29A6 6 0 0 1 20 20Z"/></svg>',
-                'url'   => '/adamson-ccit/public/index.php?page=student_organizations',
-            ],
-            [
-                'label' => 'Faculty',
-                'icon'  => '<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm-7 9v-2a7 7 0 0 1 14 0v2Z"/></svg>',
-                'url'   => '/adamson-ccit/public/index.php?page=faculty_profile',
-            ],
-            [
-                'label' => 'News',
-                'icon'  => '<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4 4h16v2H4zm0 4h10v2H4zm0 4h16v2H4zm0 4h10v2H4z"/></svg>',
-                'url'   => '/adamson-ccit/public/index.php?page=news',
-            ],
-        ];
+        // Now dynamic - fetch from database
+        try {
+            $actions = QuickAction::getAllActive();
+            return array_map(function ($action): array {
+                return [
+                    'id'    => $action['id'],
+                    'label' => $action['label'] ?? '',
+                    'icon'  => $action['icon'] ?? '',
+                    'url'   => $action['url'] ?? '',
+                ];
+            }, $actions);
+        } catch (\Throwable $e) {
+            // Fallback to empty array if database error
+            return [];
+        }
     }
 
     private function buildWhy(array $s): array
@@ -205,7 +188,7 @@ final class HomeController
                     'image'     => $n['image_url'] ?? '',
                     'chip'      => ucfirst($n['category'] ?? 'News'),
                     'chip_class'=> '',
-                    'url'       => '/adamson-ccit/public/index.php?page=news#' . ($n['id'] ?? ''),
+                    'url'       => '/adamson-ccit/public/index.php?page=news_article&id=' . ($n['id'] ?? ''),
                 ];
             }, $list),
         ];
@@ -233,12 +216,16 @@ final class HomeController
                 }
             }
             return [
-                'title'  => $e['title'] ?? '',
-                'date'   => $dateStr ?? '',
-                'day'    => $day,
-                'month'  => $month,
-                'details'=> $e['location'] ?? '',
-                'url'    => '#',
+                'id'        => $e['id'] ?? '',
+                'title'     => $e['title'] ?? '',
+                'date'      => $dateStr ?? '',
+                'day'       => $day,
+                'month'     => $month,
+                'details'   => $e['location'] ?? '',
+                'description' => $e['description'] ?? '',
+                'start_time' => $e['start_time'] ?? '',
+                'end_time'  => $e['end_time'] ?? '',
+                'url'       => '#event-' . ($e['id'] ?? ''),
             ];
         }, $list);
     }

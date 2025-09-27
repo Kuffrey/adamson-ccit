@@ -261,9 +261,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <label class="form-label">Category</label>
                   <select name="category" class="form-select">
                     <option value="news">News</option>
-                    <option value="announcement">Announcement</option>
-                    <option value="event">Event</option>
-                    <option value="update">Update</option>
+                    <option value="research">Research</option>
+                    <option value="achievement">Achievements</option>
+                    <option value="student">Student Life</option>
                   </select>
                 </div>
                 <div class="col-md-6 mb-3">
@@ -438,9 +438,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label class="form-label">Category</label>
             <select name="category" class="form-select">
               <option value="news" <?= ($n['category'] ?? '') === 'news' ? 'selected' : '' ?>>News</option>
-              <option value="announcement" <?= ($n['category'] ?? '') === 'announcement' ? 'selected' : '' ?>>Announcement</option>
-              <option value="event" <?= ($n['category'] ?? '') === 'event' ? 'selected' : '' ?>>Event</option>
-              <option value="update" <?= ($n['category'] ?? '') === 'update' ? 'selected' : '' ?>>Update</option>
+              <option value="research" <?= ($n['category'] ?? '') === 'research' ? 'selected' : '' ?>>Research</option>
+              <option value="achievement" <?= ($n['category'] ?? '') === 'achievement' ? 'selected' : '' ?>>Achievements</option>
+              <option value="student" <?= ($n['category'] ?? '') === 'student' ? 'selected' : '' ?>>Student Life</option>
             </select>
           </div>
           <div class="mb-3">

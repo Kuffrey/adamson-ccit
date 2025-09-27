@@ -24,7 +24,7 @@ $cards = ProgramsGraduateSettings::getCards($settings, false); // Frontend mode 
   <!-- ============ SUB-HERO ============ -->
   <section class="subhero">
     <div class="subhero__media" aria-hidden="true">
-      <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/programs/graduate.jpg') ?>" alt="Graduate studies at CCIT">
+      <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-campus.jpg') ?>" alt="Graduate studies at CCIT">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
     <div class="container subhero__inner">
@@ -47,6 +47,12 @@ $cards = ProgramsGraduateSettings::getCards($settings, false); // Frontend mode 
       </ul>
     </div>
   </nav>
+
+  <style>
+    /* Consistent container padding */
+    .page-grad .content > .container { padding: 16px 20px clamp(24px,5vw,48px); }
+    .page-grad .prog__grid { padding: 16px 0 clamp(32px,6vw,56px); }
+  </style>
 
   <!-- ============ PROGRAMS GRID ============ -->
   <section class="content" aria-labelledby="grad-heading">

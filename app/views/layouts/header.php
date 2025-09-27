@@ -67,36 +67,50 @@ if (!$menus) {
   ];
 }
 ?>
-<link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
-
-<!-- Small scoped styles for the user icon menu -->
-<style>
-    .site-header{
-    border-bottom: 1px solid var(--edgec, #e6e9ef);
-  }
-  .user-menu{ position:relative; }
-  .user-menu summary{
-    list-style:none; cursor:pointer; border:1px solid #d1d5db; background:#fff; color:#0b234c;
-    width:40px; height:40px; border-radius:999px; display:grid; place-items:center; padding:0;
-  }
-  .user-menu summary::-webkit-details-marker{ display:none }
-  .user-menu summary:focus-visible{ outline:3px solid #9ad1ff; outline-offset:2px; border-radius:999px; }
-  .user-menu .panel{
-    position:absolute; right:0; top:calc(100% + 10px);
-    background:#fff; border:1px solid var(--edgec, #e6e9ef); border-radius:12px; box-shadow:var(--shadow, 0 6px 20px rgba(17,24,39,.08));
-    padding:8px; display:grid; gap:4px; min-width:220px; z-index:4000;
-    opacity:0; transform:translateY(6px); transition:opacity .15s ease, transform .15s ease;
-  }
-  .user-menu[open] .panel{ opacity:1; transform:translateY(0) }
-  .user-menu .panel a{
-    text-decoration:none; color:#111827; padding:10px 12px; border-radius:8px; font-weight:600; display:flex; align-items:center; gap:8px;
-  }
-  .user-menu .panel a:hover{ background:#f3f4f6 }
-  .user-menu .umeta{ padding:8px 10px; border-bottom:1px solid var(--edgec, #e6e9ef); color:#475569; font-weight:600 }
-  .user-menu .role{ text-transform:uppercase; font-size:12px; letter-spacing:.05em; color:#0b234c; font-weight:900 }
-  .main-nav-right{ display:flex; gap:10px; align-items:center; position:relative; z-index:1200 }
-  .icon{ width:20px; height:20px; display:inline-block }
-</style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adamson University - College of Computing and Information Technology</title>
+  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
+  <style>
+    /* CSS Reset & Base Styles */
+    *, *::before, *::after { box-sizing: border-box; }
+    * { margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Arial, sans-serif; line-height: 1.6; color: #0b234c; }
+    main { flex: 1; }
+    
+    /* Site layout */
+    .site-header { border-bottom: 1px solid var(--edgec, #e6e9ef); }
+    .user-menu { position: relative; }
+    .user-menu summary {
+      list-style: none; cursor: pointer; border: 1px solid #d1d5db; background: #fff; color: #0b234c;
+      width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center; padding: 0;
+    }
+    .user-menu summary::-webkit-details-marker { display: none; }
+    .user-menu summary:focus-visible { outline: 3px solid #9ad1ff; outline-offset: 2px; border-radius: 999px; }
+    .user-menu .panel {
+      position: absolute; right: 0; top: calc(100% + 10px);
+      background: #fff; border: 1px solid var(--edgec, #e6e9ef); border-radius: 12px; 
+      box-shadow: var(--shadow, 0 6px 20px rgba(17,24,39,.08));
+      padding: 8px; display: grid; gap: 4px; min-width: 220px; z-index: 4000;
+      opacity: 0; transform: translateY(6px); transition: opacity .15s ease, transform .15s ease;
+    }
+    .user-menu[open] .panel { opacity: 1; transform: translateY(0); }
+    .user-menu .panel a {
+      text-decoration: none; color: #111827; padding: 10px 12px; border-radius: 8px; font-weight: 600; 
+      display: flex; align-items: center; gap: 8px;
+    }
+    .user-menu .panel a:hover { background: #f3f4f6; }
+    .user-menu .umeta { padding: 8px 10px; border-bottom: 1px solid var(--edgec, #e6e9ef); color: #475569; font-weight: 600; }
+    .user-menu .role { text-transform: uppercase; font-size: 12px; letter-spacing: .05em; color: #0b234c; font-weight: 900; }
+    .main-nav-right { display: flex; gap: 10px; align-items: center; position: relative; z-index: 1200; }
+    .icon { width: 20px; height: 20px; display: inline-block; }
+  </style>
+</head>
+<body>
 
 <!-- Utility strip -->
 <div class="util" role="banner">

@@ -11,6 +11,87 @@ require_once __DIR__ . '/../../models/FacultyProfile.php';
 if (!function_exists('esc')) {
     function esc($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 }
+if (!function_exists('uploadFacultyAvatar')) {
+    function uploadFacultyAvatar($fileInput) {
+        if (!isset($_FILES[$fileInput]) || $_FILES[$fileInput]['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+        
+        $file = $_FILES[$fileInput];
+        
+        // Log detailed file information for debugging
+        error_log("=== FILE UPLOAD DEBUG ===");
+        error_log("File name: " . $file['name']);
+        error_log("File type (MIME): " . $file['type']);
+        error_log("File size: " . $file['size']);
+        error_log("File error: " . $file['error']);
+        
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-adobe-dng', 'image/dng', 'application/octet-stream'];
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'dng'];
+        $maxSize = 20 * 1024 * 1024; // 20MB
+        
+        // Get file extension
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        error_log("File extension: " . $extension);
+        
+        // Validate file type - check both MIME type and extension for DNG files
+        $mimeTypeValid = in_array($file['type'], $allowedTypes);
+        $extensionValid = in_array($extension, $allowedExtensions);
+        
+        error_log("MIME type valid: " . ($mimeTypeValid ? 'YES' : 'NO'));
+        error_log("Extension valid: " . ($extensionValid ? 'YES' : 'NO'));
+        
+        if (!$mimeTypeValid && !$extensionValid) {
+            error_log("File upload rejected - Type: " . $file['type'] . ", Extension: " . $extension);
+            throw new Exception('Invalid file type. Please upload a JPEG, PNG, GIF, WebP, or DNG image.');
+        }
+        
+        error_log("File validation passed!");
+        error_log("=========================");
+        
+        // Validate file size
+        if ($file['size'] > $maxSize) {
+            throw new Exception('File too large. Maximum size is 5MB.');
+        }
+        
+        // Create uploads directory if it doesn't exist
+        $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/adamson-ccit/public/uploads/faculty/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        // Debug: Log the actual upload directory path
+        error_log("Upload directory: " . $uploadDir);
+        error_log("Upload directory realpath: " . realpath(dirname($uploadDir)));
+        
+        // Generate unique filename
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = 'faculty_' . uniqid() . '_' . time() . '.' . $extension;
+        $filepath = $uploadDir . $filename;
+        
+        // Debug: Log the file path and check if tmp file exists
+        error_log("Upload file path: " . $filepath);
+        error_log("Temp file exists: " . (file_exists($file['tmp_name']) ? 'yes' : 'no'));
+        error_log("Temp file path: " . $file['tmp_name']);
+        
+        // Move uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            error_log("move_uploaded_file failed. Last error: " . error_get_last()['message']);
+            throw new Exception('Failed to upload file.');
+        }
+        
+        // Verify file was actually created
+        if (!file_exists($filepath)) {
+            error_log("File was not created at: " . $filepath);
+            throw new Exception('File upload verification failed.');
+        }
+        
+        error_log("File successfully uploaded to: " . $filepath);
+        
+        // Return relative URL for database storage
+        return '/adamson-ccit/public/uploads/faculty/' . $filename;
+    }
+}
 
 $user = $_SESSION['user'] ?? [];
 $username = $user['username'] ?? 'Admin';
@@ -24,13 +105,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       FacultyProfilePageSettings::updateSettings($_POST['settings']);
       $notice = 'Page settings saved.';
     } elseif (isset($_POST['add_faculty'])) {
-      FacultyProfile::create($_POST['faculty'] ?? []);
-      $notice = 'Faculty member added.';
+      $facultyData = $_POST['faculty'] ?? [];
+      
+      // Handle avatar upload
+      try {
+        $uploadedAvatar = uploadFacultyAvatar('faculty_avatar');
+        if ($uploadedAvatar) {
+          $facultyData['avatar_url'] = $uploadedAvatar;
+          error_log("Avatar uploaded successfully: " . $uploadedAvatar);
+        } else {
+          error_log("No avatar uploaded");
+        }
+      } catch (Exception $e) {
+        error_log("Avatar upload error: " . $e->getMessage());
+        $notice = 'Faculty added but avatar upload failed: ' . $e->getMessage();
+      }
+      
+      error_log("Faculty data before create: " . print_r($facultyData, true));
+      
+      FacultyProfile::create($facultyData);
+      if (empty($notice)) {
+        $notice = 'Faculty member added successfully.';
+      }
     } elseif (isset($_POST['edit_faculty'])) {
-      FacultyProfile::update((int)$_POST['id'], $_POST['faculty'] ?? []);
-      $notice = 'Faculty member updated.';
+      $facultyData = $_POST['faculty'] ?? [];
+      $facultyId = (int)$_POST['id'];
+      
+      // Handle avatar upload for edit
+      try {
+        $uploadedAvatar = uploadFacultyAvatar('faculty_avatar_edit_' . $facultyId);
+        if ($uploadedAvatar) {
+          // Get current faculty data to delete old image if needed
+          $currentFaculty = FacultyProfile::getAll();
+          foreach ($currentFaculty as $f) {
+            if ($f['id'] == $facultyId && !empty($f['avatar_url']) && strpos($f['avatar_url'], '/uploads/faculty/') !== false) {
+              $oldImagePath = __DIR__ . '/../../../../public' . $f['avatar_url'];
+              if (file_exists($oldImagePath)) {
+                unlink($oldImagePath);
+              }
+            }
+          }
+          $facultyData['avatar_url'] = $uploadedAvatar;
+        }
+      } catch (Exception $e) {
+        $notice = 'Faculty updated but avatar upload failed: ' . $e->getMessage();
+      }
+      
+      FacultyProfile::update($facultyId, $facultyData);
+      if (empty($notice)) {
+        $notice = 'Faculty member updated successfully.';
+      }
     } elseif (isset($_POST['delete_faculty'])) {
-      FacultyProfile::delete((int)$_POST['id']);
+      $facultyId = (int)$_POST['id'];
+      
+      // Delete associated image file
+      $currentFaculty = FacultyProfile::getAll();
+      foreach ($currentFaculty as $f) {
+        if ($f['id'] == $facultyId && !empty($f['avatar_url']) && strpos($f['avatar_url'], '/uploads/faculty/') !== false) {
+          $imagePath = __DIR__ . '/../../../../public' . $f['avatar_url'];
+          if (file_exists($imagePath)) {
+            unlink($imagePath);
+          }
+        }
+      }
+      
+      FacultyProfile::delete($facultyId);
       $notice = 'Faculty member deleted.';
     }
   } catch (Throwable $e) {
@@ -118,7 +257,7 @@ $faculty = FacultyProfile::getAll();
         
         <div class="collapse" id="addFacultyCard">
           <div class="card-body">
-            <form method="post" autocomplete="off">
+            <form method="post" enctype="multipart/form-data" autocomplete="off">
               <input type="hidden" name="add_faculty" value="1">
               <div class="row">
                 <div class="col-md-6 mb-3">
@@ -166,6 +305,23 @@ $faculty = FacultyProfile::getAll();
                 </div>
               </div>
               <div class="row">
+                <div class="col-md-12 mb-3">
+                  <label class="form-label">Profile Image Upload</label>
+                  <div class="input-group">
+                    <input type="file" class="form-control" name="faculty_avatar" id="avatarUpload" accept="image/*,.dng" 
+                           onchange="previewAvatar(this, 'avatarPreview')">
+                    <button type="button" class="btn btn-outline-secondary" onclick="clearAvatar('avatarUpload', 'avatarPreview')">
+                      <i class="fas fa-times"></i> Clear
+                    </button>
+                  </div>
+                  <div class="mt-2">
+                    <img id="avatarPreview" src="" alt="Avatar Preview" 
+                         style="max-width: 120px; max-height: 120px; border-radius: 50%; display: none; border: 3px solid #dee2e6;">
+                  </div>
+                  <small class="form-text text-muted">Upload an image file or provide a URL above. Recommended: square image, at least 200x200px.</small>
+                </div>
+              </div>
+              <div class="row">
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Badges</label>
                   <input type="text" class="form-control" name="faculty[badges]" 
@@ -208,6 +364,7 @@ $faculty = FacultyProfile::getAll();
                 <table class="table table-striped table-hover">
                   <thead class="table-dark">
                     <tr>
+                      <th>Avatar</th>
                       <th>Name</th>
                       <th>Department</th>
                       <th>Role</th>
@@ -219,6 +376,16 @@ $faculty = FacultyProfile::getAll();
                   <tbody>
                     <?php foreach ($faculty as $f): ?>
                       <tr>
+                        <td>
+                          <?php if (!empty($f['avatar_url'])): ?>
+                            <img src="<?= esc($f['avatar_url']) ?>" alt="Avatar" 
+                                 style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #dee2e6;">
+                          <?php else: ?>
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #6c757d, #495057); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; border: 2px solid #dee2e6;">
+                              <?= esc($f['avatar_initials'] ?? substr($f['name'], 0, 2)) ?>
+                            </div>
+                          <?php endif; ?>
+                        </td>
                         <td>
                           <strong><?= esc($f['name']) ?></strong>
                           <?php if ($f['badges']): ?>
@@ -260,7 +427,7 @@ $faculty = FacultyProfile::getAll();
                 <h5 class="modal-title">Edit Faculty Member</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
-              <form method="post">
+              <form method="post" enctype="multipart/form-data">
                 <div class="modal-body">
                   <input type="hidden" name="edit_faculty" value="1">
                   <input type="hidden" name="id" value="<?= (int)$f['id'] ?>">
@@ -305,6 +472,34 @@ $faculty = FacultyProfile::getAll();
                     </div>
                   </div>
                   <div class="row mt-3">
+                    <div class="col-md-12">
+                      <label class="form-label">Update Profile Image</label>
+                      <div class="input-group">
+                        <input type="file" class="form-control" name="faculty_avatar_edit_<?= $f['id'] ?>" id="avatarUpload<?= $f['id'] ?>" accept="image/*,.dng" 
+                               onchange="previewAvatar(this, 'avatarPreview<?= $f['id'] ?>')">
+                        <button type="button" class="btn btn-outline-secondary" 
+                                onclick="clearAvatar('avatarUpload<?= $f['id'] ?>', 'avatarPreview<?= $f['id'] ?>')">
+                          <i class="fas fa-times"></i> Clear
+                        </button>
+                      </div>
+                      <div class="mt-2 d-flex align-items-center gap-3">
+                        <?php if (!empty($f['avatar_url'])): ?>
+                          <div>
+                            <small class="text-muted d-block">Current Avatar:</small>
+                            <img src="<?= esc($f['avatar_url']) ?>" alt="Current Avatar" 
+                                 style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #dee2e6;">
+                          </div>
+                        <?php endif; ?>
+                        <div>
+                          <small class="text-muted d-block">New Preview:</small>
+                          <img id="avatarPreview<?= $f['id'] ?>" src="" alt="New Avatar Preview" 
+                               style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: none; border: 2px solid #dee2e6;">
+                        </div>
+                      </div>
+                      <small class="form-text text-muted">Upload a new image file or update the URL above.</small>
+                    </div>
+                  </div>
+                  <div class="row mt-3">
                     <div class="col-md-6">
                       <label class="form-label">Badges</label>
                       <input type="text" class="form-control" name="faculty[badges]" value="<?= esc($f['badges']) ?>">
@@ -329,3 +524,76 @@ $faculty = FacultyProfile::getAll();
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Image preview and management functions
+function previewAvatar(input, previewId) {
+  const preview = document.getElementById(previewId);
+  const file = input.files[0];
+  
+  if (file) {
+    // Validate file size (20MB)
+    if (file.size > 20 * 1024 * 1024) {
+      alert('File size must be less than 20MB.');
+      input.value = '';
+      return;
+    }
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-adobe-dng', 'image/dng', 'application/octet-stream'];
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'dng'];
+    const fileExtension = file.name.toLowerCase().split('.').pop();
+    
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+      alert('Please upload a JPEG, PNG, GIF, WebP, or DNG image.');
+      input.value = '';
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      
+      // Clear the avatar URL field when file is uploaded
+      const urlField = input.closest('form').querySelector('input[name$="[avatar_url]"]');
+      if (urlField) {
+        urlField.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function clearAvatar(inputId, previewId) {
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  
+  input.value = '';
+  preview.src = '';
+  preview.style.display = 'none';
+  
+  // Clear the avatar URL field if it exists
+  const urlField = input.closest('form').querySelector('input[name$="[avatar_url]"]');
+  if (urlField) {
+    urlField.value = '';
+  }
+}
+
+// Auto-generate initials from name
+document.addEventListener('DOMContentLoaded', function() {
+  const nameInputs = document.querySelectorAll('input[name$="[name]"]');
+  nameInputs.forEach(nameInput => {
+    nameInput.addEventListener('input', function() {
+      const initialsField = this.closest('form').querySelector('input[name$="[avatar_initials]"]');
+      if (initialsField && !initialsField.value) {
+        const name = this.value.trim();
+        if (name) {
+          const words = name.split(' ');
+          const initials = words.map(word => word.charAt(0).toUpperCase()).slice(0, 2).join('');
+          initialsField.value = initials;
+        }
+      }
+    });
+  });
+});
+</script>

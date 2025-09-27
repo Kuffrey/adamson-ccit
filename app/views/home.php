@@ -197,11 +197,13 @@
         <aside class="events">
           <h3 class="events__title">Upcoming Events</h3>
           <ul class="events__list" role="list">
-            <?php foreach (($events ?? []) as $event): ?>
+            <?php foreach (($events ?? []) as $index => $event): 
+              $eventId = !empty($event['id']) ? $event['id'] : 'event-' . $index;
+            ?>
             <li class="event">
               <time datetime="<?= htmlspecialchars($event['date'], ENT_QUOTES, 'UTF-8') ?>" class="event__date"><span><?= htmlspecialchars($event['day'], ENT_QUOTES, 'UTF-8') ?></span><?= htmlspecialchars($event['month'], ENT_QUOTES, 'UTF-8') ?></time>
               <div class="event__body">
-                <a href="<?= htmlspecialchars($event['url'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($event['title'], ENT_QUOTES, 'UTF-8') ?></a>
+                <a href="#" class="event-link" data-event-id="<?= htmlspecialchars($eventId, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($event['title'], ENT_QUOTES, 'UTF-8') ?></a>
                 <small><?= htmlspecialchars($event['details'], ENT_QUOTES, 'UTF-8') ?></small>
               </div>
             </li>
@@ -225,8 +227,254 @@
 
 </main>
 
+<!-- Event Modals -->
+<?php foreach (($events ?? []) as $index => $event): 
+  $eventId = !empty($event['id']) ? $event['id'] : 'event-' . $index;
+?>
+<div id="event-modal-<?= htmlspecialchars($eventId, ENT_QUOTES, 'UTF-8') ?>" class="event-modal" style="display: none;">
+  <div class="event-modal-backdrop" onclick="closeEventModal()"></div>
+  <div class="event-modal-content">
+    <div class="event-modal-header">
+      <h3><?= htmlspecialchars($event['title'], ENT_QUOTES, 'UTF-8') ?></h3>
+      <button class="event-modal-close" onclick="closeEventModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="event-modal-body">
+      <div class="event-date-time">
+        <div class="event-date">
+          <span class="event-day"><?= htmlspecialchars($event['day'], ENT_QUOTES, 'UTF-8') ?></span>
+          <span class="event-month"><?= htmlspecialchars($event['month'], ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+        <div class="event-time">
+          <?php if (!empty($event['start_time'])): ?>
+            <p><strong>Time:</strong> <?= htmlspecialchars($event['start_time'], ENT_QUOTES, 'UTF-8') ?>
+            <?= !empty($event['end_time']) ? ' - ' . htmlspecialchars($event['end_time'], ENT_QUOTES, 'UTF-8') : '' ?></p>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php if (!empty($event['details'])): ?>
+        <p><strong>Location:</strong> <?= htmlspecialchars($event['details'], ENT_QUOTES, 'UTF-8') ?></p>
+      <?php endif; ?>
+      <?php if (!empty($event['description'])): ?>
+        <div class="event-description">
+          <strong>Description:</strong>
+          <p><?= nl2br(htmlspecialchars($event['description'], ENT_QUOTES, 'UTF-8')) ?></p>
+        </div>
+      <?php else: ?>
+        <div class="event-description">
+          <p>More details about this event will be available soon.</p>
+        </div>
+      <?php endif; ?>
+    </div>
+    <div class="event-modal-footer">
+      <button class="btn btn--solid" onclick="closeEventModal()">Close</button>
+    </div>
+  </div>
+</div>
+<?php endforeach; ?>
+
+<!-- Event Modal Styles -->
+<style>
+.event-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.6);
+  animation: fadeIn 0.3s ease;
+}
+
+.event-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.event-modal-content {
+  position: relative;
+  background: white;
+  margin: 5% auto;
+  padding: 0;
+  width: 90%;
+  max-width: 500px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease;
+}
+
+.event-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.event-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1e40af;
+}
+
+.event-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.event-modal-close:hover {
+  background: #f3f4f6;
+}
+
+.event-modal-body {
+  padding: 1.5rem;
+}
+
+.event-date-time {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.event-date {
+  text-align: center;
+  background: #1e40af;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 8px;
+  min-width: 60px;
+}
+
+.event-day {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.event-month {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.event-time {
+  flex: 1;
+}
+
+.event-description {
+  margin-top: 1rem;
+}
+
+.event-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  text-align: right;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-50px) scale(0.9); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .event-modal-content {
+    margin: 10% auto;
+    width: 95%;
+  }
+  
+  .event-date-time {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+</style>
+
 </body>
 <script>
+// Event Modal Functions
+function openEventModal(eventId) {
+  console.log('Opening modal for event ID:', eventId);
+  const modal = document.getElementById('event-modal-' + eventId);
+  if (modal) {
+    modal.style.display = 'block';
+    modal.style.opacity = '1';
+    modal.style.visibility = 'visible';
+    document.body.style.overflow = 'hidden';
+    console.log('Modal opened successfully');
+    console.log('Modal element:', modal);
+    console.log('Modal computed style:', window.getComputedStyle(modal));
+  } else {
+    console.error('Modal not found for ID:', eventId);
+    // List all available modals for debugging
+    const allModals = document.querySelectorAll('[id^="event-modal-"]');
+    console.log('Available modals:', Array.from(allModals).map(m => m.id));
+  }
+}
+
+function closeEventModal() {
+  const modals = document.querySelectorAll('.event-modal');
+  modals.forEach(modal => {
+    modal.style.display = 'none';
+  });
+  document.body.style.overflow = '';
+}
+
+// Set up event listeners for event links
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM Content Loaded - Setting up event listeners');
+  
+  const eventLinks = document.querySelectorAll('.event-link');
+  console.log('Found event links:', eventLinks.length);
+  
+  const allModals = document.querySelectorAll('[id^="event-modal-"]');
+  console.log('Found event modals:', allModals.length);
+  console.log('Modal IDs:', Array.from(allModals).map(m => m.id));
+  
+  eventLinks.forEach((link, index) => {
+    const eventId = link.getAttribute('data-event-id');
+    console.log(`Event link ${index}: ID = ${eventId}`);
+    
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Event link clicked, event ID:', eventId);
+      if (eventId) {
+        openEventModal(eventId);
+      }
+    });
+  });
+});
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeEventModal();
+  }
+});
+
 /* Partners carousel: buttons, keyboard, drag/swipe (with threshold) + details panel (neutral default) */
 (function(){
   const viewport = document.querySelector('.pc__viewport');

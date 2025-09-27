@@ -2,7 +2,9 @@
 // app/views/admin/announcements_form.php
 /** @var array $settings */
 $msg = $msg ?? null;
-function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+if (!function_exists('e')) {
+    function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

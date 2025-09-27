@@ -38,7 +38,7 @@ $extAttr = function ($flag) { return !empty($flag) ? ' target="_blank" rel="noop
   <!-- ============ SUB-HERO ============ -->
   <section class="subhero">
     <div class="subhero__media" aria-hidden="true">
-      <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/programs/undergrad.jpg') ?>" alt="CCIT learning spaces and labs">
+      <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-campus.jpg') ?>" alt="CCIT learning spaces and labs">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
     <div class="container subhero__inner">
@@ -61,6 +61,12 @@ $extAttr = function ($flag) { return !empty($flag) ? ' target="_blank" rel="noop
       </ul>
     </div>
   </nav>
+
+  <style>
+    /* Consistent container padding */
+    .content > .container { padding: 16px 20px clamp(24px,5vw,48px); }
+    .prog__grid { padding: 16px 0 clamp(32px,6vw,56px); }
+  </style>
 
   <!-- ============ PROGRAMS GRID (dynamic first, legacy fallback) ============ -->
   <section class="content" aria-labelledby="programs-heading">

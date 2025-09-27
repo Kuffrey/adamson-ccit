@@ -28,23 +28,29 @@ $years = FacultyResearch::getYears();
       <p class="subhero__lead"><?= htmlspecialchars($settings['subhero_lead'] ?? 'Peer-reviewed publications, presentations, and other scholarly work by CCIT faculty.') ?></p>
     </div>
   </section>
-  <!-- ============ LOCAL SUBNAV (Faculty, consistent with news.php) ============ -->
+  <!-- ============ LOCAL SUBNAV ============ -->
   <nav class="subnav" aria-label="Faculty sub-navigation">
     <div class="container">
       <ul class="subnav__list" role="list">
-        <li><a href="/adamson-ccit/public/index.php?page=faculty_profile">Profile</a></li>
-        <li class="is-active"><a href="/adamson-ccit/public/index.php?page=faculty_research" aria-current="page">Research</a></li>
-        <li><a href="/adamson-ccit/public/index.php?page=faculty_certifications">Certifications</a></li>
+        <li>
+          <a href="/adamson-ccit/public/index.php?page=faculty_profile">Profile</a>
+        </li>
+        <li class="is-active">
+          <a href="/adamson-ccit/public/index.php?page=faculty_research" aria-current="page">Research</a>
+        </li>
+        <li>
+          <a href="/adamson-ccit/public/index.php?page=faculty_certifications">Certifications</a>
+        </li>
       </ul>
     </div>
   </nav>
-  <!-- ============ FILTER BAR (NBAR STYLE, CONSISTENT WITH NEWS) ============ -->
+  <!-- ============ FILTER BAR ============ -->
   <section class="nbar">
     <div class="container nbar__inner">
       <div class="nbar__left">
         <div class="ncats" role="tablist" aria-label="Filter by department">
-          <a class="pill is-active" role="tab" aria-selected="true" href="#" data-dept="all">All</a>
-          <a class="pill" role="tab" href="#" data-dept="itis">IT&amp;IS</a>
+          <button class="pill is-active" role="tab" aria-selected="true" data-dept="all">All</button>
+          <button class="pill" role="tab" data-dept="itis">IT&amp;IS</button>
         </div>
         <form class="nyear" method="get" action="#" onsubmit="return false;">
           <select id="fYear" name="year">
@@ -57,55 +63,70 @@ $years = FacultyResearch::getYears();
       </div>
       <form class="nsearch" role="search" aria-label="Search research" onsubmit="return false;">
         <input id="fQuery" type="search" placeholder="Search title, author, venue…" aria-label="Search research" />
-        <button class="btn btn--solid" type="submit">Search</button>
+        <button class="btn btn--solid" type="submit"></button>
       </form>
     </div>
   </section>
-  <!-- ============ LIST ============ -->
-  <section class="content rlist" aria-labelledby="dir-head">
+  <!-- ============ RESEARCH GRID ============ -->
+  <section class="rlist">
     <div class="container">
       <div id="rCount" class="rcount">Showing <?= count($research) ?> publication<?= count($research) !== 1 ? 's' : '' ?></div>
+      
       <div id="rGrid" class="cards">
-        <?php foreach ($research as $r): ?>
-        <article class="r" data-dept="<?= htmlspecialchars($r['dept']) ?>" data-type="<?= htmlspecialchars($r['type']) ?>" data-year="<?= htmlspecialchars($r['year']) ?>">
-          <a class="r__media" href="<?= !empty($r['view_url']) ? htmlspecialchars($r['view_url']) : '#' ?>" target="_blank" rel="noopener">
-            <img src="<?= htmlspecialchars($r['image_url'] ?: '/adamson-ccit/public/assets/images/placeholder-16x9.jpg') ?>" alt="Poster: <?= htmlspecialchars($r['title']) ?>">
-            <span class="chip chip--blue"><?= ucfirst(htmlspecialchars($r['type'])) ?></span>
-          </a>
-          <div class="r__body">
-            <h3 class="r__title">
-              <?php if (!empty($r['view_url'])): ?>
-                <a href="<?= htmlspecialchars($r['view_url']) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($r['title']) ?></a>
-              <?php else: ?>
-                <?= htmlspecialchars($r['title']) ?>
-              <?php endif; ?>
-            </h3>
-            <p class="r__meta"><?= htmlspecialchars($r['authors']) ?> • <strong><?= htmlspecialchars($r['venue']) ?></strong> • <?= htmlspecialchars($r['year']) ?></p>
-            <?php if (!empty($r['view_url'])): ?>
-            <div class="r__actions">
-              <a class="btn btn--outline-blue" href="<?= htmlspecialchars($r['view_url']) ?>" target="_blank" rel="noopener">Read</a>
+        <?php if (empty($research)): ?>
+          <!-- Fallback static content -->
+          <article class="r" data-dept="itis" data-type="journal" data-year="2024">
+            <a class="r__media" href="#" target="_blank" rel="noopener">
+              <img src="/adamson-ccit/public/assets/images/research-placeholder.jpg" alt="Research paper">
+              <span class="chip chip--blue">Journal</span>
+            </a>
+            <div class="r__body">
+              <h3 class="r__title">
+                <a href="#" target="_blank" rel="noopener">Machine Learning Applications in Computer Science Education</a>
+              </h3>
+              <p class="r__meta">Dr. Maria Santos • IEEE Transactions on Education • 2024</p>
+              <div class="r__actions">
+                <a class="btn btn--outline-blue" href="#" target="_blank" rel="noopener">Read Paper</a>
+              </div>
             </div>
-            <?php endif; ?>
-          </div>
-        </article>
-        <?php endforeach; ?>
+          </article>
+        <?php else: ?>
+          <?php foreach ($research as $r): ?>
+          <article class="r" data-dept="<?= htmlspecialchars($r['dept']) ?>" data-type="<?= htmlspecialchars($r['type']) ?>" data-year="<?= htmlspecialchars($r['year']) ?>">
+            <a class="r__media" href="<?= !empty($r['view_url']) ? htmlspecialchars($r['view_url']) : '#' ?>" target="_blank" rel="noopener">
+              <img src="<?= htmlspecialchars($r['image_url'] ?: '/adamson-ccit/public/assets/images/placeholder-16x9.jpg') ?>" alt="Poster: <?= htmlspecialchars($r['title']) ?>">
+              <span class="chip chip--blue"><?= ucfirst(htmlspecialchars($r['type'])) ?></span>
+            </a>
+            <div class="r__body">
+              <h3 class="r__title">
+                <?php if (!empty($r['view_url'])): ?>
+                  <a href="<?= htmlspecialchars($r['view_url']) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($r['title']) ?></a>
+                <?php else: ?>
+                  <?= htmlspecialchars($r['title']) ?>
+                <?php endif; ?>
+              </h3>
+              <p class="r__meta"><?= htmlspecialchars($r['authors']) ?> • <strong><?= htmlspecialchars($r['venue']) ?></strong> • <?= htmlspecialchars($r['year']) ?></p>
+              <?php if (!empty($r['view_url'])): ?>
+              <div class="r__actions">
+                <a class="btn btn--outline-blue" href="<?= htmlspecialchars($r['view_url']) ?>" target="_blank" rel="noopener">Read</a>
+              </div>
+              <?php endif; ?>
+            </div>
+          </article>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </div>
-      <nav class="pager" aria-label="Research pagination">
-        <button class="pg" disabled>« Prev</button>
-        <span class="pg__status">Page 1 of 1</span>
-        <button class="pg" disabled>Next »</button>
-      </nav>
-      <div id="rEmpty" class="nempty"<?= count($research) ? ' hidden' : '' ?>>No faculty research entries are available yet. This directory will be posted once submissions are compiled.</div>
+
+      <div id="rEmpty" class="nempty"<?= count($research) ? ' hidden' : '' ?>>No faculty research entries are available yet.</div>
     </div>
   </section>
 </main>
 <script>
 (function(){
-  const pills = Array.from(document.querySelectorAll('.tpills .pill'));
-  const typeSel = document.getElementById('fType');
+  const pills = Array.from(document.querySelectorAll('.ncats .pill'));
   const yearSel = document.getElementById('fYear');
   const qInput  = document.getElementById('fQuery');
-  const form    = document.querySelector('.rsearch');
+  const form    = document.querySelector('.nsearch');
   const grid  = document.getElementById('rGrid');
   const cards = Array.from(grid.querySelectorAll('.r'));
   const count = document.getElementById('rCount');
@@ -113,7 +134,6 @@ $years = FacultyResearch::getYears();
   let activeDept = 'all';
   function apply(){
     const q = (qInput.value || '').trim().toLowerCase();
-    const t = typeSel.value;
     const y = yearSel.value;
     let visible = 0;
     cards.forEach(card => {
@@ -123,17 +143,14 @@ $years = FacultyResearch::getYears();
       const text = card.innerText.toLowerCase();
       let ok = true;
       if (activeDept !== 'all' && dept !== activeDept) ok = false;
-      if (ok && t !== 'all' && type !== t) ok = false;
       if (ok && y !== 'all' && year !== y) ok = false;
       if (ok && q && !text.includes(q)) ok = false;
       card.style.display = ok ? '' : 'none';
       if (ok) visible++;
     });
     const deptLabel = (activeDept === 'all') ? 'All departments' : activeDept.toUpperCase();
-    const typeMap = { all:'all types', journal:'Journal Articles', conference:'Conference Papers', chapter:'Book Chapters', patent:'Patents', other:'Other' };
-    const typeLabel = typeMap[t] || 'all types';
     const yearLabel = (y === 'all') ? 'all years' : y;
-    count.textContent = `Showing ${visible} publication${visible!==1?'s':''} • ${deptLabel} • ${typeLabel} • ${yearLabel}`;
+    count.textContent = `Showing ${visible} publication${visible!==1?'s':''} • ${deptLabel} • ${yearLabel}`;
     empty.hidden = visible !== 0;
   }
   pills.forEach(p => p.addEventListener('click', () => {
@@ -142,7 +159,6 @@ $years = FacultyResearch::getYears();
     activeDept = p.dataset.dept;
     apply();
   }));
-  typeSel.addEventListener('change', apply);
   yearSel.addEventListener('change', apply);
   form.addEventListener('submit', e => { e.preventDefault(); apply(); });
   apply();

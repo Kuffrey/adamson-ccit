@@ -4,7 +4,9 @@ $role = $_SESSION['user']['role'] ?? '';
 if (!in_array($role, ['admin','dean'], true)) {
   header('Location: ?page=login_admin'); exit;
 }
-function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+if (!function_exists('e')) {
+    function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
+}
 $username = $_SESSION['user']['username'] ?? 'Admin';
 ?>
 <!DOCTYPE html>

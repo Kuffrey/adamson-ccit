@@ -282,3 +282,6 @@ function social_svg(string $platform): string {
 </footer>
 
 <script src="/adamson-ccit/public/assets/js/chatbot.js"></script>
+
+</body>
+</html>
