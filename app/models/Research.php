@@ -5,9 +5,10 @@ require_once __DIR__ . '/Model.php';
 
 final class Research extends Model {
     public function create(array $d): int {
+        $db = self::db();
         $sql="INSERT INTO research (title, abstract, owner_user_id, department_id, status, requires_dean_approval, submitted_at, published_at)
               VALUES (:title,:abstract,:owner,:dept,:status,:requires, NOW(), NULL)";
-        $st=$this->db->prepare($sql);
+        $st=$db->prepare($sql);
         $st->execute([
             ':title'=>trim($d['title']),
             ':abstract'=>$d['abstract'] ?? null,
@@ -16,11 +17,13 @@ final class Research extends Model {
             ':status'=>$d['status'] ?? 'draft',   // draft|review|approved|published|rejected
             ':requires'=>!empty($d['requires_dean_approval'])?1:0,
         ]);
-        return (int)$this->db->lastInsertId();
+        return (int)$db->lastInsertId();
     }
+    
     public function update(int $id, array $d): bool {
+        $db = self::db();
         $sql="UPDATE research SET title=:title, abstract=:abstract, department_id=:dept, status=:status, requires_dean_approval=:requires WHERE id=:id";
-        $st=$this->db->prepare($sql);
+        $st=$db->prepare($sql);
         return $st->execute([
             ':title'=>trim($d['title']),
             ':abstract'=>$d['abstract'] ?? null,
@@ -30,29 +33,57 @@ final class Research extends Model {
             ':id'=>$id
         ]);
     }
+    
     public function submitForReview(int $id): bool {
-        $st=$this->db->prepare("UPDATE research SET status='review', submitted_at=NOW() WHERE id=:id");
+        $db = self::db();
+        $st=$db->prepare("UPDATE research SET status='review', submitted_at=NOW() WHERE id=:id");
         return $st->execute([':id'=>$id]);
     }
+    
     public function approve(int $id, int $approverId, bool $publish=false): bool {
+        $db = self::db();
         if ($publish) {
             $sql="UPDATE research SET status='published', approved_by=:uid, published_at=NOW() WHERE id=:id";
         } else {
             $sql="UPDATE research SET status='approved', approved_by=:uid WHERE id=:id";
         }
-        $st=$this->db->prepare($sql);
+        $st=$db->prepare($sql);
         return $st->execute([':uid'=>$approverId, ':id'=>$id]);
     }
-    public function listByOwner(int $ownerId, int $page=1, int $per=10): array {
+    
+    public function listByOwner(int $ownerId): array {
+        $db = self::db();
         $sql="SELECT * FROM research WHERE owner_user_id=:uid ORDER BY created_at DESC";
-        return $this->paginate($sql, [':uid'=>$ownerId], $page, $per);
+        $st = $db->prepare($sql);
+        $st->execute([':uid' => $ownerId]);
+        return $st->fetchAll(PDO::FETCH_ASSOC);
     }
-    public function listForDeanQueue(int $page=1,int $per=20): array {
-        $sql="SELECT * FROM research WHERE requires_dean_approval=1 AND status='review' ORDER BY submitted_at DESC";
-        return $this->paginate($sql, [], $page, $per);
+    
+    public static function getAllPending(): array {
+        $db = self::db();
+        $sql="SELECT r.*, u.username as faculty_name FROM research r
+              LEFT JOIN users u ON r.owner_user_id = u.id
+              WHERE r.requires_dean_approval=1 AND r.status='review' ORDER BY r.submitted_at DESC";
+        $st = $db->query($sql);
+        return $st->fetchAll(PDO::FETCH_ASSOC);
     }
+    
+    public static function updateStatus(int $id, string $status, int $approverId = null): bool {
+        $db = self::db();
+        if ($approverId) {
+            $sql = "UPDATE research SET status = :status, approved_by = :approver WHERE id = :id";
+            $st = $db->prepare($sql);
+            return $st->execute([':status' => $status, ':approver' => $approverId, ':id' => $id]);
+        } else {
+            $sql = "UPDATE research SET status = :status WHERE id = :id";
+            $st = $db->prepare($sql);
+            return $st->execute([':status' => $status, ':id' => $id]);
+        }
+    }
+    
     public function delete(int $id): bool {
-        $st = $this->db->prepare("DELETE FROM research WHERE id = :id");
+        $db = self::db();
+        $st = $db->prepare("DELETE FROM research WHERE id = :id");
         return $st->execute([':id' => $id]);
     }
 }

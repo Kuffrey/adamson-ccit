@@ -161,7 +161,7 @@ if (!$menus) {
 
       <?php if (!$user): ?>
         <!-- Not logged in -->
-        <a href="/adamson-ccit/public/index.php?page=login_guest_student" class="btn outline">Login</a>
+        <a href="/adamson-ccit/public/index.php?page=login" class="btn outline">Login</a>
       <?php else: ?>
         <!-- Logged in: compact user icon + dropdown -->
         <details class="user-menu" aria-label="User menu">

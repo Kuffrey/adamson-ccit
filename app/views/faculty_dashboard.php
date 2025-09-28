@@ -16,7 +16,7 @@ $username = $user['username'] ?? 'Faculty';
 </head>
 <body>
 <div class="admin-cms-layout">
-  <?php include __DIR__ . '/../views/faculty/_faculty_sidebar.php'; ?>
+  <?php include __DIR__ . '/faculty/_faculty_sidebar.php'; ?>
   
   <main class="admin-main">
     <header class="admin-topbar">

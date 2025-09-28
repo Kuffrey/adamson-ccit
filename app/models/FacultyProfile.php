@@ -1,20 +1,26 @@
 <?php
 // app/models/FacultyProfile.php
 require_once __DIR__ . '/Model.php';
+
 class FacultyProfile extends Model {
     protected static $table = 'faculty_profile';
+    
     public static function getAll() {
         $db = self::db();
-        $sql = 'SELECT * FROM ' . self::$table . ' ORDER BY ordering ASC, id ASC';
+        $sql = 'SELECT id, name, dept, role, title, avatar_url, 
+                CASE WHEN avatar_url IS NOT NULL AND avatar_url != "" THEN "active" ELSE "active" END as status
+                FROM ' . self::$table . ' ORDER BY ordering ASC, id ASC';
         $stmt = $db->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+    
     public static function getDepartments() {
         $db = self::db();
         $sql = 'SELECT DISTINCT dept FROM ' . self::$table . ' ORDER BY dept ASC';
         $stmt = $db->query($sql);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
+    
     public static function getRoles() {
         $db = self::db();
         $sql = 'SELECT DISTINCT role FROM ' . self::$table . ' ORDER BY role ASC';
@@ -24,7 +30,7 @@ class FacultyProfile extends Model {
 
     public static function getById($id) {
         $db = self::db();
-        $sql = 'SELECT * FROM ' . self::$table . ' WHERE id = ?';
+        $sql = 'SELECT id, name, dept, role, title, avatar_url FROM ' . self::$table . ' WHERE id = ?';
         $stmt = $db->prepare($sql);
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);

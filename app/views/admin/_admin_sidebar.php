@@ -156,6 +156,11 @@ $facultyOpen  = in_array($pg, ['admin_faculty_profile','admin_faculty_research',
       </div>
     </div>
 
+    <!-- User Management -->
+    <a href="?page=admin_manage_users"
+       class="nav__link<?= $pg === 'admin_manage_users' ? ' is-active' : '' ?>">
+       User Management</a>
+
   </nav>
 
   <!-- User section -->

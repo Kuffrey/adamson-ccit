@@ -29,8 +29,10 @@ final class Auth
         // Regenerate on privilege change to mitigate fixation
         session_regenerate_id(true);
         $_SESSION['user'] = [
-            'username' => $user['username'] ?? '',
-            'role'     => $user['role']     ?? '',
+            'id'           => $user['id'] ?? null,
+            'username'     => $user['username'] ?? '',
+            'role'         => $user['role'] ?? '',
+            'department_id'=> $user['department_id'] ?? null,
         ];
     }
 
@@ -42,8 +44,6 @@ final class Auth
             $p = session_get_cookie_params();
             setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
         }
-        // Don't remove the remember me cookies - they should persist after logout
-        // if they exist, so credentials are remembered on next visit
         session_destroy();
     }
 

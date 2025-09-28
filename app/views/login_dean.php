@@ -9,7 +9,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Demo only — replace with DB lookup
     if ($username === 'dean' && $password === 'dean123') {
-        Auth::login(['username' => $username, 'role' => 'dean']);
+        Auth::login([
+            'id' => 2,  // Demo dean ID
+            'username' => $username, 
+            'role' => 'dean',
+            'department_id' => 1  // Demo department ID
+        ]);
         $dest = '/adamson-ccit/public/index.php?page=dean_dashboard';
         if (!headers_sent()) {
             header('Location: ' . $dest);

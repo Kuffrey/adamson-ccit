@@ -59,6 +59,10 @@ $username = $user['username'] ?? 'Admin';
           <h2>👨‍🏫 Faculty</h2>
           <p>Showcase faculty profiles and achievements.</p>
         </a>
+        <a href="?page=admin_manage_users" class="dash-card">
+          <h2>👥 User Management</h2>
+          <p>Manage system users and their roles.</p>
+        </a>
       </div>
     </section>
   </main>

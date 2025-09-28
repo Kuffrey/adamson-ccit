@@ -8,7 +8,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Demo only — replace with DB lookup
     if ($username === 'faculty' && $password === 'faculty123') {
-        Auth::login(['username' => 'faculty', 'role' => 'faculty']);
+        Auth::login([
+            'id' => 1,  // Demo faculty ID
+            'username' => 'faculty', 
+            'role' => 'faculty',
+            'department_id' => 1  // Demo department ID
+        ]);
         $dest = '/adamson-ccit/public/index.php?page=faculty_dashboard';
         if (!headers_sent()) { header('Location: ' . $dest); exit; }
         echo '<script>location.href=' . json_encode($dest) . ';</script>'; exit;

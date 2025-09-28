@@ -2175,3 +2175,35 @@ Stack trace:
 [18-Sep-2025 21:16:02 Europe/Berlin] [session_start(): Ignoring session_start() because a session is already active] in C:\xampp\htdocs\adamson-ccit\app\views\admin\admin_programs_undergraduate.php on line 2
 [18-Sep-2025 21:17:58 Europe/Berlin] [session_start(): Ignoring session_start() because a session is already active] in C:\xampp\htdocs\adamson-ccit\app\views\admin\admin_programs_undergraduate.php on line 2
 [18-Sep-2025 21:20:28 Europe/Berlin] [session_start(): Ignoring session_start() because a session is already active] in C:\xampp\htdocs\adamson-ccit\app\views\admin\admin_programs_undergraduate.php on line 2
+[28-Sep-2025 00:18:29 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in C:\xampp\htdocs\adamson-ccit\app\models\Faculty.php:6
+Stack trace:
+#0 C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_faculty.php(32): Faculty::all()
+#1 C:\xampp\htdocs\adamson-ccit\app\controllers\AdminController.php(391): include('C:\\xampp\\htdocs...')
+#2 C:\xampp\htdocs\adamson-ccit\app\controllers\Router.php(294): AdminController->manageFaculty()
+#3 C:\xampp\htdocs\adamson-ccit\public\index.php(22): Router::route()
+#4 {main}
+  thrown in C:\xampp\htdocs\adamson-ccit\app\models\Faculty.php on line 6
+[28-Sep-2025 00:18:38 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in C:\xampp\htdocs\adamson-ccit\app\models\Faculty.php:6
+Stack trace:
+#0 C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_faculty.php(32): Faculty::all()
+#1 C:\xampp\htdocs\adamson-ccit\app\controllers\AdminController.php(391): include('C:\\xampp\\htdocs...')
+#2 C:\xampp\htdocs\adamson-ccit\app\controllers\Router.php(294): AdminController->manageFaculty()
+#3 C:\xampp\htdocs\adamson-ccit\public\index.php(22): Router::route()
+#4 {main}
+  thrown in C:\xampp\htdocs\adamson-ccit\app\models\Faculty.php on line 6
+[28-Sep-2025 00:19:05 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in C:\xampp\htdocs\adamson-ccit\app\models\Faculty.php:6
+Stack trace:
+#0 C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_faculty.php(32): Faculty::all()
+#1 C:\xampp\htdocs\adamson-ccit\app\controllers\AdminController.php(391): include('C:\\xampp\\htdocs...')
+#2 C:\xampp\htdocs\adamson-ccit\app\controllers\Router.php(294): AdminController->manageFaculty()
+#3 C:\xampp\htdocs\adamson-ccit\public\index.php(22): Router::route()
+#4 {main}
+  thrown in C:\xampp\htdocs\adamson-ccit\app\models\Faculty.php on line 6
+[28-Sep-2025 00:19:15 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to a member function query() on null in C:\xampp\htdocs\adamson-ccit\app\models\Faculty.php:6
+Stack trace:
+#0 C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_faculty.php(32): Faculty::all()
+#1 C:\xampp\htdocs\adamson-ccit\app\controllers\AdminController.php(391): include('C:\\xampp\\htdocs...')
+#2 C:\xampp\htdocs\adamson-ccit\app\controllers\Router.php(294): AdminController->manageFaculty()
+#3 C:\xampp\htdocs\adamson-ccit\public\index.php(22): Router::route()
+#4 {main}
+  thrown in C:\xampp\htdocs\adamson-ccit\app\models\Faculty.php on line 6
