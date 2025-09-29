@@ -9,16 +9,49 @@ class StudentProfile extends Model {
     public static function getByUserId(int $userId): ?array {
         try {
             $db = parent::db();
+            // Get user data from users table (primary source) and merge with student_profiles if exists
             $stmt = $db->prepare("
-                SELECT sp.*, u.username, u.role 
-                FROM student_profiles sp 
-                JOIN users u ON u.id = sp.user_id 
-                WHERE sp.user_id = ?
+                SELECT u.*, sp.bio, sp.skills, sp.linkedin_url, sp.github_url, sp.portfolio_url
+                FROM users u 
+                LEFT JOIN student_profiles sp ON u.id = sp.user_id 
+                WHERE u.id = ?
             ");
             $stmt->execute([$userId]);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return $result ?: null;
+            
+            if (!$result) {
+                return null;
+            }
+            
+            // Return unified profile data from both tables
+            return [
+                'id' => $result['id'],
+                'user_id' => $result['id'],
+                'first_name' => $result['first_name'] ?? null,
+                'last_name' => $result['last_name'] ?? null,
+                'full_name' => trim(($result['first_name'] ?? '') . ' ' . ($result['last_name'] ?? '')),
+                'email' => $result['email'] ?? null,
+                'phone' => $result['phone'] ?? null,
+                'birthday' => $result['birthday'] ?? null,
+                'birth_date' => $result['birthday'] ?? null, // Alias for compatibility
+                'program' => $result['program'] ?? null,
+                'year_level' => $result['year_level'] ?? null,
+                'student_number' => $result['student_number'] ?? null,
+                'bio' => $result['bio'] ?? null,
+                'skills' => $result['skills'] ?? null,
+                'linkedin_url' => $result['linkedin_url'] ?? null,
+                'github_url' => $result['github_url'] ?? null,
+                'website_url' => $result['portfolio_url'] ?? null, // Map portfolio_url to website_url
+                'portfolio_url' => $result['portfolio_url'] ?? null,
+                'location' => $result['address'] ?? null, // Map address to location from users table
+                'profile_image' => $result['profile_image'] ?? null,
+                'created_at' => $result['created_at'] ?? null,
+                'updated_at' => $result['updated_at'] ?? null,
+                'username' => $result['username'] ?? null,
+                'role' => $result['role'] ?? null
+            ];
         } catch (Exception $e) {
+            error_log("StudentProfile::getByUserId error: " . $e->getMessage());
             return null;
         }
     }

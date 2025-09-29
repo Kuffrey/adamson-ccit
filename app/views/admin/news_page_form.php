@@ -2,7 +2,7 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 $role = $_SESSION['user']['role'] ?? '';
 if (!in_array($role, ['admin','dean'], true)) {
-  header('Location: ?page=login_admin'); exit;
+  header('Location: ?page=login'); exit;
 }
 if (!function_exists('e')) {
     function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }

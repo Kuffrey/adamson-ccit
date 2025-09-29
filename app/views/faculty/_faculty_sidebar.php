@@ -19,19 +19,19 @@ $pg = $_GET['page'] ?? '';
   <nav class="admin-sb__nav admin-sb__nav--main">
     <a href="?page=faculty_dashboard"
        class="nav__link<?= $pg === 'faculty_dashboard' ? ' is-active' : '' ?>"
-       <?= $pg === 'faculty_dashboard' ? 'aria-current="page"' : '' ?>>🏠 Dashboard</a>
+       <?= $pg === 'faculty_dashboard' ? 'aria-current="page"' : '' ?>>Dashboard</a>
 
     <a href="?page=faculty_manage_research"
        class="nav__link<?= $pg === 'faculty_manage_research' ? ' is-active' : '' ?>"
-       <?= $pg === 'faculty_manage_research' ? 'aria-current="page"' : '' ?>>🔬 Manage Research</a>
+       <?= $pg === 'faculty_manage_research' ? 'aria-current="page"' : '' ?>>Submit Research</a>
 
     <a href="?page=faculty_manage_certifications"
        class="nav__link<?= $pg === 'faculty_manage_certifications' ? ' is-active' : '' ?>"
-       <?= $pg === 'faculty_manage_certifications' ? 'aria-current="page"' : '' ?>>📄 Manage Certifications</a>
+       <?= $pg === 'faculty_manage_certifications' ? 'aria-current="page"' : '' ?>>Submit Certifications</a>
 
     <a href="?page=faculty_portfolio"
       class="nav__link<?= $pg === 'faculty_portfolio' ? ' is-active' : '' ?>"
-      <?= $pg === 'faculty_portfolio' ? 'aria-current="page"' : '' ?>>🗂️ Portfolio</a>
+      <?= $pg === 'faculty_portfolio' ? 'aria-current="page"' : '' ?>>Portfolio</a>
   </nav>
 
   <div class="admin-sb__spacer"></div>

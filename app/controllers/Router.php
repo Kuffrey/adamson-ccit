@@ -47,20 +47,20 @@ class Router {
                 break;
             /* -------------------- ADMIN HOMEPAGE CMS -------------------- */
             case 'admin_homepage':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminHomepageController.php';
                 echo (new AdminHomepageController())->index();
                 break;
 
             case 'admin_homepage_save':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminHomepageController.php';
                 (new AdminHomepageController())->save();
                 break;
 
             // Legacy alias used by your existing sidebar: ?page=admin_manage_homepage
             case 'admin_manage_homepage':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminHomepageController.php';
                 $c = new AdminHomepageController();
                 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') { $c->save(); }
@@ -69,7 +69,7 @@ class Router {
 
             /* -------------------- QUICK ACTIONS MANAGEMENT -------------------- */
             case 'admin_manage_quick_actions':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/QuickActionsController.php';
                 $c = new QuickActionsController();
                 if (($_POST['action'] ?? '') === 'save' || ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') { 
@@ -169,33 +169,19 @@ class Router {
                 include __DIR__ . '/../views/virtual_tour.php'; break;
 
             /* -------------------- AUTH VIEWS -------------------- */
-            case 'login_guest_student':
-                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                    require_once __DIR__ . '/StudentLoginController.php';
-                    $error = StudentLoginController::handle();
-                }
-                include __DIR__ . '/../views/login_guest_student.php'; break;
-
-            case 'login_faculty':
-                include __DIR__ . '/../views/login_faculty.php'; break;
-
-            case 'login_admin':
-                include __DIR__ . '/../views/login_admin.php'; break;
-
-            case 'login_dean':
-                include __DIR__ . '/../views/login_dean.php'; break;
+            // Old login routes removed - now using unified login only
 
             /* -------------------- STUDENT (gated) -------------------- */
             case 'student_profile':
-                Auth::requireRole(['student'], $base . 'login_guest_student');
+                Auth::requireRole(['student'], $base . 'login');
                 include __DIR__ . '/../views/student_profile.php'; break;
 
             case 'student_profile_save':
-                Auth::requireRole(['student'], $base . 'login_guest_student');
+                Auth::requireRole(['student'], $base . 'login');
                 include __DIR__ . '/../handlers/student_profile_handler.php'; break;
 
             case 'student_settings':
-                Auth::requireRole(['student'], $base . 'login_guest_student');
+                Auth::requireRole(['student'], $base . 'login');
                 include __DIR__ . '/../views/student_settings.php'; break;
 
             case 'student_career_results':
@@ -203,7 +189,7 @@ class Router {
 
             /* -------------------- FACULTY CMS -------------------- */
             case 'faculty_dashboard':
-                Auth::requireRole(['faculty','admin','dean'], $base . 'login_faculty');
+                Auth::requireRole(['faculty','admin','dean'], $base . 'login');
                 require_once __DIR__ . '/FacultyController.php';
                 echo (new FacultyController())->dashboard(); break;
 
@@ -219,77 +205,77 @@ class Router {
                 echo (new FacultyController())->manageCertifications(); break;
 
             case 'faculty_portfolio':
-                Auth::requireRole(['faculty','admin','dean'], $base . 'login_faculty');
+                Auth::requireRole(['faculty','admin','dean'], $base . 'login');
                 require_once __DIR__ . '/FacultyController.php';
                 echo (new FacultyController())->portfolio(); break;
 
             /* -------------------- ADMIN + DEAN CMS -------------------- */
             case 'admin_dashboard':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->dashboard(); break;
 
             case 'admin_manage_news':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->manageNews(); break;
 
             case 'admin_news_settings':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminNewsPageController.php';
                 AdminNewsPageController::handle(); break;
 
             case 'admin_manage_programs':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 include __DIR__ . '/../views/admin_manage_programs.php'; break;
 
             case 'admin_programs_undergraduate':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 include __DIR__ . '/../views/admin/admin_programs_undergraduate.php'; break;
 
             case 'admin_programs_graduate':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 include __DIR__ . '/../views/admin/admin_programs_graduate.php'; break;
                 
             case 'admin_debug':
-                Auth::requireRole(['admin'], $base . 'login_admin');
+                Auth::requireRole(['admin'], $base . 'login');
                 include __DIR__ . '/../views/admin/debug.php'; break;
 
             case 'admin_student_organizations':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->studentOrganizations(); break;
 
             case 'admin_student_scholarships':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->studentScholarships(); break;
 
             case 'admin_student_research':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->studentResearch(); break;
 
             case 'admin_student_certifications':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->studentCertifications(); break;
 
             case 'admin_student_testimonials':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->studentTestimonials(); break;
 
             case 'admin_faculty_profile':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 include __DIR__ . '/../views/admin/admin_faculty_profile.php'; break;
 
             case 'admin_faculty_research':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 include __DIR__ . '/../views/admin/admin_faculty_research.php'; break;
 
             case 'admin_faculty_certifications':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 include __DIR__ . '/../views/admin/admin_faculty_certifications.php'; break;
 
             case 'admin_manage_users':
@@ -297,26 +283,26 @@ class Router {
                 include __DIR__ . '/../views/admin/admin_manage_users.php'; break;
 
             case 'admin_manage_faculty':
-                Auth::requireRole(['admin'], $base . 'login_admin');
+                Auth::requireRole(['admin'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->manageFaculty(); break;
 
             case 'admin_manage_announcements':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->manageAnnouncements(); break;
 
             case 'admin_manage_about':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->manageAbout(); break;
 
             case 'admin_about_vision_mission':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/../views/admin/about_vision_mission_form.php'; break;
 
             case 'admin_about_vision_mission_save':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/../models/AboutVisionMission.php';
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $m  = new AboutVisionMission();
@@ -329,29 +315,29 @@ class Router {
                 echo '<script>location.href='.json_encode($base.'admin_about_vision_mission').';</script>'; exit;
 
             case 'admin_manage_events':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminController.php';
                 echo (new AdminController())->manageEvents(); break;
 
             /* -------------------- ADMISSION CMS -------------------- */
             case 'admin_admission_freshman':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminAdmissionFreshmanController.php';
                 AdminAdmissionFreshmanController::handle(); break;
 
             case 'admin_admission_transferee':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminAdmissionTransfereeController.php';
                 AdminAdmissionTransfereeController::handle(); break;
 
             case 'admin_admission_graduate':
-                Auth::requireRole(['admin','dean'], $base . 'login_admin');
+                Auth::requireRole(['admin','dean'], $base . 'login');
                 require_once __DIR__ . '/AdminAdmissionGraduateController.php';
                 AdminAdmissionGraduateController::handle(); break;
 
             /* -------------------- DEAN -------------------- */
             case 'dean_dashboard':
-                Auth::requireRole(['dean'], $base . 'login_faculty');
+                Auth::requireRole(['dean'], $base . 'login');
                 require_once __DIR__ . '/DeanController.php';
                 echo (new DeanController())->dashboard(); break;
 
@@ -423,28 +409,28 @@ class Router {
                 break;
 
             case 'dean_create_news':
-                Auth::requireRole(['dean'], $base . 'login_faculty');
+                Auth::requireRole(['dean'], $base . 'login');
                 require_once __DIR__ . '/DeanController.php';
                 echo (new DeanController())->createNews(); break;
 
             case 'dean_create_event':
-                Auth::requireRole(['dean'], $base . 'login_faculty');
+                Auth::requireRole(['dean'], $base . 'login');
                 require_once __DIR__ . '/DeanController.php';
                 echo (new DeanController())->createEvent(); break;
 
             case 'dean_create_announcement':
-                Auth::requireRole(['dean'], $base . 'login_faculty');
+                Auth::requireRole(['dean'], $base . 'login');
                 require_once __DIR__ . '/DeanController.php';
                 echo (new DeanController())->createAnnouncement(); break;
 
             /* -------------------- STUDENT CERT ACTIONS -------------------- */
             case 'student_cert_save':
-                Auth::requireRole(['student'], $base . 'login_guest_student');
+                Auth::requireRole(['student'], $base . 'login');
                 require_once __DIR__ . '/StudentCertController.php';
                 (new StudentCertController())->save(); break;
 
             case 'student_cert_delete':
-                Auth::requireRole(['student'], $base . 'login_guest_student');
+                Auth::requireRole(['student'], $base . 'login');
                 require_once __DIR__ . '/StudentCertController.php';
                 (new StudentCertController())->delete(); break;
 
@@ -462,7 +448,7 @@ class Router {
 
                 // Legacy alias: ?page=admin_manage_homepage  -> uses the new controller
 case 'admin_manage_homepage':
-    Auth::requireRole(['admin','dean'], $base . 'login_admin');
+    Auth::requireRole(['admin','dean'], $base . 'login');
     require_once __DIR__ . '/AdminHomepageController.php';
     $c = new AdminHomepageController();
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {

@@ -2,7 +2,7 @@
 // app/views/admin/admin_student_certifications.php
 if (session_status() === PHP_SESSION_NONE) session_start();
 if (empty($_SESSION['user']) || !in_array(($_SESSION['user']['role'] ?? ''), ['admin','dean'], true)) {
-  header('Location: ?page=login_admin'); exit;
+  header('Location: ?page=login'); exit;
 }
 
 require_once __DIR__ . '/../../models/StudentCertificationsPageSettings.php';

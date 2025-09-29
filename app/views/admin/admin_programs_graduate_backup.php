@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!in_array(($_SESSION['user']['role'] ?? ''), ['admin','dean'], true)) {
-  header('Location: ?page=login_admin'); exit;
+  header('Location: ?page=login'); exit;
 }
 
 require_once dirname(__DIR__, 2) . '/models/ProgramsGraduateSettings.php';

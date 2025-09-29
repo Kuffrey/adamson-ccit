@@ -10,7 +10,13 @@ final class User extends Model {
     // Static methods for admin management
     public static function getAll(): array {
         $db = parent::db();
-        $stmt = $db->query("SELECT id, username, role, department_id FROM users ORDER BY username");
+        $stmt = $db->query("
+            SELECT id, username, first_name, last_name, email, 
+                   student_number, program, year_level, status, 
+                   role, department_id, created_at 
+            FROM users 
+            ORDER BY role, username
+        ");
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
     
@@ -24,14 +30,26 @@ final class User extends Model {
     public static function create(array $data): bool {
         $db = parent::db();
         $stmt = $db->prepare("
-            INSERT INTO users (username, password, role, department_id) 
-            VALUES (:username, :password, :role, :department_id)
+            INSERT INTO users (
+                username, password, role, first_name, last_name, email,
+                student_number, program, year_level, status, department_id
+            ) VALUES (
+                :username, :password, :role, :first_name, :last_name, :email,
+                :student_number, :program, :year_level, :status, :department_id
+            )
         ");
         
         return $stmt->execute([
             ':username' => $data['username'],
             ':password' => password_hash($data['password'], PASSWORD_DEFAULT),
             ':role' => $data['role'],
+            ':first_name' => $data['first_name'] ?? null,
+            ':last_name' => $data['last_name'] ?? null,
+            ':email' => $data['email'] ?? null,
+            ':student_number' => $data['student_number'] ?? null,
+            ':program' => $data['program'] ?? null,
+            ':year_level' => $data['year_level'] ?? null,
+            ':status' => $data['status'] ?? 'active',
             ':department_id' => $data['department_id'] ?? null
         ]);
     }
@@ -57,6 +75,41 @@ final class User extends Model {
             $params[':role'] = $data['role'];
         }
         
+        if (isset($data['first_name'])) {
+            $fields[] = 'first_name = :first_name';
+            $params[':first_name'] = $data['first_name'];
+        }
+        
+        if (isset($data['last_name'])) {
+            $fields[] = 'last_name = :last_name';
+            $params[':last_name'] = $data['last_name'];
+        }
+        
+        if (isset($data['email'])) {
+            $fields[] = 'email = :email';
+            $params[':email'] = $data['email'];
+        }
+        
+        if (isset($data['student_number'])) {
+            $fields[] = 'student_number = :student_number';
+            $params[':student_number'] = $data['student_number'];
+        }
+        
+        if (isset($data['program'])) {
+            $fields[] = 'program = :program';
+            $params[':program'] = $data['program'];
+        }
+        
+        if (isset($data['year_level'])) {
+            $fields[] = 'year_level = :year_level';
+            $params[':year_level'] = $data['year_level'];
+        }
+        
+        if (isset($data['status'])) {
+            $fields[] = 'status = :status';
+            $params[':status'] = $data['status'];
+        }
+        
         if (isset($data['department_id'])) {
             $fields[] = 'department_id = :department_id';
             $params[':department_id'] = $data['department_id'];
@@ -66,7 +119,7 @@ final class User extends Model {
             return false;
         }
         
-        $sql = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = :id";
+        $sql = "UPDATE users SET " . implode(', ', $fields) . ", updated_at = CURRENT_TIMESTAMP WHERE id = :id";
         $stmt = $db->prepare($sql);
         
         return $stmt->execute($params);

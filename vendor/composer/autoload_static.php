@@ -73,6 +73,7 @@ class ComposerStaticInit2ec818b0765088aa2a38c504c80a89e8
             'ParaTest\\' => 9,
             'PHPUnit\\Architecture\\' => 21,
             'PHPStan\\PhpDocParser\\' => 21,
+            'PHPMailer\\PHPMailer\\' => 20,
         ),
         'N' => 
         array (
@@ -250,6 +251,10 @@ class ComposerStaticInit2ec818b0765088aa2a38c504c80a89e8
         'PHPStan\\PhpDocParser\\' => 
         array (
             0 => __DIR__ . '/..' . '/phpstan/phpdoc-parser/src',
+        ),
+        'PHPMailer\\PHPMailer\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
         ),
         'NunoMaduro\\Collision\\' => 
         array (

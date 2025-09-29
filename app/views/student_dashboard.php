@@ -2,7 +2,7 @@
 // Optional-login site: only gate this page, not the whole site.
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 if (empty($_SESSION['user']) || ($_SESSION['user']['role'] ?? '') !== 'student') {
-  header('Location: /adamson-ccit/public/index.php?page=login_guest_student&next=' . urlencode($_SERVER['REQUEST_URI']));
+  header('Location: /adamson-ccit/public/index.php?page=login&next=' . urlencode($_SERVER['REQUEST_URI']));
   exit;
 }
 $u = $_SESSION['user'];

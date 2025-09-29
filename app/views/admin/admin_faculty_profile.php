@@ -2,7 +2,7 @@
 // app/views/admin/admin_faculty_profile.php
 if (session_status() === PHP_SESSION_NONE) session_start();
 if (empty($_SESSION['user']) || !in_array(($_SESSION['user']['role'] ?? ''), ['admin','dean'], true)) {
-  header('Location: ?page=login_admin'); exit;
+  header('Location: ?page=login'); exit;
 }
 
 require_once __DIR__ . '/../../models/FacultyProfilePageSettings.php';
@@ -388,19 +388,19 @@ $faculty = FacultyProfile::getAll();
                         </td>
                         <td>
                           <strong><?= esc($f['name']) ?></strong>
-                          <?php if ($f['badges']): ?>
-                            <br><small class="text-muted"><?= esc($f['badges']) ?></small>
+                          <?php if (!empty($f['badges'] ?? '')): ?>
+                            <br><small class="text-muted"><?= esc($f['badges'] ?? '') ?></small>
                           <?php endif; ?>
                         </td>
                         <td><span class="badge bg-secondary"><?= esc(ucfirst($f['dept'])) ?></span></td>
                         <td><?= esc($f['role']) ?></td>
                         <td><?= esc($f['title']) ?></td>
-                        <td><?= esc($f['ordering']) ?></td>
+                        <td><?= esc($f['ordering'] ?? '') ?></td>
                         <td>
                           <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal<?= $f['id'] ?>">
                             <i class="fas fa-edit"></i>
                           </button>
-                          <form method="post" class="inline-form" onsubmit="return confirm('Delete this faculty member?')">>
+                          <form method="post" class="inline-form" onsubmit="return confirm('Delete this faculty member?')">
                             <input type="hidden" name="delete_faculty" value="1">
                             <input type="hidden" name="id" value="<?= (int)$f['id'] ?>">
                             <button type="submit" class="btn btn-sm btn-danger">
@@ -468,7 +468,7 @@ $faculty = FacultyProfile::getAll();
                     </div>
                     <div class="col-md-6">
                       <label class="form-label">Avatar Initials</label>
-                      <input type="text" class="form-control" name="faculty[avatar_initials]" value="<?= esc($f['avatar_initials']) ?>" maxlength="4">
+                      <input type="text" class="form-control" name="faculty[avatar_initials]" value="<?= esc($f['avatar_initials'] ?? '') ?>" maxlength="4">
                     </div>
                   </div>
                   <div class="row mt-3">
@@ -502,11 +502,11 @@ $faculty = FacultyProfile::getAll();
                   <div class="row mt-3">
                     <div class="col-md-6">
                       <label class="form-label">Badges</label>
-                      <input type="text" class="form-control" name="faculty[badges]" value="<?= esc($f['badges']) ?>">
+                      <input type="text" class="form-control" name="faculty[badges]" value="<?= esc($f['badges'] ?? '') ?>">
                     </div>
                     <div class="col-md-6">
                       <label class="form-label">Ordering</label>
-                      <input type="number" class="form-control" name="faculty[ordering]" value="<?= esc($f['ordering']) ?>" min="0">
+                      <input type="number" class="form-control" name="faculty[ordering]" value="<?= esc($f['ordering'] ?? '') ?>" min="0">
                     </div>
                   </div>
                 </div>

@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'faculty') {
-    header('Location: ?page=login_faculty');
+    header('Location: ?page=login');
     exit;
 }
 require_once __DIR__ . '/../models/Certification.php';
@@ -11,7 +11,7 @@ require_once __DIR__ . '/../models/Certification.php';
 // Check if user is logged in and get faculty ID
 $faculty_id = $_SESSION['user']['id'] ?? null;
 if (!$faculty_id) {
-    header('Location: ?page=login_faculty');
+    header('Location: ?page=login');
     exit;
 }
 $certModel = new Certification();

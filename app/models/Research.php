@@ -19,6 +19,17 @@ final class Research extends Model {
         ]);
         return (int)$db->lastInsertId();
     }
+
+        /**
+         * List research by status (for dean dashboard)
+         */
+        public function listByStatus(string $status): array {
+            $db = self::db();
+            $sql = "SELECT r.*, u.username as faculty_name FROM research r LEFT JOIN users u ON r.owner_user_id = u.id WHERE r.status = :status ORDER BY r.submitted_at DESC";
+            $st = $db->prepare($sql);
+            $st->execute([':status' => $status]);
+            return $st->fetchAll(PDO::FETCH_ASSOC);
+        }
     
     public function update(int $id, array $d): bool {
         $db = self::db();

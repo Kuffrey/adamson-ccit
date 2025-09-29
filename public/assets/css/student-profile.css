@@ -20,8 +20,10 @@
   border-radius: 8px;
   color: white;
   font-weight: 500;
-  z-index: 1000;
+  z-index: 1200;
   animation: slideIn 0.3s ease;
+  max-width: 400px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
 .toast--success { background: #057a55; }
 .toast--danger { background: #dc2626; }
@@ -243,11 +245,75 @@
   background: white;
   margin-bottom: 8px;
   transition: all 0.2s;
+  position: relative;
 }
 
 .cert-list-item:hover {
   border-color: #0077b5;
   box-shadow: 0 2px 8px rgba(0,119,181,0.1);
+}
+
+.cert-list-item:hover .cert-hover-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Subtle Hover Actions */
+.cert-hover-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+}
+
+.action-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+.action-icon-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.action-icon-btn.edit-btn {
+  color: #0077b5;
+}
+
+.action-icon-btn.edit-btn:hover {
+  background: #0077b5;
+  color: white;
+  border-color: #0077b5;
+}
+
+.action-icon-btn.delete-btn {
+  color: #dc2626;
+}
+
+.action-icon-btn.delete-btn:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+}
+
+.action-icon-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .cert-list-item.expired {
@@ -348,28 +414,31 @@
   display: flex;
   gap: 12px;
   align-items: center;
+  margin-top: 8px;
 }
 
-.action-link {
+.credential-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   color: #0077b5;
   text-decoration: none;
   font-weight: 500;
-  padding: 2px 0;
-  border-bottom: 1px solid transparent;
+  padding: 4px 8px;
+  border-radius: 6px;
   transition: all 0.2s;
+  background: rgba(0,119,181,0.1);
 }
 
-.action-link:hover {
-  border-bottom-color: #0077b5;
+.credential-link:hover {
+  background: rgba(0,119,181,0.15);
+  transform: translateY(-1px);
 }
 
-.delete-link {
-  color: #dc2626 !important;
-}
-
-.delete-link:hover {
-  border-bottom-color: #dc2626 !important;
+.credential-link svg {
+  width: 14px;
+  height: 14px;
 }
 
 .inline-form {
@@ -657,6 +726,16 @@
   color: #0077b5;
 }
 
+/* Card hover actions (reuse the same styles) */
+.certification-card {
+  position: relative;
+}
+
+.certification-card:hover .cert-hover-actions {
+  opacity: 1;
+  visibility: visible;
+}
+
 .cert-actions-menu {
   position: relative;
 }
@@ -850,6 +929,113 @@
   font-weight: 600;
   margin: 0;
   color: #1f2937;
+}
+
+/* Special styling for password modal */
+#passwordModal .modal-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+#passwordModal .modal-header h3 {
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#passwordModal .modal-header h3::before {
+  content: "🔒";
+  font-size: 20px;
+}
+
+#passwordModal form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#passwordModal label {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+#passwordModal input[type="password"] {
+  padding: 12px 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  background: #f9fafb;
+}
+
+#passwordModal input[type="password"]:focus {
+  outline: none;
+  border-color: #dc2626;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+#passwordModal .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+#passwordModal .security-note {
+  background: #fef7f0;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: #9a3412;
+  margin-top: 8px;
+}
+
+#passwordModal .modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+#passwordModal .btn {
+  padding: 12px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+#passwordModal .btn--outline {
+  background: white;
+  border: 2px solid #6b7280;
+  color: #6b7280;
+}
+
+#passwordModal .btn--outline:hover {
+  background: #6b7280;
+  color: white;
+}
+
+#passwordModal .btn--solid {
+  background: #dc2626;
+  border: 2px solid #dc2626;
+  color: white;
+}
+
+#passwordModal .btn--solid:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+#passwordModal .btn--solid:disabled {
+  background: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
 }
 
 .modal-close {

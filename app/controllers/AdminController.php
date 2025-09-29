@@ -21,7 +21,7 @@ class AdminController
     {
         $this->startSession();
         $role = $_SESSION['user']['role'] ?? '';
-        if ($role !== 'admin') $this->redirect('?page=login_admin');
+        if ($role !== 'admin') $this->redirect('?page=login');
     }
 
     /** Allow either Admin or Dean */
@@ -29,7 +29,7 @@ class AdminController
     {
         $this->startSession();
         $role = $_SESSION['user']['role'] ?? '';
-        if (!in_array($role, ['admin','dean'], true)) $this->redirect('?page=login_admin');
+        if (!in_array($role, ['admin','dean'], true)) $this->redirect('?page=login');
     }
 
     /** Safe redirect w/ JS fallback if headers already sent */

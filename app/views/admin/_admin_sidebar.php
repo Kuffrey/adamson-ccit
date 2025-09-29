@@ -141,9 +141,6 @@ $facultyOpen  = in_array($pg, ['admin_faculty_profile','admin_faculty_research',
         Faculty <span class="caret">▾</span>
       </button>
       <div class="nav__submenu">
-        <a href="?page=admin_manage_faculty"
-           class="nav__sublink<?= $pg==='admin_manage_faculty' ? ' is-active' : '' ?>">
-           Faculty List</a>
         <a href="?page=admin_faculty_profile"
            class="nav__sublink<?= $pg==='admin_faculty_profile' ? ' is-active' : '' ?>">
            Profiles</a>
@@ -173,7 +170,7 @@ $facultyOpen  = in_array($pg, ['admin_faculty_profile','admin_faculty_research',
         <span class="urole"><?= esc($roleName) ?></span>
       </div>
     </div>
-    <a href="?page=logout_admin" class="nav__link">Logout</a>
+    <a href="?page=logout" class="nav__link">Logout</a>
   </div>
 </aside>
 

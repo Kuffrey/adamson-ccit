@@ -9,7 +9,7 @@ abstract class Model
 {
     protected static ?PDO $db = null;
 
-    protected static function db(): PDO
+    public static function db(): PDO
     {
         if (self::$db instanceof PDO) {
             return self::$db;

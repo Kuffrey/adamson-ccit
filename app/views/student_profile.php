@@ -50,12 +50,14 @@ $email = $studentProfile['email'] ?? ($user['username'] . '@student.adamson.edu.
 
 <main class="page-student">
   <!-- Toast Notifications -->
-  <?php if (!empty($_GET['saved']) || !empty($_GET['deleted']) || !empty($_GET['error'])): ?>
+  <?php if (!empty($_GET['saved']) || !empty($_GET['deleted']) || !empty($_GET['error']) || !empty($_GET['password_changed'])): ?>
     <div class="toast <?= !empty($_GET['error']) ? 'toast--danger' : (!empty($_GET['deleted']) ? 'toast--danger' : 'toast--success') ?>">
       <?php if (!empty($_GET['error'])): ?>
         <?= htmlspecialchars($_GET['error']) ?>
       <?php elseif (!empty($_GET['deleted'])): ?>
         Certification deleted.
+      <?php elseif (!empty($_GET['password_changed'])): ?>
+        Password changed successfully!
       <?php elseif ($_GET['saved'] == '1'): ?>
         Profile updated successfully!
       <?php else: ?>
@@ -101,12 +103,21 @@ $email = $studentProfile['email'] ?? ($user['username'] . '@student.adamson.edu.
         <div class="profile-card">
           <div class="card-header-flex">
             <h3 class="card-title">About</h3>
-            <button class="edit-profile-btn" onclick="openEditProfileModal()" title="Edit Profile">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-            </button>
+            <div class="card-actions">
+              <button class="edit-profile-btn" onclick="openEditProfileModal()" title="Edit Profile">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button class="edit-profile-btn" onclick="openPasswordModal()" title="Change Password">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <circle cx="12" cy="16" r="1"></circle>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </button>
+            </div>
           </div>
           <p class="about-text">
             <?= htmlspecialchars($bio ?: 'No bio added yet. Click edit to add your professional summary.') ?>
@@ -235,22 +246,41 @@ $email = $studentProfile['email'] ?? ($user['username'] . '@student.adamson.edu.
                         <span class="meta-item credential-id">ID: <?= htmlspecialchars($c['credential_id']) ?></span>
                       <?php endif; ?>
                     </div>
-                    <div class="cert-actions-compact">
-                      <?php if (!empty($c['credential_url'])): ?>
-                        <a href="<?= htmlspecialchars($c['credential_url']) ?>" target="_blank" class="action-link">
+                    <?php if (!empty($c['credential_url'])): ?>
+                      <div class="cert-actions-compact">
+                        <a href="<?= htmlspecialchars($c['credential_url']) ?>" target="_blank" class="action-link credential-link">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15,3 21,3 21,9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                          </svg>
                           Show credential
                         </a>
-                      <?php endif; ?>
-                      <a href="#" onclick='editCert(<?= json_encode($c, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT) ?>);return false;' class="action-link">
-                        Edit
-                      </a>
-                      <form action="/adamson-ccit/public/index.php" method="get" class="inline-form"
-                            onsubmit="return confirm('Delete this certification?')">
-                        <input type="hidden" name="page" value="student_cert_delete">
-                        <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-                        <button type="submit" class="action-link delete-link">Delete</button>
-                      </form>
-                    </div>
+                      </div>
+                    <?php endif; ?>
+                  </div>
+                  <!-- Hover Action Buttons -->
+                  <div class="cert-hover-actions">
+                    <button 
+                      class="action-icon-btn edit-btn" 
+                      onclick='editCert(<?= json_encode($c, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT) ?>)'
+                      title="Edit certification">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                      </svg>
+                    </button>
+                    <button 
+                      class="action-icon-btn delete-btn" 
+                      onclick='deleteCert(<?= (int)$c['id'] ?>, "<?= htmlspecialchars($c['name']) ?>")'
+                      title="Delete certification">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3,6 5,6 21,6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               <?php endforeach; ?>
@@ -273,21 +303,28 @@ $email = $studentProfile['email'] ?? ($user['username'] . '@student.adamson.edu.
                 <div class="certification-card <?= $isExpired ? 'expired' : '' ?>">
                   <div class="cert-header">
                     <div class="cert-logo">🎓</div>
-                    <div class="cert-actions-menu">
-                      <button class="action-menu-btn" onclick="toggleCertMenu(<?= $c['id'] ?>)">⋯</button>
-                      <div class="cert-menu" id="cert-menu-<?= $c['id'] ?>">
-                        <a href="#" onclick='editCert(<?= json_encode($c, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT) ?>);return false;' class="menu-item">
-                          <span class="menu-icon">✏️</span> Edit
-                        </a>
-                        <form action="/adamson-ccit/public/index.php" method="get" class="menu-form"
-                              onsubmit="return confirm('Delete this certification?')">
-                          <input type="hidden" name="page" value="student_cert_delete">
-                          <input type="hidden" name="id" value="<?= (int)$c['id'] ?>">
-                          <button type="submit" class="menu-item delete-item">
-                            <span class="menu-icon">🗑️</span> Delete
-                          </button>
-                        </form>
-                      </div>
+                    <!-- Hover Action Buttons -->
+                    <div class="cert-hover-actions">
+                      <button 
+                        class="action-icon-btn edit-btn" 
+                        onclick='editCert(<?= json_encode($c, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT) ?>)'
+                        title="Edit certification">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                      </button>
+                      <button 
+                        class="action-icon-btn delete-btn" 
+                        onclick='deleteCert(<?= (int)$c['id'] ?>, "<?= htmlspecialchars($c['name']) ?>")'
+                        title="Delete certification">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3,6 5,6 21,6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2h4a2 2 0 0 1 2 2v2"></path>
+                          <line x1="10" y1="11" x2="10" y2="17"></line>
+                          <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                      </button>
                     </div>
                   </div>
                   
@@ -351,58 +388,72 @@ $email = $studentProfile['email'] ?? ($user['username'] . '@student.adamson.edu.
       <h3>Edit Profile</h3>
       <button type="button" class="modal-close" onclick="closeProfileModal()">✕</button>
     </div>
-    <form id="profileForm" action="/adamson-ccit/public/index.php" method="POST">
-      <input type="hidden" name="page" value="student_profile_save">
-      <input type="hidden" name="user_id" value="<?= htmlspecialchars($userId) ?>">
+    <form id="profileForm" action="/adamson-ccit/public/index.php?page=student_profile_save" method="POST">
+      <input type="hidden" name="user_id" value="<?= htmlspecialchars($user['id'] ?? '') ?>">
 
-      <label>Full Name*</label>
-      <input type="text" name="full_name" value="<?= htmlspecialchars($studentProfile['full_name'] ?? '') ?>" required>
+      <label>Full Name</label>
+      <div class="readonly-field">
+        <?= htmlspecialchars($fullName) ?>
+      </div>
 
       <label>Program*</label>
       <input type="text" name="program" value="<?= htmlspecialchars($studentProfile['program'] ?? '') ?>" required>
 
       <label>Year Level*</label>
       <select name="year_level" required>
-        <option value="">Select Year</option>
-        <option value="1st Year" <?= ($studentProfile['year_level'] ?? '') === '1st Year' ? 'selected' : '' ?>>1st Year</option>
-        <option value="2nd Year" <?= ($studentProfile['year_level'] ?? '') === '2nd Year' ? 'selected' : '' ?>>2nd Year</option>
-        <option value="3rd Year" <?= ($studentProfile['year_level'] ?? '') === '3rd Year' ? 'selected' : '' ?>>3rd Year</option>
-        <option value="4th Year" <?= ($studentProfile['year_level'] ?? '') === '4th Year' ? 'selected' : '' ?>>4th Year</option>
-        <option value="Graduate" <?= ($studentProfile['year_level'] ?? '') === 'Graduate' ? 'selected' : '' ?>>Graduate</option>
+   <option value="">Select Year</option>
+   <option value="1st Year" <?= ($studentProfile['year_level'] ?? '') === '1st Year' ? 'selected' : '' ?>>1st Year</option>
+   <option value="2nd Year" <?= ($studentProfile['year_level'] ?? '') === '2nd Year' ? 'selected' : '' ?>>2nd Year</option>
+   <option value="3rd Year" <?= ($studentProfile['year_level'] ?? '') === '3rd Year' ? 'selected' : '' ?>>3rd Year</option>
+   <option value="4th Year" <?= ($studentProfile['year_level'] ?? '') === '4th Year' ? 'selected' : '' ?>>4th Year</option>
+   <option value="Graduate" <?= ($studentProfile['year_level'] ?? '') === 'Graduate' ? 'selected' : '' ?>>Graduate</option>
       </select>
 
       <label>About/Bio</label>
       <textarea name="bio" rows="4" placeholder="Tell us about yourself, your interests, and career goals..."><?= htmlspecialchars($studentProfile['bio'] ?? '') ?></textarea>
 
       <label>Skills (comma-separated)</label>
-      <input type="text" name="skills" value="<?= htmlspecialchars($studentProfile['skills'] ?? '') ?>" 
-             placeholder="Programming, Web Development, Database Management">
-
-      <label>Email</label>
-      <input type="email" name="email" value="<?= htmlspecialchars($studentProfile['email'] ?? '') ?>">
-
-      <label>Phone</label>
-      <input type="tel" name="phone" value="<?= htmlspecialchars($studentProfile['phone'] ?? '') ?>">
-
-      <label>Location</label>
-      <input type="text" name="location" value="<?= htmlspecialchars($studentProfile['location'] ?? '') ?>" 
-             placeholder="City, Country">
-
-      <label>LinkedIn Profile</label>
-      <input type="url" name="linkedin_url" value="<?= htmlspecialchars($studentProfile['linkedin_url'] ?? '') ?>" 
-             placeholder="https://linkedin.com/in/yourprofile">
-
-      <label>GitHub Profile</label>
-      <input type="url" name="github_url" value="<?= htmlspecialchars($studentProfile['github_url'] ?? '') ?>" 
-             placeholder="https://github.com/yourusername">
-
-      <label>Portfolio Website</label>
-      <input type="url" name="website_url" value="<?= htmlspecialchars($studentProfile['website_url'] ?? '') ?>" 
-             placeholder="https://yourportfolio.com">
+      <input type="text" name="skills" value="<?= htmlspecialchars($studentProfile['skills'] ?? '') ?>" placeholder="Programming, Web Development, Database Management">
 
       <div class="modal-actions">
-        <button type="button" class="btn btn--outline" onclick="closeProfileModal()">Cancel</button>
-        <button type="submit" class="btn btn--solid">Save Profile</button>
+   <button type="button" class="btn btn--outline" onclick="closeProfileModal()">Cancel</button>
+   <button type="submit" class="btn btn--solid">Save Profile</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="passwordModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Change Password</h3>
+      <button type="button" class="modal-close" onclick="closePasswordModal()">✕</button>
+    </div>
+    <form id="passwordForm" action="/adamson-ccit/public/index.php?page=change_password" method="POST">
+      <input type="hidden" name="user_id" value="<?= htmlspecialchars($user['id'] ?? '') ?>">
+
+      <div class="form-group">
+        <label>Current Password*</label>
+        <input type="password" name="current_password" required autocomplete="current-password">
+      </div>
+
+      <div class="form-group">
+        <label>New Password*</label>
+        <input type="password" name="new_password" required minlength="6" autocomplete="new-password">
+        <div class="security-note">
+          Password must be at least 6 characters long. Use a combination of letters, numbers, and symbols for better security.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Confirm New Password*</label>
+        <input type="password" name="confirm_password" required minlength="6" autocomplete="new-password">
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn--outline" onclick="closePasswordModal()">Cancel</button>
+        <button type="submit" class="btn btn--solid">Change Password</button>
       </div>
     </form>
   </div>
@@ -416,7 +467,7 @@ $email = $studentProfile['email'] ?? ($user['username'] . '@student.adamson.edu.
       <button type="button" class="modal-close">✕</button>
     </div>
 
-<form id="certForm" action="index.php?page=student_cert_save" method="POST">
+<form id="certForm" action="/adamson-ccit/public/index.php?page=student_cert_save" method="POST">
       <input type="hidden" name="mode" value="create">
       <input type="hidden" name="id">
 
@@ -482,6 +533,25 @@ $email = $studentProfile['email'] ?? ($user['username'] . '@student.adamson.edu.
   </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Delete Certification</h3>
+      <button type="button" class="modal-close" onclick="closeDeleteModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to delete this certification?</p>
+      <p><strong id="deleteCertName">Certification Name</strong></p>
+      <p class="text-danger"><small>This action cannot be undone.</small></p>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn--outline" onclick="closeDeleteModal()">Cancel</button>
+      <button type="button" class="btn btn--danger" onclick="confirmDelete()" id="deleteConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
 </main>
 
 
@@ -518,6 +588,30 @@ $email = $studentProfile['email'] ?? ($user['username'] . '@student.adamson.edu.
   #certForm .form-row.disabled { opacity:.55; pointer-events:none; }
 
   .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+
+  .btn--danger {
+    background: #dc3545;
+    color: white;
+    border: 1px solid #dc3545;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn--danger:hover {
+    background: #c82333;
+    border: 1px solid #c82333;
+  }
+  .text-danger {
+    color: #dc3545;
+  }
+  #profileForm .readonly-field {
+    background: #f8f9fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+  }
 </style>
 
 <script>
@@ -615,6 +709,62 @@ function editCert(c){
 window.editCert = editCert;
 window.toggleCertMenu = toggleCertMenu;
 
+// Delete Modal Functions
+const deleteModal = document.getElementById('deleteModal');
+let currentDeleteId = null;
+
+function deleteCert(certId, certName) {
+  currentDeleteId = certId;
+  document.getElementById('deleteCertName').textContent = certName;
+  deleteModal.classList.add('show');
+  document.body.classList.add('modal-open');
+}
+
+function closeDeleteModal() {
+  deleteModal.classList.remove('show');
+  document.body.classList.remove('modal-open');
+  currentDeleteId = null;
+}
+
+function confirmDelete() {
+  if (!currentDeleteId) {
+    console.error('No certification ID to delete');
+    return;
+  }
+  
+  console.log('Deleting certification ID:', currentDeleteId);
+  
+  // Disable button and show loading
+  const deleteBtn = document.getElementById('deleteConfirmBtn');
+  deleteBtn.disabled = true;
+  deleteBtn.textContent = 'Deleting...';
+  
+  // Create and submit form
+  const form = document.createElement('form');
+  form.method = 'GET';
+  form.action = '/adamson-ccit/public/index.php';
+  
+  const pageInput = document.createElement('input');
+  pageInput.type = 'hidden';
+  pageInput.name = 'page';
+  pageInput.value = 'student_cert_delete';
+  form.appendChild(pageInput);
+  
+  const idInput = document.createElement('input');
+  idInput.type = 'hidden';
+  idInput.name = 'id';
+  idInput.value = currentDeleteId;
+  form.appendChild(idInput);
+  
+  document.body.appendChild(form);
+  form.submit();
+}
+
+// Make delete functions available globally
+window.deleteCert = deleteCert;
+window.closeDeleteModal = closeDeleteModal;
+window.confirmDelete = confirmDelete;
+
 // Profile Edit Modal Functions
 const profileModal = document.getElementById('profileModal');
 const profileForm = document.getElementById('profileForm');
@@ -633,20 +783,83 @@ function closeProfileModal() {
 window.openEditProfileModal = openEditProfileModal;
 window.closeProfileModal = closeProfileModal;
 
-// Close profile modal with escape key
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && profileModal.classList.contains('show')) {
-    closeProfileModal();
+// Password Modal Functions
+const passwordModal = document.getElementById('passwordModal');
+const passwordForm = document.getElementById('passwordForm');
+
+function openPasswordModal() {
+  passwordModal.classList.add('show');
+  document.body.classList.add('modal-open');
+}
+
+function closePasswordModal() {
+  passwordModal.classList.remove('show');
+  document.body.classList.remove('modal-open');
+  passwordForm.reset();
+}
+
+// Make password functions available globally
+window.openPasswordModal = openPasswordModal;
+window.closePasswordModal = closePasswordModal;
+
+// Password form validation
+passwordForm.addEventListener('submit', function(e) {
+  const newPassword = this.querySelector('[name="new_password"]').value;
+  const confirmPassword = this.querySelector('[name="confirm_password"]').value;
+  
+  if (newPassword !== confirmPassword) {
+    e.preventDefault();
+    alert('New password and confirm password do not match!');
+    return false;
+  }
+  
+  if (newPassword.length < 6) {
+    e.preventDefault();
+    alert('New password must be at least 6 characters long!');
+    return false;
+  }
+  
+  // Show loading state
+  const btn = this.querySelector('button[type="submit"]');
+  if (btn) { 
+    btn.disabled = true; 
+    btn.textContent = 'Changing Password…'; 
   }
 });
 
-// Close profile modal by clicking backdrop
+// Close profile modal with escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (profileModal.classList.contains('show')) {
+      closeProfileModal();
+    }
+    if (passwordModal.classList.contains('show')) {
+      closePasswordModal();
+    }
+    if (deleteModal.classList.contains('show')) {
+      closeDeleteModal();
+    }
+  }
+});
+
+// Close modals by clicking backdrop
 profileModal.addEventListener('click', (e) => {
   if (e.target === profileModal) closeProfileModal();
 });
 
+passwordModal.addEventListener('click', (e) => {
+  if (e.target === passwordModal) closePasswordModal();
+});
+
+deleteModal.addEventListener('click', (e) => {
+  if (e.target === deleteModal) closeDeleteModal();
+});
+
 // Profile form submission
-profileForm.addEventListener('submit', function() {
+profileForm.addEventListener('submit', function(e) {
+  console.log('Profile form submitted');
+  console.log('Form data:', new FormData(this));
+  
   const btn = this.querySelector('button[type="submit"]');
   if (btn) { 
     btn.disabled = true; 

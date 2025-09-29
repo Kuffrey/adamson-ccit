@@ -3,6 +3,32 @@
 require_once __DIR__ . '/Model.php';
 
 class FacultyProfile extends Model {
+    /**
+     * Create a faculty profile from a student profile array
+     * Sets role to 'faculty' and maps relevant fields
+     */
+    public static function createFromStudentProfile(array $studentProfile): bool {
+        $db = self::db();
+        $sql = 'INSERT INTO ' . self::$table . ' (name, dept, role, title, avatar_url, avatar_initials, badges, ordering) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+        $name = trim(($studentProfile['first_name'] ?? '') . ' ' . ($studentProfile['last_name'] ?? ''));
+        $dept = $studentProfile['program'] ?? '';
+        $role = 'faculty';
+        $title = $studentProfile['title'] ?? '';
+        $avatar_url = $studentProfile['profile_image'] ?? '';
+        $avatar_initials = strtoupper(substr($studentProfile['first_name'] ?? '', 0, 1) . substr($studentProfile['last_name'] ?? '', 0, 1));
+        $badges = '';
+        $ordering = 0;
+        return $db->prepare($sql)->execute([
+            $name,
+            $dept,
+            $role,
+            $title,
+            $avatar_url,
+            $avatar_initials,
+            $badges,
+            $ordering
+        ]);
+    }
     protected static $table = 'faculty_profile';
     
     public static function getAll() {

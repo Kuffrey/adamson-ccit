@@ -11,7 +11,7 @@
  */
 function postLogin($data) {
     // Initialize a new cURL session pointing to the login page
-    $ch = curl_init('http://localhost/adamson-ccit/public/index.php?page=login_guest_student');
+    $ch = curl_init('http://localhost/adamson-ccit/public/index.php?page=login');
 
     // Return the response body as a string (instead of outputting it directly)
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

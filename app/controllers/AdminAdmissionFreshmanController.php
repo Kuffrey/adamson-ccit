@@ -5,7 +5,7 @@ require_once __DIR__ . '/../lib/Auth.php';
 
 class AdminAdmissionFreshmanController {
     public static function handle(): void {
-        Auth::requireRole(['admin','dean'], '/adamson-ccit/public/index.php?page=login_admin');
+        Auth::requireRole(['admin','dean'], '/adamson-ccit/public/index.php?page=login');
 
         $msg = null;
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
