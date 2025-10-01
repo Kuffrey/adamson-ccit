@@ -1,233 +1,550 @@
 <?php
 // app/models/FacultySubmissions.php
-require_once __DIR__ . '/Model.php';
+require_once __DIR__ . '/../config/database.php';
 
-class FacultySubmissions extends Model {
-    protected static $table = 'faculty_submissions';
-    
-    public static function getByFaculty($facultyId, $type = null) {
-        $db = self::db();
-        $sql = 'SELECT * FROM ' . self::$table . ' WHERE faculty_id = ?';
-        $params = [$facultyId];
-        
-        if ($type) {
-            $sql .= ' AND submission_type = ?';
-            $params[] = $type;
-        }
-        
-        $sql .= ' ORDER BY submitted_at DESC';
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    public static function getPendingByReviewer($reviewerRole = null) {
-        $db = self::db();
-        $sql = 'SELECT fs.*, fp.name as faculty_name, fp.dept 
-                FROM ' . self::$table . ' fs
-                JOIN faculty_profile fp ON fs.faculty_id = fp.id
-                WHERE fs.status IN ("submitted", "under_review")
-                ORDER BY fs.submitted_at ASC';
-        $stmt = $db->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    public static function getCountsByStatus() {
-        $db = self::db();
-        $sql = 'SELECT status, COUNT(*) as count FROM ' . self::$table . ' GROUP BY status';
-        $stmt = $db->query($sql);
-        $result = [];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $result[$row['status']] = (int)$row['count'];
-        }
-        return $result;
-    }
-    
-    public static function getPendingCountsByType() {
-        $db = self::db();
-        $sql = 'SELECT submission_type, COUNT(*) as count FROM ' . self::$table . ' 
-                WHERE status IN ("submitted", "under_review") 
-                GROUP BY submission_type';
-        $stmt = $db->query($sql);
-        $result = ['research' => 0, 'certification' => 0, 'news' => 0];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $result[$row['submission_type']] = (int)$row['count'];
-        }
-        return $result;
-    }
-    
-    public static function getSubmissionsByFacultyWithPendingCounts() {
-        $db = self::db();
-        $sql = 'SELECT fp.id, fp.name, fp.dept, fp.role, fp.title, fp.avatar_url,
-                COUNT(CASE WHEN fs.submission_type = "research" AND fs.status IN ("submitted", "under_review") THEN 1 END) as pending_research,
-                COUNT(CASE WHEN fs.submission_type = "certification" AND fs.status IN ("submitted", "under_review") THEN 1 END) as pending_certifications,
-                COUNT(CASE WHEN fs.submission_type = "news" AND fs.status IN ("submitted", "under_review") THEN 1 END) as pending_news,
-                MAX(fs.submitted_at) as last_submission_date
-                FROM faculty_profile fp
-                LEFT JOIN ' . self::$table . ' fs ON fp.id = fs.faculty_id
-                GROUP BY fp.id, fp.name, fp.dept, fp.role, fp.title, fp.avatar_url
-                ORDER BY fp.name ASC';
-        $stmt = $db->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    public static function create($data) {
-        $db = self::db();
-        $sql = 'INSERT INTO ' . self::$table . ' 
-                (faculty_id, submission_type, title, description, content, category, status, submitted_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-        $stmt = $db->prepare($sql);
-        return $stmt->execute([
-            $data['faculty_id'],
-            $data['submission_type'],
-            $data['title'] ?? '',
-            $data['description'] ?? '',
-            $data['content'] ?? '',
-            $data['category'] ?? null,
-            $data['status'] ?? 'draft',
-            $data['status'] === 'submitted' ? date('Y-m-d H:i:s') : null
-        ]);
-    }
-    
-    public static function updateStatus($id, $status, $reviewerId = null, $notes = null) {
-        $db = self::db();
-        $sql = 'UPDATE ' . self::$table . ' SET status = ?, reviewed_at = ?, reviewed_by = ?, review_notes = ? WHERE id = ?';
-        $stmt = $db->prepare($sql);
-        return $stmt->execute([
-            $status,
-            date('Y-m-d H:i:s'),
-            $reviewerId,
-            $notes,
-            $id
-        ]);
-    }
-    
-    public static function getById($id) {
-        $db = self::db();
-        $sql = 'SELECT fs.*, fp.name as faculty_name, fp.dept, u.username as reviewer_name
-                FROM ' . self::$table . ' fs
-                LEFT JOIN faculty_profile fp ON fs.faculty_id = fp.id
-                LEFT JOIN users u ON fs.reviewed_by = u.id
-                WHERE fs.id = ?';
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    public function approveSubmission(int $submissionId): bool {
+class FacultySubmissions {
+    private static function getConnection() {
         try {
-            $this->db->beginTransaction();
+            $pdo = new PDO(
+                "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8",
+                DB_USER,
+                DB_PASS,
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]
+            );
+            return $pdo;
+        } catch (PDOException $e) {
+            error_log("Database connection failed: " . $e->getMessage());
+            throw new Exception("Database connection failed");
+        }
+    }
+
+    public static function create($data) {
+        try {
+            $pdo = self::getConnection();
+            
+            $sql = "INSERT INTO faculty_submissions (
+                faculty_id, submission_type, title, description, content, 
+                category, related_item_id, status, submitted_at, created_at
+            ) VALUES (
+                :faculty_id, :submission_type, :title, :description, :content,
+                :category, :related_item_id, :status, NOW(), NOW()
+            )";
+            
+            $stmt = $pdo->prepare($sql);
+            return $stmt->execute([
+                ':faculty_id' => $data['faculty_id'],
+                ':submission_type' => $data['submission_type'],
+                ':title' => $data['title'],
+                ':description' => $data['description'] ?? '',
+                ':content' => $data['content'] ?? '',
+                ':category' => $data['category'] ?? null,
+                ':related_item_id' => $data['related_item_id'] ?? null,
+                ':status' => $data['status'] ?? 'submitted'
+            ]);
+        } catch (PDOException $e) {
+            error_log("Error creating faculty submission: " . $e->getMessage());
+            throw new Exception("Failed to create submission");
+        }
+    }
+
+    public static function createFromCertification($certificationId, $facultyId) {
+        try {
+            // Get certification details
+            require_once __DIR__ . '/Certification.php';
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT c.*, u.username FROM certifications c 
+                    LEFT JOIN users u ON c.owner_user_id = u.id 
+                    WHERE c.id = :cert_id AND c.owner_user_id = :faculty_id";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':cert_id' => $certificationId, ':faculty_id' => $facultyId]);
+            $cert = $stmt->fetch();
+            
+            if (!$cert) {
+                throw new Exception("Certification not found or not owned by faculty");
+            }
+            
+            return self::create([
+                'faculty_id' => $facultyId,
+                'submission_type' => 'certification',
+                'title' => $cert['title'],
+                'description' => 'Certification: ' . $cert['title'] . ' issued by ' . $cert['issuer'],
+                'content' => 'Issuer: ' . $cert['issuer'] . "\nIssued Date: " . $cert['issued_at'],
+                'category' => 'Professional Certification',
+                'related_item_id' => $certificationId,
+                'status' => 'submitted'
+            ]);
+        } catch (Exception $e) {
+            error_log("Error creating certification submission: " . $e->getMessage());
+            throw new Exception("Failed to create certification submission");
+        }
+    }
+
+    public static function createFromResearch($researchId, $facultyId) {
+        try {
+            // Get research details
+            require_once __DIR__ . '/Research.php';
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT r.*, u.username FROM research r 
+                    LEFT JOIN users u ON r.owner_user_id = u.id 
+                    WHERE r.id = :research_id AND r.owner_user_id = :faculty_id";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':research_id' => $researchId, ':faculty_id' => $facultyId]);
+            $research = $stmt->fetch();
+            
+            if (!$research) {
+                throw new Exception("Research not found or not owned by faculty");
+            }
+            
+            return self::create([
+                'faculty_id' => $facultyId,
+                'submission_type' => 'research',
+                'title' => $research['title'],
+                'description' => $research['abstract'],
+                'content' => $research['abstract'],
+                'category' => 'Academic Research',
+                'related_item_id' => $researchId,
+                'status' => 'submitted'
+            ]);
+        } catch (Exception $e) {
+            error_log("Error creating research submission: " . $e->getMessage());
+            throw new Exception("Failed to create research submission");
+        }
+    }
+
+    /**
+     * Create submission record from news
+     */
+    public static function createFromNews($newsId, $facultyId) {
+        try {
+            require_once __DIR__ . '/News.php';
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT * FROM news WHERE id = :news_id";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':news_id' => $newsId]);
+            $news = $stmt->fetch();
+            
+            if (!$news) {
+                throw new Exception("News not found");
+            }
+            
+            $content = $news['body'] ?? $news['content'] ?? '';
+            
+            return self::create([
+                'faculty_id' => $facultyId,
+                'submission_type' => 'news',
+                'title' => $news['title'],
+                'description' => $content,
+                'content' => $content,
+                'category' => ucfirst($news['category'] ?? 'news'),
+                'related_item_id' => $newsId,
+                'status' => 'submitted'
+            ]);
+        } catch (Exception $e) {
+            error_log("Error creating news submission: " . $e->getMessage());
+            throw new Exception("Failed to create news submission");
+        }
+    }
+
+    /**
+     * Create submission record from event
+     */
+    public static function createFromEvent($eventId, $facultyId) {
+        try {
+            require_once __DIR__ . '/Event.php';
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT * FROM events WHERE id = :event_id";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':event_id' => $eventId]);
+            $event = $stmt->fetch();
+            
+            if (!$event) {
+                throw new Exception("Event not found");
+            }
+            
+            return self::create([
+                'faculty_id' => $facultyId,
+                'submission_type' => 'event',
+                'title' => $event['title'],
+                'description' => $event['description'],
+                'content' => $event['description'],
+                'category' => ucfirst($event['category'] ?? 'event'),
+                'related_item_id' => $eventId,
+                'status' => 'submitted'
+            ]);
+        } catch (Exception $e) {
+            error_log("Error creating event submission: " . $e->getMessage());
+            throw new Exception("Failed to create event submission");
+        }
+    }
+
+    /**
+     * Create submission record from announcement
+     */
+    public static function createFromAnnouncement($announcementId, $facultyId) {
+        try {
+            require_once __DIR__ . '/Announcement.php';
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT * FROM announcements WHERE id = :announcement_id";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':announcement_id' => $announcementId]);
+            $announcement = $stmt->fetch();
+            
+            if (!$announcement) {
+                throw new Exception("Announcement not found");
+            }
+            
+            $content = $announcement['content'] ?? $announcement['body'] ?? '';
+            
+            return self::create([
+                'faculty_id' => $facultyId,
+                'submission_type' => 'announcement',
+                'title' => $announcement['title'],
+                'description' => $content,
+                'content' => $content,
+                'category' => ucfirst($announcement['category'] ?? 'general'),
+                'related_item_id' => $announcementId,
+                'status' => 'submitted'
+            ]);
+        } catch (Exception $e) {
+            error_log("Error creating announcement submission: " . $e->getMessage());
+            throw new Exception("Failed to create announcement submission");
+        }
+    }
+
+    public static function getAllSubmissionsWithFacultyDetails() {
+        try {
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT 
+                fs.*,
+                CONCAT(u.first_name, ' ', u.last_name) as faculty_name,
+                u.username as faculty_username,
+                d.name as dept,
+                CONCAT(r.first_name, ' ', r.last_name) as reviewer_name
+            FROM faculty_submissions fs
+            LEFT JOIN users u ON fs.faculty_id = u.id
+            LEFT JOIN departments d ON u.department_id = d.id
+            LEFT JOIN users r ON fs.reviewed_by = r.id
+            ORDER BY fs.submitted_at DESC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("Error fetching submissions: " . $e->getMessage());
+            throw new Exception("Failed to fetch submissions");
+        }
+    }
+
+    public static function updateStatus($submissionId, $status, $reviewerId = null, $reviewNotes = '') {
+        try {
+            $pdo = self::getConnection();
+            
+            // Start transaction
+            $pdo->beginTransaction();
+            
+            // Get submission details first
+            $sql = "SELECT * FROM faculty_submissions WHERE id = :id";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':id' => $submissionId]);
+            $submission = $stmt->fetch();
+            
+            if (!$submission) {
+                throw new Exception("Submission not found");
+            }
             
             // Update submission status
-            $stmt = $this->db->prepare("
-                UPDATE faculty_submissions 
-                SET status = 'approved', approved_date = NOW() 
-                WHERE id = ? AND status = 'submitted'
-            ");
-            $stmt->execute([$submissionId]);
+            $sql = "UPDATE faculty_submissions 
+                    SET status = :status, 
+                        reviewed_by = :reviewed_by, 
+                        review_notes = :review_notes, 
+                        reviewed_at = NOW() 
+                    WHERE id = :id";
             
-            if ($stmt->rowCount() > 0) {
-                // Log the approval action
-                $this->logActivity($submissionId, 'approved', 'Submission approved by dean');
-                $this->db->commit();
-                return true;
-            } else {
-                $this->db->rollback();
-                return false;
+            $stmt = $pdo->prepare($sql);
+            $success = $stmt->execute([
+                ':status' => $status,
+                ':reviewed_by' => $reviewerId,
+                ':review_notes' => $reviewNotes,
+                ':id' => $submissionId
+            ]);
+            
+            if ($success && $submission['related_item_id']) {
+                // Update the related item's status based on submission type
+                if ($submission['submission_type'] === 'certification') {
+                    $sql = "UPDATE certifications SET status = :status WHERE id = :id";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([':status' => $status, ':id' => $submission['related_item_id']]);
+                } elseif ($submission['submission_type'] === 'research') {
+                    $sql = "UPDATE research SET status = :status, approved_by = :approver WHERE id = :id";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([
+                        ':status' => $status, 
+                        ':approver' => $reviewerId,
+                        ':id' => $submission['related_item_id']
+                    ]);
+                } elseif ($submission['submission_type'] === 'news') {
+                    // For news: set status to 'published' when approved, 'rejected' when rejected
+                    $newsStatus = ($status === 'approved') ? 'published' : 'rejected';
+                    $sql = "UPDATE news SET status = :status WHERE id = :id";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([':status' => $newsStatus, ':id' => $submission['related_item_id']]);
+                } elseif ($submission['submission_type'] === 'event') {
+                    // For events: set status to 'published' when approved, 'rejected' when rejected
+                    $eventStatus = ($status === 'approved') ? 'published' : 'rejected';
+                    $sql = "UPDATE events SET status = :status WHERE id = :id";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([':status' => $eventStatus, ':id' => $submission['related_item_id']]);
+                } elseif ($submission['submission_type'] === 'announcement') {
+                    // For announcements: set status to 'published' when approved, 'rejected' when rejected
+                    $announcementStatus = ($status === 'approved') ? 'published' : 'rejected';
+                    $sql = "UPDATE announcements SET status = :status WHERE id = :id";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([':status' => $announcementStatus, ':id' => $submission['related_item_id']]);
+                }
             }
-        } catch (Exception $e) {
-            $this->db->rollback();
-            error_log("Error approving submission: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    public function rejectSubmission(int $submissionId, string $rejectionNotes): bool {
-        try {
-            $this->db->beginTransaction();
             
-            // Update submission status with rejection notes
-            $stmt = $this->db->prepare("
-                UPDATE faculty_submissions 
-                SET status = 'rejected', rejection_notes = ?, rejected_date = NOW() 
-                WHERE id = ? AND status = 'submitted'
-            ");
-            $stmt->execute([$rejectionNotes, $submissionId]);
+            $pdo->commit();
+            return $success;
             
-            if ($stmt->rowCount() > 0) {
-                // Log the rejection action
-                $this->logActivity($submissionId, 'rejected', 'Submission rejected: ' . $rejectionNotes);
-                $this->db->commit();
-                return true;
-            } else {
-                $this->db->rollback();
-                return false;
-            }
-        } catch (Exception $e) {
-            $this->db->rollback();
-            error_log("Error rejecting submission: " . $e->getMessage());
-            return false;
+        } catch (PDOException $e) {
+            $pdo->rollback();
+            error_log("Error updating submission status: " . $e->getMessage());
+            throw new Exception("Failed to update submission status");
         }
     }
 
-    private function logActivity(int $submissionId, string $action, string $details): void {
+    public static function getByFacultyId($facultyId) {
         try {
-            $stmt = $this->db->prepare("
-                INSERT INTO faculty_activity_log (submission_id, action, details, created_date) 
-                VALUES (?, ?, ?, NOW())
-            ");
-            $stmt->execute([$submissionId, $action, $details]);
-        } catch (Exception $e) {
-            error_log("Error logging activity: " . $e->getMessage());
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT * FROM faculty_submissions 
+                    WHERE faculty_id = :faculty_id 
+                    ORDER BY submitted_at DESC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':faculty_id' => $facultyId]);
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("Error fetching faculty submissions: " . $e->getMessage());
+            throw new Exception("Failed to fetch submissions");
         }
     }
 
-    // Get pending submissions by type for detailed review
-    public static function getPendingByType($type = null) {
-        $db = self::db();
-        $whereClause = "WHERE fs.status IN ('submitted', 'under_review')";
-        $params = [];
-        
-        if ($type) {
-            $whereClause .= " AND fs.submission_type = ?";
-            $params[] = $type;
-        }
-        
-        $sql = "SELECT fs.*, fp.name, fp.dept, fp.role
-                FROM " . self::$table . " fs
-                LEFT JOIN faculty_profile fp ON fs.faculty_id = fp.id
-                $whereClause
-                ORDER BY fs.submitted_at DESC";
-        
+    public static function getPendingSubmissions() {
         try {
-            $stmt = $db->prepare($sql);
-            $stmt->execute($params);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT 
+                fs.*,
+                CONCAT(u.first_name, ' ', u.last_name) as faculty_name,
+                u.username as faculty_username,
+                d.name as dept
+            FROM faculty_submissions fs
+            LEFT JOIN users u ON fs.faculty_id = u.id
+            LEFT JOIN departments d ON u.department_id = d.id
+            WHERE fs.status IN ('submitted', 'under_review')
+            ORDER BY fs.submitted_at ASC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
             error_log("Error fetching pending submissions: " . $e->getMessage());
-            return [];
+            throw new Exception("Failed to fetch pending submissions");
         }
     }
 
-    // Get all submissions with faculty details for dean oversight
-    public static function getAllSubmissionsWithFacultyDetails() {
-        $db = self::db();
-        $sql = "SELECT fs.*, 
-                       fp.name as faculty_name, 
-                       fp.dept, 
-                       fp.role as faculty_role,
-                       reviewer.username as reviewer_name
-                FROM " . self::$table . " fs
-                LEFT JOIN faculty_profile fp ON fs.faculty_id = fp.id
-                LEFT JOIN users reviewer ON fs.reviewed_by = reviewer.id
-                ORDER BY fs.submitted_at DESC";
-        
+    public static function getSubmissionsByType($type) {
         try {
-            $stmt = $db->query($sql);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log("Error fetching all submissions: " . $e->getMessage());
-            return [];
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT 
+                fs.*,
+                CONCAT(u.first_name, ' ', u.last_name) as faculty_name,
+                u.username as faculty_username,
+                d.name as dept,
+                CONCAT(r.first_name, ' ', r.last_name) as reviewer_name
+            FROM faculty_submissions fs
+            LEFT JOIN users u ON fs.faculty_id = u.id
+            LEFT JOIN departments d ON u.department_id = d.id
+            LEFT JOIN users r ON fs.reviewed_by = r.id
+            WHERE fs.submission_type = :type
+            ORDER BY fs.submitted_at DESC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':type' => $type]);
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("Error fetching submissions by type: " . $e->getMessage());
+            throw new Exception("Failed to fetch submissions");
+        }
+    }
+
+    /**
+     * Get pending submissions that need reviewer approval
+     */
+    public static function getPendingByReviewer() {
+        try {
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT fs.*, 
+                           CONCAT(u.first_name, ' ', u.last_name) as faculty_name,
+                           u.email as faculty_email,
+                           d.name as department_name
+                    FROM faculty_submissions fs
+                    LEFT JOIN users u ON fs.faculty_id = u.id
+                    LEFT JOIN departments d ON u.department_id = d.id
+                    WHERE fs.status IN ('pending', 'submitted', 'under_review')
+                    ORDER BY fs.submitted_at ASC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("Error fetching pending submissions by reviewer: " . $e->getMessage());
+            throw new Exception("Failed to fetch pending submissions");
+        }
+    }
+
+    /**
+     * Get count of pending submissions grouped by type
+     */
+    public static function getPendingCountsByType() {
+        try {
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT submission_type, COUNT(*) as count 
+                    FROM faculty_submissions 
+                    WHERE status IN ('pending', 'submitted', 'under_review')
+                    GROUP BY submission_type";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            $results = $stmt->fetchAll();
+            
+            // Initialize counts array with all types set to 0
+            $counts = [
+                'certification' => 0,
+                'research' => 0,
+                'news' => 0,
+                'event' => 0,
+                'announcement' => 0
+            ];
+            
+            // Update counts based on query results
+            foreach ($results as $result) {
+                $counts[$result['submission_type']] = (int)$result['count'];
+            }
+            
+            return $counts;
+        } catch (PDOException $e) {
+            error_log("Error fetching pending counts by type: " . $e->getMessage());
+            throw new Exception("Failed to fetch pending counts");
+        }
+    }
+
+    /**
+     * Get pending submissions by specific type
+     */
+    public static function getPendingByType($type) {
+        try {
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT fs.*, 
+                           CONCAT(u.first_name, ' ', u.last_name) as faculty_name,
+                           u.email as faculty_email,
+                           d.name as department_name
+                    FROM faculty_submissions fs
+                    LEFT JOIN users u ON fs.faculty_id = u.id
+                    LEFT JOIN departments d ON u.department_id = d.id
+                    WHERE fs.status IN ('pending', 'submitted', 'under_review')
+                    AND fs.submission_type = :type
+                    ORDER BY fs.submitted_at ASC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':type' => $type]);
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("Error fetching pending submissions by type: " . $e->getMessage());
+            throw new Exception("Failed to fetch pending submissions by type");
+        }
+    }
+
+    /**
+     * Get submissions by faculty ID and type
+     */
+    public static function getByFacultyAndType($facultyId, $type) {
+        try {
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT fs.*, 
+                           CONCAT(u.first_name, ' ', u.last_name) as faculty_name,
+                           u.username as faculty_username,
+                           u.email as faculty_email
+                    FROM faculty_submissions fs
+                    LEFT JOIN users u ON fs.faculty_id = u.id
+                    WHERE fs.faculty_id = :faculty_id AND fs.submission_type = :type 
+                    ORDER BY fs.submitted_at DESC";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([
+                ':faculty_id' => $facultyId,
+                ':type' => $type
+            ]);
+            return $stmt->fetchAll();
+        } catch (PDOException $e) {
+            error_log("Error fetching faculty submissions by type: " . $e->getMessage());
+            throw new Exception("Failed to fetch submissions by faculty and type");
+        }
+    }
+
+    /**
+     * Get a submission by ID
+     */
+    public static function getById($id) {
+        try {
+            $pdo = self::getConnection();
+            
+            $sql = "SELECT fs.*, 
+                           CONCAT(u.first_name, ' ', u.last_name) as faculty_name,
+                           u.username as faculty_username,
+                           u.email as faculty_email
+                    FROM faculty_submissions fs
+                    LEFT JOIN users u ON fs.faculty_id = u.id 
+                    WHERE fs.id = :id";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':id' => $id]);
+            return $stmt->fetch();
+        } catch (PDOException $e) {
+            error_log("Error fetching submission by ID: " . $e->getMessage());
+            throw new Exception("Failed to fetch submission");
+        }
+    }
+
+    /**
+     * Delete a submission
+     */
+    public static function delete($id) {
+        try {
+            $pdo = self::getConnection();
+            
+            $sql = "DELETE FROM faculty_submissions WHERE id = :id";
+            $stmt = $pdo->prepare($sql);
+            return $stmt->execute([':id' => $id]);
+        } catch (PDOException $e) {
+            error_log("Error deleting submission: " . $e->getMessage());
+            throw new Exception("Failed to delete submission");
         }
     }
 }

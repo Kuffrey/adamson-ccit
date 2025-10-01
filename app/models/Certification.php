@@ -9,7 +9,7 @@ final class Certification extends Model {
         $sql="INSERT INTO certifications (title, issuer, owner_user_id, department_id, issued_at, expires_at, status)
               VALUES (:title,:issuer,:owner,:dept,:issued,:expires,:status)";
         $st=$db->prepare($sql);
-        $st->execute([
+        $success = $st->execute([
             ':title'=>trim($d['title']),
             ':issuer'=>$d['issuer'] ?? null,
             ':owner'=>(int)$d['owner_user_id'],
@@ -18,7 +18,7 @@ final class Certification extends Model {
             ':expires'=>$d['expires_at'] ?? null,
             ':status'=>$d['status'] ?? 'pending', // pending|approved|rejected
         ]);
-        return (int)$db->lastInsertId();
+        return $success ? (int)$db->lastInsertId() : 0;
     }
     
     public function update(int $id, array $d): bool {

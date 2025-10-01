@@ -12,7 +12,7 @@ $page  = $_GET['page'] ?? '';
 $isAdmin = (strpos($page, 'admin_') === 0) || preg_match('#/(admin|cms)(/|$)#i', $uri);
 
 // Faculty admin/dashboard pages
-$isFacultyDashboard = strpos($page, 'faculty_dashboard') === 0 || strpos($page, 'faculty_manage_') === 0;
+$isFacultyDashboard = strpos($page, 'faculty_dashboard') === 0 || strpos($page, 'faculty_manage_') === 0 || strpos($page, 'faculty_portfolio') === 0;
 
 // Dean admin/dashboard pages
 $isDeanDashboard = strpos($page, 'dean_') === 0 || $page === 'dean_dashboard';

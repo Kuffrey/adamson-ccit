@@ -30,37 +30,62 @@ $username = $user['username'] ?? 'Dean';
 
     <section class="admin-cms-section">
       <h1 class="admin-cms-section__title">Welcome back, <?= esc($username) ?> 👋</h1>
-      <p class="intro">Manage news, faculty profiles, research, certifications, and portfolios here.</p>
+      <p class="intro">Manage content, approvals, and college operations from your dashboard.</p>
 
       <div class="dashboard-grid">
         <a href="?page=dean_manage_news" class="dash-card">
-          <h2>📰 News & Announcements</h2>
-          <p>Publish and manage updates and announcements.</p>
+          <h2>📰 News Articles</h2>
+          <p>Create and publish news articles.</p>
         </a>
 
         <a href="?page=dean_manage_events" class="dash-card">
           <h2>📅 Events</h2>
-          <p>Create and update upcoming college events.</p>
+          <p>Schedule and manage college events.</p>
         </a>
 
-        <a href="?page=dean_manage_faculty_profiles" class="dash-card">
-          <h2>👨‍🏫 Faculty Profiles</h2>
-          <p>Manage faculty biographies and details.</p>
+        <a href="?page=dean_manage_announcements" class="dash-card">
+          <h2>📢 Announcements</h2>
+          <p>Post important college announcements.</p>
         </a>
 
-        <a href="?page=dean_manage_faculty_research" class="dash-card">
-          <h2>🔬 Faculty Research</h2>
-          <p>Track and display faculty research projects and publications.</p>
+        <a href="?page=dean_manage_research" class="dash-card">
+          <h2>🔬 Research Publications</h2>
+          <p>Oversee faculty research and publications.</p>
         </a>
 
-        <a href="?page=dean_manage_faculty_certifications" class="dash-card">
+        <a href="?page=dean_manage_certifications" class="dash-card">
           <h2>🎓 Faculty Certifications</h2>
-          <p>Manage certifications and licenses of faculty members.</p>
+          <p>Manage faculty certifications and credentials.</p>
         </a>
 
-        <a href="?page=dean_manage_faculty_portfolio" class="dash-card">
-          <h2>📁 Faculty Portfolio</h2>
-          <p>Showcase faculty portfolios similar to student portfolios.</p>
+        <a href="?page=dean_approvals" class="dash-card">
+          <h2>✅ All Pending Approvals</h2>
+          <p>Review all pending submissions.</p>
+        </a>
+
+        <a href="?page=dean_certifications" class="dash-card">
+          <h2>🎓 Certification Approvals</h2>
+          <p>Approve faculty certification requests.</p>
+        </a>
+
+        <a href="?page=dean_research_approvals" class="dash-card">
+          <h2>🔬 Research Approvals</h2>
+          <p>Review faculty research submissions.</p>
+        </a>
+
+        <a href="?page=dean_news_approvals" class="dash-card">
+          <h2>📰 News Approvals</h2>
+          <p>Approve news and content submissions.</p>
+        </a>
+
+        <a href="?page=dean_pending_submissions" class="dash-card">
+          <h2>📥 Submission Queue</h2>
+          <p>Manage the submission workflow.</p>
+        </a>
+
+        <a href="?page=dean_logs" class="dash-card">
+          <h2>📋 Activity Logs</h2>
+          <p>Monitor system activity and logs.</p>
         </a>
       </div>
     </section>

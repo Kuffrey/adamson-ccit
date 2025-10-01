@@ -7,11 +7,11 @@ class FacultyCertification extends Model {
     // Grouped by year > issuer > certification > faculty
     public static function getGrouped() {
         $db = self::db();
-        $sql = 'SELECT fca.year_earned, c.issuer, c.issuer_key, c.cert_title, c.badge_url, c.cert_url, c.verify_url, f.name AS faculty_name
+        $sql = 'SELECT fca.year_earned, c.issuer, c.issuer_key, c.cert_title, c.badge_url, c.cert_url, c.verify_url, CONCAT(u.first_name, " ", u.last_name) AS faculty_name
                 FROM faculty_certification_award fca
-                JOIN faculty f ON fca.faculty_id = f.id
+                JOIN users u ON fca.faculty_id = u.id
                 JOIN certification c ON fca.certification_id = c.id
-                ORDER BY fca.year_earned DESC, c.issuer, c.cert_title, f.name';
+                ORDER BY fca.year_earned DESC, c.issuer, c.cert_title, u.first_name, u.last_name';
         $stmt = $db->query($sql);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $grouped = [];
@@ -96,10 +96,10 @@ class FacultyCertification extends Model {
         }
         
         $db = self::db();
-        $sql = 'SELECT fca.*, c.cert_title, c.issuer, f.name as faculty_name 
+        $sql = 'SELECT fca.*, c.cert_title, c.issuer, CONCAT(u.first_name, " ", u.last_name) as faculty_name 
                 FROM faculty_certification_award fca
                 LEFT JOIN certification c ON fca.certification_id = c.id
-                LEFT JOIN faculty f ON fca.faculty_id = f.id
+                LEFT JOIN users u ON fca.faculty_id = u.id
                 WHERE fca.id = :id';
         $stmt = $db->prepare($sql);
         $stmt->execute([':id' => $id]);
@@ -116,18 +116,18 @@ class FacultyCertification extends Model {
     
     public static function getAllFaculty() {
         $db = self::db();
-        $sql = 'SELECT id, name, dept FROM faculty ORDER BY name';
+        $sql = 'SELECT id, CONCAT(first_name, " ", last_name) as name FROM users WHERE role = "faculty" ORDER BY first_name, last_name';
         $stmt = $db->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
     public function getAll() {
         $db = self::db();
-        $sql = 'SELECT fca.*, c.cert_title, c.issuer, f.name as faculty_name 
+        $sql = 'SELECT fca.*, c.cert_title, c.issuer, CONCAT(u.first_name, " ", u.last_name) as faculty_name 
                 FROM faculty_certification_award fca
                 LEFT JOIN certification c ON fca.certification_id = c.id
-                LEFT JOIN faculty f ON fca.faculty_id = f.id
-                ORDER BY fca.year_earned DESC, f.name, c.cert_title';
+                LEFT JOIN users u ON fca.faculty_id = u.id
+                ORDER BY fca.year_earned DESC, u.first_name, u.last_name, c.cert_title';
         $stmt = $db->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

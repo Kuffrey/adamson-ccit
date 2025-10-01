@@ -6,88 +6,84 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'faculty') {
     header('Location: ?page=login');
     exit;
 }
-require_once __DIR__ . '/../models/Research.php';
-
-// Check if user is logged in and get faculty ID
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Debug: Let's see what's in the session
-error_log("Session debug: " . print_r($_SESSION, true));
+require_once __DIR__ . '/../models/FacultySubmissions.php';
 
 $faculty_id = $_SESSION['user']['id'] ?? null;
+$faculty_username = $_SESSION['user']['username'] ?? 'Faculty';
 if (!$faculty_id) {
-    error_log("Faculty ID not found in session. Redirecting to login.");
     header('Location: ?page=login');
     exit;
 }
 
-error_log("Faculty ID found: " . $faculty_id);
-$dept_id = $_SESSION['user']['department_id'] ?? 0;
-$researchModel = new Research();
-
-if (isset($_POST['add_research'])) {
-    // Research is created as 'draft' and requires dean approval
-    $researchModel->create([
-        'title' => $_POST['title'],
-        'abstract' => $_POST['description'],
-        'owner_user_id' => $faculty_id,
-        'department_id' => $dept_id,
-        'status' => 'draft',
-        'requires_dean_approval' => 1, // flag for dean approval
-    ]);
-    header('Location: ?page=faculty_manage_research');
-    exit;
+// Get faculty's information from database
+try {
+    $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+    $stmt = $pdo->prepare("SELECT first_name, last_name FROM users WHERE username = ? LIMIT 1");
+    $stmt->execute([$faculty_username]);
+    $faculty = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($faculty) {
+        $firstName = $faculty['first_name'];
+        $lastName = $faculty['last_name'];
+        $fullName = $firstName . ' ' . $lastName;
+    } else {
+        $firstName = "Faculty";
+        $lastName = "";
+        $fullName = $faculty_username;
+    }
+} catch (PDOException $e) {
+    $firstName = "Faculty";
+    $lastName = "";
+    $fullName = $faculty_username;
 }
 
-if (isset($_POST['submit_for_review']) && isset($_POST['research_id'])) {
-  $researchId = (int)$_POST['research_id'];
-  // Only allow submission if owned by this faculty and status is draft
-  $myResearch = $researchModel->listByOwner($faculty_id);
-  $target = null;
-  foreach ($myResearch as $r) {
-    if ($r['id'] == $researchId && $r['status'] === 'draft') {
-      $target = $r;
-      break;
+$notice = '';
+
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  try {
+    if (isset($_POST['add_research'])) {
+      // Create a faculty submission for research
+      $submissionData = [
+        'faculty_id' => $faculty_id,
+        'submission_type' => 'research',
+        'title' => $_POST['title'] ?? '',
+        'description' => $_POST['description'] ?? '',
+        'category' => $_POST['type'] ?? 'journal',
+        'content' => json_encode([
+          'dept' => $_POST['dept'] ?? '',
+          'type' => $_POST['type'] ?? '',
+          'year' => $_POST['year'] ?? '',
+          'authors' => $_POST['authors'] ?? '',
+          'venue' => $_POST['venue'] ?? '',
+          'pdf_url' => $_POST['pdf_url'] ?? '',
+          'view_url' => $_POST['view_url'] ?? '',
+          'image_url' => $_POST['image_url'] ?? ''
+        ]),
+        'status' => 'submitted'
+      ];
+      FacultySubmissions::create($submissionData);
+      $success_message = 'Research submitted for dean approval successfully!';
+    } elseif (isset($_POST['delete_submission']) && isset($_POST['submission_id'])) {
+      $submissionId = (int)$_POST['submission_id'];
+      // Only allow delete if owned by this faculty and status is not approved
+      $submission = FacultySubmissions::getById($submissionId);
+      if ($submission && $submission['faculty_id'] == $faculty_id && $submission['status'] !== 'approved') {
+        FacultySubmissions::delete($submissionId);
+        $success_message = 'Research submission deleted successfully!';
+      } else {
+        $error_message = 'Error: Cannot delete this research submission.';
+      }
     }
+  } catch (Exception $e) {
+    $error_message = 'Error: ' . $e->getMessage();
   }
-  if ($target) {
-    // Set status to 'review' so dean can approve/reject
-    $researchModel->submitForReview($researchId); // This should update status to 'review'
+}
 
-    // Create a faculty_submissions record for dean approval
-    require_once __DIR__ . '/../models/FacultySubmissions.php';
-    FacultySubmissions::create([
-      'faculty_id' => $faculty_id,
-      'submission_type' => 'research',
-      'title' => $target['title'],
-      'description' => $target['abstract'],
-      'content' => '',
-      'category' => null,
-      'status' => 'submitted',
-    ]);
-  }
-  header('Location: ?page=faculty_manage_research');
-  exit;
-}
-if (isset($_GET['delete'])) {
-    // Only allow delete if owned by this faculty and status is draft or review
-    $myResearch = $researchModel->listByOwner($faculty_id);
-    $target = null;
-    foreach ($myResearch as $r) {
-        if ($r['id'] == (int)$_GET['delete']) $target = $r;
-    }
-    if ($target && in_array($target['status'], ['draft','review'])) {
-        // You need to implement a delete method in Research model if not present
-        if (method_exists($researchModel, 'delete')) {
-            $researchModel->delete((int)$_GET['delete']);
-        }
-    }
-    header('Location: ?page=faculty_manage_research');
-    exit;
-}
-$research = $researchModel->listByOwner($faculty_id);
+// Get faculty research submissions
+$research = FacultySubmissions::getByFacultyAndType($faculty_id, 'research');
 
 function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 ?>
@@ -102,152 +98,429 @@ function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
-      background: #f6f8fb;
+      background: #fafbfc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-    .faculty-section-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #0b234c;
-      margin-bottom: 1.2rem;
-      letter-spacing: .01em;
+    
+    .admin-cms-section {
+      max-width: 100%;
+      margin: 0;
+      padding: 2rem 3rem;
+    }
+    
+    /* Page Header */
+    .page-header {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e5e7eb;
     }
-    .faculty-section-title i {
-      color: #008040;
-      font-size: 1.1rem;
+    
+    .page-title {
+      margin: 0;
+      font-size: 1.875rem;
+      font-weight: 600;
+      color: #111827;
     }
-    .faculty-actions-bar {
-      display: flex;
+    
+    /* Buttons */
+    .btn-primary {
+      display: inline-flex;
       align-items: center;
-      justify-content: flex-end;
-      margin-bottom: 1.2rem;
       gap: 0.5rem;
+      background: #008040;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      cursor: pointer;
     }
-    .faculty-table-card {
-      background: #fff;
+    
+    .btn-primary:hover {
+      background: #006d37;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 128, 64, 0.15);
+    }
+    
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    
+    .btn-secondary:hover {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    
+    /* Content Card */
+    .content-card {
+      background: white;
       border-radius: 12px;
-      border: 1px solid #e3e6f0;
-      padding: 1.3rem 1.2rem;
-      box-shadow: none;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
       margin-bottom: 2rem;
     }
-    .faculty-table-card-header {
-      font-size: 1.07rem;
-      font-weight: 600;
-      color: #008040;
-      margin-bottom: 0.7rem;
+    
+    .card-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+    
+    .card-title {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      letter-spacing: .01em;
+      gap: 0.75rem;
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #111827;
     }
-    .faculty-table-card-header i {
+    
+    .card-title i {
       color: #008040;
       font-size: 1rem;
     }
-    .table-responsive {
-      margin-top: 0.7rem;
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #6b7280;
     }
-    .table {
-      background: #fff;
-      border-radius: 8px;
-      border: 1px solid #e3e6f0;
-      font-size: 0.98rem;
-      margin-bottom: 0;
+    
+    .empty-state i {
+      font-size: 3rem;
+      color: #d1d5db;
+      margin-bottom: 1rem;
     }
-    .table thead {
-      background: #f8fafc;
-      color: #0b234c;
-      font-weight: 700;
-      border-bottom: 1px solid #e3e6f0;
-    }
-    .table th, .table td {
-      vertical-align: middle;
-      padding: 12px 10px;
-      border-top: none;
-    }
-    .table-striped > tbody > tr:nth-of-type(odd) {
-      background: #f8fafc;
-    }
-    .status-badge {
-      display: inline-block;
-      padding: 3px 12px;
-      border-radius: 999px;
-      font-size: 12px;
+    
+    .empty-state h4 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.125rem;
       font-weight: 600;
-      text-transform: uppercase;
-      margin-left: 0.5rem;
-      letter-spacing: .02em;
-      border: none;
-      background: #f3f4f6;
       color: #374151;
     }
-    .status-draft    { background: #f3f4f6; color: #374151; }
-    .status-review   { background: #fffbe6; color: #b45309; }
-    .status-approved { background: #e8f5ee; color: #008040; }
+    
+    .empty-state p {
+      margin: 0;
+      font-size: 0.875rem;
+    }
+    
+    /* Table */
+    .table-container {
+      overflow-x: auto;
+      margin: 0 -1rem;
+      padding: 0 1rem;
+    }
+    
+    .data-table {
+      width: 100%;
+      min-width: 1000px;
+      border-collapse: collapse;
+    }
+    
+    .data-table th {
+      background: #f9fafb;
+      padding: 1rem 0.75rem;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #374151;
+      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
+    }
+    
+    .data-table td {
+      padding: 1rem 0.75rem;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+    
+    .data-table tbody tr:hover {
+      background: #f9fafb;
+    }
+    
+    .item-title {
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 0.25rem;
+    }
+    
+    .item-subtitle {
+      font-size: 0.875rem;
+      color: #6b7280;
+      line-height: 1.4;
+    }
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    
+    .status-draft { background: #f3f4f6; color: #6b7280; }
+    .status-submitted { background: #fef3c7; color: #d97706; }
+    .status-approved { background: #d1fae5; color: #059669; }
     .status-rejected { background: #fee2e2; color: #dc2626; }
-    .admin-notice {
-      margin: 1rem 0;
-      padding: 0.7rem 1.1rem;
-      border-radius: 7px;
-      background: #f8fafc;
-      color: #008040;
+    .status-under_review { background: #dbeafe; color: #1d4ed8; }
+    
+    .date-text {
+      font-size: 0.875rem;
+      color: #374151;
       font-weight: 500;
-      border: 1px solid #e3e6f0;
-      font-size: 0.98rem;
     }
-    .btn--primary, .btn.btn--primary {
-      background: #008040;
-      color: #fff;
+    
+    .review-notes-full {
+      font-size: 0.875rem;
+      color: #374151;
+      line-height: 1.4;
+      max-height: 60px;
+      overflow-y: auto;
+      word-wrap: break-word;
+    }
+    
+    .no-notes {
+      font-size: 0.875rem;
+      color: #9ca3af;
+      font-style: italic;
+    }
+    
+    /* Modal */
+    .modal-content {
       border: none;
-      border-radius: 7px;
+      border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f9fafb;
+    }
+    
+    .modal-title {
+      margin: 0;
+      font-size: 1.125rem;
       font-weight: 600;
-      padding: 0.45rem 1.1rem;
-      font-size: 0.97rem;
-      transition: background 0.18s;
-      box-shadow: none;
+      color: #111827;
     }
-    .btn--primary:hover, .btn.btn--primary:hover {
-      background: #0b234c;
-      color: #fff;
+    
+    .modal-body {
+      padding: 1.5rem;
     }
-    .btn--danger, .btn.btn--danger {
+    
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #e5e7eb;
+      background: #f9fafb;
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+    
+    /* Form */
+    .form-grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .form-label {
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+    }
+    
+    .optional {
+      color: #9ca3af;
+      font-weight: 400;
+    }
+    
+    .form-control, .form-select {
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      background: white;
+    }
+    
+    .form-control:focus, .form-select:focus {
+      outline: none;
+      border-color: #008040;
+      box-shadow: 0 0 0 3px rgba(0, 128, 64, 0.1);
+    }
+    
+    .submission-note {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: #1e40af;
+    }
+    
+    .submission-note i {
+      color: #3b82f6;
+    }
+    
+    /* Alerts */
+    .alert {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+    
+    .alert-success {
+      background: #d1fae5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+    
+    .alert-danger {
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+    
+    /* Action button */
+    .btn-danger-sm {
       background: #dc2626;
-      color: #fff;
+      color: white;
       border: none;
-      border-radius: 7px;
-      font-weight: 600;
-      padding: 0.45rem 1.1rem;
-      font-size: 0.97rem;
-      transition: background 0.18s;
-      box-shadow: none;
+      border-radius: 6px;
+      padding: 0.5rem 0.875rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
     }
-    .btn--danger:hover, .btn.btn--danger:hover {
+    
+    .btn-danger-sm:hover {
       background: #b91c1c;
-      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
     }
-    .btn--small {
-      font-size: 0.93rem;
-      padding: 0.32rem 0.8rem;
-      border-radius: 7px;
+    
+    /* External link buttons */
+    .btn-link-sm {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: all 0.2s;
     }
-    .btn--primary i, .btn--danger i, .btn.btn--primary i, .btn.btn--danger i {
-      color: #fff !important;
+    
+    .btn-pdf {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
     }
-    .btn-outline-secondary i {
-      color: #475569 !important;
+    
+    .btn-pdf:hover {
+      background: #fee2e2;
+      color: #b91c1c;
     }
-    @media (max-width: 900px) {
-      .faculty-table-card {
-        padding: 0.7rem;
+    
+    .btn-view {
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+    }
+    
+    .btn-view:hover {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    
+    .type-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: capitalize;
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .admin-cms-section {
+        padding: 1rem;
       }
-      .faculty-section-title {
-        font-size: 1.08rem;
+      
+      .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
       }
-      .table th, .table td {
-        padding: 8px 6px;
+      
+      .page-title {
+        font-size: 1.5rem;
+      }
+      
+      .data-table {
+        font-size: 0.875rem;
+      }
+      
+      .data-table th,
+      .data-table td {
+        padding: 0.75rem 0.5rem;
+      }
+      
+      .form-grid {
+        gap: 1rem;
+      }
+    }
+    
+    @media (min-width: 640px) {
+      .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .form-group:first-child,
+      .form-group:nth-child(6),
+      .form-group:nth-child(7) {
+        grid-column: span 2;
       }
     }
   </style>
@@ -261,81 +534,155 @@ function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
       <span class="admin-topbar__title">Submit Research</span>
       <div class="admin-topbar__spacer"></div>
       <div class="admin-topbar__user">
-        <span class="admin-topbar__avatar"><?= esc(strtoupper($_SESSION['user']['username'][0] ?? 'F')) ?></span>
-        <span class="admin-topbar__name"><?= esc($_SESSION['user']['username'] ?? 'Faculty') ?></span>
+        <span class="admin-topbar__avatar"><?= esc(strtoupper($firstName[0] . $lastName[0])) ?></span>
+        <span class="admin-topbar__name"><?= esc($fullName) ?></span>
       </div>
     </header>
 
     <section class="admin-cms-section">
-      <div class="faculty-actions-bar">
-        <button type="button" class="btn btn--primary" data-bs-toggle="modal" data-bs-target="#addResearchModal">
-          <i class="fas fa-plus"></i> Add New Research
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1 class="page-title">
+          <i class="fas fa-microscope"></i>
+          Research Management
+        </h1>
+        <button type="button" class="btn-primary" data-bs-toggle="modal" data-bs-target="#addResearchModal">
+          <i class="fas fa-plus"></i>
+          Submit New Research
         </button>
       </div>
-      <div class="faculty-table-card">
-        <div class="faculty-table-card-header">
-          <i class="fas fa-list"></i> Your Research
+
+      <!-- Alerts -->
+      <?php if (isset($success_message) && !empty($success_message)): ?>
+        <div class="alert alert-success">
+          <i class="fas fa-check-circle"></i>
+          <?php echo htmlspecialchars($success_message); ?>
         </div>
+      <?php endif; ?>
+
+      <?php if (isset($error_message) && !empty($error_message)): ?>
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-circle"></i>
+          <?php echo htmlspecialchars($error_message); ?>
+        </div>
+      <?php endif; ?>
+
+      <!-- Research List -->
+      <div class="content-card">
+        <div class="card-header">
+          <h2 class="card-title">
+            <i class="fas fa-list"></i>
+            Your Research Submissions
+          </h2>
+        </div>
+
         <?php if (empty($research)): ?>
-          <div class="admin-notice admin-notice--info">
-            <i class="fas fa-info-circle"></i> No research entries found. Add your first research above.
+          <div class="empty-state">
+            <i class="fas fa-microscope"></i>
+            <h4>No research submissions yet</h4>
+            <p>Get started by submitting your first research publication above.</p>
           </div>
         <?php else: ?>
-          <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
+          <div class="table-container">
+            <table class="data-table">
               <thead>
                 <tr>
-                  <th>Title</th>
+                  <th>Research Details</th>
+                  <th>Type & Department</th>
+                  <th>Publication</th>
                   <th>Status</th>
-                  <th>Description</th>
-                  <th style="width: 120px;">Actions</th>
+                  <th>Year</th>
+                  <th>Links</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 <?php foreach ($research as $item): ?>
+                  <?php 
+                    $researchData = json_decode($item['content'] ?? '{}', true) ?: [];
+                  ?>
                   <tr>
                     <td>
-                      <strong><?= esc($item['title']) ?></strong>
+                      <div class="item-title"><?= esc($item['title']) ?></div>
+                      <?php if (!empty($researchData['authors'])): ?>
+                        <div class="item-subtitle">Authors: <?= esc($researchData['authors']) ?></div>
+                      <?php endif; ?>
+                      <?php if (!empty($researchData['description'])): ?>
+                        <div class="item-subtitle" style="margin-top: 0.25rem;">
+                          <?= esc(substr($researchData['description'], 0, 100)) ?><?= strlen($researchData['description']) > 100 ? '...' : '' ?>
+                        </div>
+                      <?php endif; ?>
+                    </td>
+                    <td>
+                      <div class="type-badge"><?= esc(ucfirst($researchData['type'] ?? 'journal')) ?></div>
+                      <?php if (!empty($researchData['dept'])): ?>
+                        <div class="item-subtitle" style="margin-top: 0.25rem;">
+                          <?= esc(strtoupper($researchData['dept'])) ?>
+                        </div>
+                      <?php endif; ?>
+                    </td>
+                    <td>
+                      <div class="item-subtitle">
+                        <?php if (!empty($researchData['venue'])): ?>
+                          <strong><?= esc($researchData['venue']) ?></strong>
+                        <?php else: ?>
+                          <span class="no-notes">No venue specified</span>
+                        <?php endif; ?>
+                      </div>
                     </td>
                     <td>
                       <span class="status-badge status-<?= esc($item['status']) ?>">
                         <?= esc(ucfirst($item['status'])) ?>
                       </span>
+                      <?php if ($item['status'] === 'rejected' && !empty($item['review_notes'])): ?>
+                        <div class="item-subtitle" style="margin-top: 0.25rem; color: #dc2626;">
+                          <i class="fas fa-exclamation-triangle"></i> 
+                          <?= esc($item['review_notes']) ?>
+                        </div>
+                      <?php endif; ?>
                     </td>
                     <td>
-                      <span style="color: #64748b;"><?= nl2br(esc($item['abstract'])) ?></span>
+                      <div class="date-text">
+                        <?= esc($researchData['year'] ?? '-') ?>
+                      </div>
                     </td>
-                    <td class="text-center">
-                      <div class="d-flex justify-content-center align-items-center gap-2">
-                        <?php if ($item['status'] === 'draft'): ?>
-                          <form method="post" style="display:inline;">
-                            <input type="hidden" name="research_id" value="<?= $item['id'] ?>">
-                            <button type="submit"
-                                    name="submit_for_review"
-                                    class="btn btn-sm btn--primary"
-                                    title="Submit for Review"
-                                    aria-label="Submit for Review"
-                                    data-bs-toggle="tooltip"
-                                    data-bs-placement="top"
-                                    data-bs-title="Submit for Review"
-                                    onclick="return confirm('Submit this research for dean approval?')">
-                              <i class="fas fa-paper-plane"></i> Submit
-                            </button>
-                          </form>
-                        <?php endif; ?>
-                        <?php if (in_array($item['status'], ['draft','review'])): ?>
-                          <a href="?page=faculty_manage_research&delete=<?= $item['id'] ?>"
-                             class="btn btn-sm btn--danger"
-                             title="Delete Research"
-                             aria-label="Delete Research"
-                             data-bs-toggle="tooltip"
-                             data-bs-placement="top"
-                             data-bs-title="Delete Research"
-                             onclick="return confirm('Delete this research?')">
-                            <i class="fas fa-trash"></i> Delete
+                    <td>
+                      <div class="item-subtitle">
+                        <?php if (!empty($researchData['pdf_url'])): ?>
+                          <a href="<?= esc($researchData['pdf_url']) ?>" target="_blank" class="btn-link-sm btn-pdf">
+                            <i class="fas fa-file-pdf"></i>
+                            PDF
                           </a>
                         <?php endif; ?>
+                        <?php if (!empty($researchData['view_url'])): ?>
+                          <a href="<?= esc($researchData['view_url']) ?>" target="_blank" class="btn-link-sm btn-view">
+                            <i class="fas fa-external-link-alt"></i>
+                            View
+                          </a>
+                        <?php endif; ?>
+                        <?php if (empty($researchData['pdf_url']) && empty($researchData['view_url'])): ?>
+                          <span class="no-notes">No links</span>
+                        <?php endif; ?>
                       </div>
+                    </td>
+                    <td>
+                      <?php if (in_array($item['status'], ['submitted', 'rejected'])): ?>
+                        <form method="post" style="display:inline;">
+                          <input type="hidden" name="delete_submission" value="1">
+                          <input type="hidden" name="submission_id" value="<?= $item['id'] ?>">
+                          <button type="submit"
+                                  class="btn-danger-sm"
+                                  title="Delete this research submission"
+                                  onclick="return confirm('Delete this research submission?')">
+                            <i class="fas fa-trash"></i>
+                            Delete Submission
+                          </button>
+                        </form>
+                      <?php elseif ($item['status'] === 'approved'): ?>
+                        <span class="status-badge status-approved">
+                          <i class="fas fa-check"></i> Published
+                        </span>
+                      <?php endif; ?>
                     </td>
                   </tr>
                 <?php endforeach; ?>
@@ -346,31 +693,90 @@ function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
       </div>
       <!-- Add Research Modal -->
       <div class="modal fade" id="addResearchModal" tabindex="-1" aria-labelledby="addResearchModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
           <div class="modal-content">
             <form method="post" action="?page=faculty_manage_research">
               <div class="modal-header">
                 <h5 class="modal-title" id="addResearchModalLabel">
-                  <i class="fas fa-plus"></i> Add New Research
+                  <i class="fas fa-plus"></i> Submit New Research
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
-                <div class="mb-3">
-                  <label for="title" class="form-label">Research Title</label>
-                  <input type="text" id="title" name="title" class="form-control" placeholder="Enter research title" required>
+                <div class="submission-note">
+                  <i class="fas fa-info-circle"></i>
+                  Your research will be submitted to the dean for review and approval.
                 </div>
-                <div class="mb-3">
-                  <label for="description" class="form-label">Research Description/Abstract</label>
-                  <textarea id="description" name="description" class="form-control" rows="4" placeholder="Enter research description or abstract" required></textarea>
+                
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="title" class="form-label">Research Title</label>
+                    <input type="text" id="title" name="title" class="form-control" placeholder="Enter research title" required>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="dept" class="form-label">Department</label>
+                    <select id="dept" name="dept" class="form-select" required>
+                      <option value="">Select Department</option>
+                      <option value="itis">IT&IS</option>
+                      <option value="cs">CS</option>
+                    </select>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="type" class="form-label">Research Type</label>
+                    <select id="type" name="type" class="form-select" required>
+                      <option value="">Select Type</option>
+                      <option value="journal">Journal Article</option>
+                      <option value="conference">Conference Paper</option>
+                      <option value="chapter">Book Chapter</option>
+                      <option value="patent">Patent</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="year" class="form-label">Year</label>
+                    <input type="text" id="year" name="year" class="form-control" placeholder="e.g., 2024" required>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="authors" class="form-label">Authors</label>
+                    <textarea id="authors" name="authors" class="form-control" rows="2" placeholder="e.g., John Doe, Jane Smith" required></textarea>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="venue" class="form-label">Venue</label>
+                    <input type="text" id="venue" name="venue" class="form-control" placeholder="e.g., IEEE Transactions on Computers" required>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="pdf_url" class="form-label">PDF URL <span class="optional">(Optional)</span></label>
+                    <input type="url" id="pdf_url" name="pdf_url" class="form-control" placeholder="Link to PDF">
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="view_url" class="form-label">View URL <span class="optional">(Optional)</span></label>
+                    <input type="url" id="view_url" name="view_url" class="form-control" placeholder="Link to publication">
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="image_url" class="form-label">Image URL <span class="optional">(Optional)</span></label>
+                    <input type="url" id="image_url" name="image_url" class="form-control" placeholder="Link to research poster/image">
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="description" class="form-label">Research Description/Abstract</label>
+                    <textarea id="description" name="description" class="form-control" rows="4" placeholder="Enter research description or abstract" required></textarea>
+                  </div>
                 </div>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn-secondary" data-bs-dismiss="modal">
                   <i class="fas fa-times"></i> Cancel
                 </button>
-                <button type="submit" name="add_research" class="btn btn--primary">
-                  <i class="fas fa-plus"></i> Add Research
+                <button type="submit" name="add_research" class="btn-primary">
+                  <i class="fas fa-paper-plane"></i> Submit for Approval
                 </button>
               </div>
             </form>

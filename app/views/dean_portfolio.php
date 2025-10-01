@@ -3,35 +3,35 @@ require_once __DIR__ . '/../../app/lib/Auth.php';
 require_once __DIR__ . '/../../app/models/Model.php';
 require_once __DIR__ . '/../../app/models/FacultyPortfolio.php';
 
-Auth::requireRole(['faculty'], '/adamson-ccit/public/index.php?page=login');
+Auth::requireRole(['dean'], '/adamson-ccit/public/index.php?page=login');
 function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 
 $user = Auth::user() ?? [];
-$username = $user['username'] ?? 'Faculty';
+$username = $user['username'] ?? 'Dean';
 
-// Get faculty's information from database
+// Get dean's information from database
 try {
     $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     $stmt = $pdo->prepare("SELECT id, first_name, last_name FROM users WHERE username = ? LIMIT 1");
     $stmt->execute([$username]);
-    $faculty = $stmt->fetch(PDO::FETCH_ASSOC);
+    $dean = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    if ($faculty) {
-        $facultyId = (int)$faculty['id'];
-        $firstName = $faculty['first_name'];
-        $lastName = $faculty['last_name'];
-        $fullName = $firstName . ' ' . $lastName;
+    if ($dean) {
+        $deanId = (int)$dean['id'];
+        $firstName = $dean['first_name'];
+        $lastName = $dean['last_name'];
+        $fullName = "Dr. " . $firstName . " " . $lastName;
     } else {
-        $facultyId = null;
-        $firstName = "Faculty";
+        $deanId = null;
+        $firstName = "Dean";
         $lastName = "";
         $fullName = $username;
     }
 } catch (PDOException $e) {
-    $facultyId = null;
-    $firstName = "Faculty";
+    $deanId = null;
+    $firstName = "Dean";
     $lastName = "";
     $fullName = $username;
 }
@@ -42,13 +42,13 @@ $_db = (new _DBX())->d();
 // Fetch companies for issuing organizations dropdown
 $companies = $_db->query("SELECT id, name FROM companies ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch faculty certifications / portfolio items using the model
+// Fetch dean certifications / portfolio items using the model
 $portfolioItems = [];
 $portfolioStats = ['total' => 0, 'active' => 0, 'expired' => 0];
 
-if ($facultyId) {
-    $portfolioItems = FacultyPortfolio::getByUserId($facultyId);
-    $portfolioStats = FacultyPortfolio::getStats($facultyId);
+if ($deanId) {
+    $portfolioItems = FacultyPortfolio::getByUserId($deanId);
+    $portfolioStats = FacultyPortfolio::getStats($deanId);
 }
 ?>
 
@@ -57,7 +57,7 @@ if ($facultyId) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Faculty Portfolio | Faculty Dashboard</title>
+  <title>Dean Portfolio | Dean Dashboard</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css" />
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/student-profile.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -86,8 +86,8 @@ if ($facultyId) {
     }
     
     input[type="checkbox"]:checked {
-      background-color: #008040 !important;
-      border-color: #008040 !important;
+      background-color: #0080c9 !important;
+      border-color: #0080c9 !important;
     }
     
     /* Ensure checkbox labels are properly styled */
@@ -98,14 +98,14 @@ if ($facultyId) {
       font-weight: normal !important;
     }
     
-    /* Adapt student profile styles for faculty dashboard */
+    /* Adapt student profile styles for dean dashboard */
     .admin-cms-section {
       max-width: 100%;
       margin: 0;
       padding: 2rem 3rem;
     }
     
-    .page-faculty {
+    .page-dean {
       max-width: 100%;
       margin: 0;
       padding: 0;
@@ -117,7 +117,7 @@ if ($facultyId) {
     }
     
     .profile-header {
-      background: linear-gradient(135deg, #008040 0%, #0b234c 100%);
+      background: linear-gradient(135deg, #0080c9 0%, #2c3e50 100%);
       border-radius: 16px;
       margin-bottom: 2rem;
     }
@@ -225,7 +225,7 @@ if ($facultyId) {
     }
     
     .add-cert-btn {
-      background: #008040;
+      background: #0080c9;
       color: white;
       border: none;
       border-radius: 8px;
@@ -240,7 +240,7 @@ if ($facultyId) {
     }
     
     .add-cert-btn:hover {
-      background: #0b234c;
+      background: #2c3e50;
     }
     
     .add-icon {
@@ -265,7 +265,7 @@ if ($facultyId) {
     }
     
     .view-btn.active {
-      background: #008040;
+      background: #0080c9;
       color: white;
     }
     
@@ -403,7 +403,7 @@ if ($facultyId) {
     }
     
     .btn-primary {
-      background: #008040;
+      background: #0080c9;
       color: white;
       border: none;
       border-radius: 8px;
@@ -414,7 +414,7 @@ if ($facultyId) {
     }
     
     .btn-primary:hover {
-      background: #0b234c;
+      background: #2c3e50;
     }
     
     /* Modal styles */
@@ -465,6 +465,10 @@ if ($facultyId) {
     }
     
     @media (max-width: 768px) {
+      .admin-cms-section {
+        padding: 1rem;
+      }
+      
       .profile-header-content {
         flex-direction: column;
         text-align: center;
@@ -489,11 +493,11 @@ if ($facultyId) {
 </head>
 <body>
 <div class="admin-cms-layout">
-  <?php include __DIR__ . '/faculty/_faculty_sidebar.php'; ?>
+  <?php include __DIR__ . '/dean/_dean_sidebar.php'; ?>
 
   <main class="admin-main">
     <header class="admin-topbar">
-      <span class="admin-topbar__title">Faculty Portfolio</span>
+      <span class="admin-topbar__title">Dean Portfolio</span>
       <div class="admin-topbar__spacer"></div>
       <div class="admin-topbar__user">
         <span class="admin-topbar__avatar"><?= esc(strtoupper($firstName[0] . $lastName[0])) ?></span>
@@ -515,7 +519,7 @@ if ($facultyId) {
         </div>
       <?php endif; ?>
 
-      <div class="page-faculty">
+      <div class="page-dean">
         <div class="profile-container">
           <!-- Profile Header -->
           <div class="profile-header">
@@ -527,7 +531,7 @@ if ($facultyId) {
               </div>
               <div class="profile-info">
                 <h1 class="profile-name"><?= esc($fullName) ?></h1>
-                <p class="profile-title">Faculty Member</p>
+                <p class="profile-title">Dean of CCIT</p>
                 <p class="profile-location">📍 Adamson University - CCIT</p>
                 <div class="profile-stats">
                   <span class="stat-item"><?= $portfolioStats['total'] ?> Certification<?= $portfolioStats['total'] !== 1 ? 's' : '' ?></span>
@@ -583,7 +587,7 @@ if ($facultyId) {
                 <div class="empty-state-modern">
                   <div class="empty-icon">🎓</div>
                   <h4>Showcase your expertise</h4>
-                  <p>Add professional certifications to highlight your skills and credentials as a faculty member.</p>
+                  <p>Add professional certifications to highlight your academic credentials and leadership qualifications as Dean.</p>
                   <button class="btn-primary" data-open-cert-modal>Add your first certification</button>
                 </div>
               <?php else: ?>
@@ -620,7 +624,7 @@ if ($facultyId) {
                         <?php if (!empty($item['credential_url'])): ?>
                           <div class="cert-actions-compact">
                             <a href="<?= htmlspecialchars($item['credential_url']) ?>" target="_blank" 
-                               style="color: #008040; text-decoration: none; font-size: 0.9rem; font-weight: 500;">
+                               style="color: #0080c9; text-decoration: none; font-size: 0.9rem; font-weight: 500;">
                               Show credential →
                             </a>
                           </div>
@@ -685,7 +689,7 @@ if ($facultyId) {
                         <p class="cert-issuer"><?= htmlspecialchars($item['company_name']) ?></p>
                         <?php if (!empty($item['credential_url'])): ?>
                           <a href="<?= htmlspecialchars($item['credential_url']) ?>" target="_blank" 
-                             style="color: #008040; text-decoration: none; font-size: 0.9rem;">
+                             style="color: #0080c9; text-decoration: none; font-size: 0.9rem;">
                             Show credential →
                           </a>
                         <?php endif; ?>
@@ -709,7 +713,7 @@ if ($facultyId) {
         <button type="button" class="modal-close">✕</button>
       </div>
 
-      <form id="certForm" action="index.php?page=faculty_portfolio_save" method="POST">
+      <form id="certForm" action="index.php?page=dean_portfolio_save" method="POST">
         <input type="hidden" name="mode" value="create">
         <input type="hidden" name="id" value="">
 
@@ -786,7 +790,7 @@ if ($facultyId) {
 
         <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
           <button type="button" class="btn btn--outline modal-close" style="background:none; border:1px solid #e5e7eb; color:#6b7280; padding:10px 16px; border-radius:6px; cursor:pointer;">Exit</button>
-          <button type="submit" class="btn btn--solid" style="background:#008040; color:white; border:none; padding:10px 16px; border-radius:6px; cursor:pointer;">Save</button>
+          <button type="submit" class="btn btn--solid" style="background:#0080c9; color:white; border:none; padding:10px 16px; border-radius:6px; cursor:pointer;">Save</button>
         </div>
       </form>
     </div>
@@ -964,7 +968,7 @@ document.addEventListener('DOMContentLoaded', function() {
     deleteBtn.textContent = 'Deleting...';
     
     // Redirect to delete page
-    window.location.href = `index.php?page=faculty_portfolio_delete&id=${currentDeleteId}`;
+    window.location.href = `index.php?page=dean_portfolio_delete&id=${currentDeleteId}`;
   };
 
   // Close delete modal on backdrop click

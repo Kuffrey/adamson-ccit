@@ -30,9 +30,9 @@ try {
     // Get all submissions for dean oversight
     $allSubmissions = FacultySubmissions::getAllSubmissionsWithFacultyDetails();
     
-    // Filter to only research and news submissions (dean oversight)
+    // Filter to only research, news, and certification submissions (dean oversight)
     $submissions = array_filter($allSubmissions, function($submission) use ($filterType) {
-        $validTypes = ['research', 'news'];
+        $validTypes = ['research', 'news', 'certification'];
         if (!in_array($submission['submission_type'], $validTypes)) {
             return false;
         }
@@ -48,6 +48,8 @@ try {
     $counts = [
         'all' => 0,
         'research' => 0,
+        'news' => 0,
+        'certification' => 0,
         'news' => 0,
         'pending' => 0,
         'approved' => 0,
@@ -144,6 +146,12 @@ try {
                                 <a class="nav-link <?= $filterType === 'news' ? 'active' : '' ?>" 
                                    href="?page=dean_pending_submissions&type=news">
                                     News (<?= $counts['news'] ?>)
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <?= $filterType === 'certification' ? 'active' : '' ?>" 
+                                   href="?page=dean_pending_submissions&type=certification">
+                                    Certifications (<?= $counts['certification'] ?>)
                                 </a>
                             </li>
                         </ul>

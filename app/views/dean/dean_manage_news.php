@@ -15,6 +15,7 @@ if (!Auth::check() || !Auth::is('dean')) {
 require_once __DIR__ . '/../../models/News.php';
 require_once __DIR__ . '/../../models/DeanLogs.php';
 require_once __DIR__ . '/../../models/NewsPageSettings.php';
+require_once __DIR__ . '/../../models/FacultySubmissions.php';
 
 // Helper function for escaping
 if (!function_exists('esc')) {
@@ -31,16 +32,37 @@ try {
     $news = News::list($status);
     $counts = News::statusCounts();
     $settings = class_exists('NewsPageSettings') ? NewsPageSettings::getSettings() : [];
+    
+    // Get pending faculty news submissions
+    $pendingNewsSubmissions = FacultySubmissions::getPendingByType('news');
 } catch (Exception $e) {
     $notice = 'Error loading data: ' . $e->getMessage();
     $news = [];
     $counts = ['all' => 0, 'draft' => 0, 'published' => 0, 'archived' => 0];
     $settings = [];
+    $pendingNewsSubmissions = [];
 }
 
 /* ---------- Handle POST (CRUD) ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        // Handle faculty submission approval/rejection
+        if (!empty($_POST['faculty_action']) && !empty($_POST['submission_id'])) {
+            $submissionId = (int)$_POST['submission_id'];
+            $action = $_POST['faculty_action'];
+            $reviewNotes = trim($_POST['review_notes'] ?? '');
+            
+            if ($action === 'approve') {
+                FacultySubmissions::updateStatus($submissionId, 'approved', $user['id'] ?? null, $reviewNotes);
+                $notice = 'Faculty news submission approved and published successfully!';
+                DeanLogs::logApprove('faculty_submissions', $submissionId, $user['id'] ?? null, "Approved news submission: " . substr($reviewNotes, 0, 100));
+            } elseif ($action === 'reject') {
+                FacultySubmissions::updateStatus($submissionId, 'rejected', $user['id'] ?? null, $reviewNotes);
+                $notice = 'Faculty news submission rejected.';
+                DeanLogs::logReject('faculty_submissions', $submissionId, $user['id'] ?? null, "Rejected news submission: " . substr($reviewNotes, 0, 100));
+            }
+        }
+
         // Update news settings
         if (!empty($_POST['settings']) && class_exists('NewsPageSettings')) {
             NewsPageSettings::updateSettings($_POST['settings']);
@@ -227,6 +249,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
+                <!-- Faculty News Submissions for Approval -->
+                <?php if (!empty($pendingNewsSubmissions)): ?>
+                <div class="card mb-4 border-warning">
+                    <div class="card-header bg-warning bg-opacity-10">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-clock text-warning me-2"></i>
+                            Pending Faculty News Submissions (<?= count($pendingNewsSubmissions) ?>)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Faculty</th>
+                                        <th>News Title</th>
+                                        <th>Category</th>
+                                        <th>Submitted</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($pendingNewsSubmissions as $submission): ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?></strong>
+                                                <br><small class="text-muted"><?= esc($submission['department_name'] ?? '') ?></small>
+                                            </td>
+                                            <td>
+                                                <strong><?= esc($submission['title']) ?></strong>
+                                                <?php if (!empty($submission['description'])): ?>
+                                                    <br><small class="text-muted"><?= esc(substr($submission['description'], 0, 100)) ?>...</small>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info"><?= esc($submission['category'] ?? 'News') ?></span>
+                                            </td>
+                                            <td>
+                                                <small><?= date('M j, Y g:i A', strtotime($submission['submitted_at'])) ?></small>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-success btn-sm" 
+                                                            data-bs-toggle="modal" data-bs-target="#approveModal<?= $submission['id'] ?>">
+                                                        <i class="fas fa-check"></i> Approve
+                                                    </button>
+                                                    <button type="button" class="btn btn-danger btn-sm" 
+                                                            data-bs-toggle="modal" data-bs-target="#rejectModal<?= $submission['id'] ?>">
+                                                        <i class="fas fa-times"></i> Reject
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Approve Modal -->
+                                        <div class="modal fade" id="approveModal<?= $submission['id'] ?>" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Approve News Submission</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <form method="POST">
+                                                        <div class="modal-body">
+                                                            <input type="hidden" name="faculty_action" value="approve">
+                                                            <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
+                                                            <p>Approve "<strong><?= esc($submission['title']) ?></strong>" by <?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?>?</p>
+                                                            <p class="text-muted">This will publish the news article immediately.</p>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Review Notes (Optional)</label>
+                                                                <textarea class="form-control" name="review_notes" rows="3" placeholder="Add any feedback or notes..."></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-success">Approve & Publish</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Reject Modal -->
+                                        <div class="modal fade" id="rejectModal<?= $submission['id'] ?>" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Reject News Submission</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <form method="POST">
+                                                        <div class="modal-body">
+                                                            <input type="hidden" name="faculty_action" value="reject">
+                                                            <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
+                                                            <p>Reject "<strong><?= esc($submission['title']) ?></strong>" by <?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?>?</p>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
+                                                                <textarea class="form-control" name="review_notes" rows="3" placeholder="Please provide a reason for rejection..." required></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-danger">Reject</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- Add New News Card -->
                 <div class="card mb-4">
                     <div class="card-header">
@@ -313,24 +451,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <tr>
                                                 <td>
                                                     <div class="d-flex align-items-center">
-                                                        <?php if ($article['image_url']): ?>
+                                                        <?php if (!empty($article['image_url'])): ?>
                                                             <img src="<?= esc($article['image_url']) ?>" alt="News Image" 
                                                                  class="rounded me-3" width="50" height="50" style="object-fit: cover;">
                                                         <?php endif; ?>
                                                         <div>
-                                                            <strong><?= esc($article['title']) ?></strong>
-                                                            <?php if (!empty($article['content'])): ?>
-                                                                <br><small class="text-muted"><?= esc(substr($article['content'], 0, 100)) ?>...</small>
+                                                            <strong><?= esc($article['title'] ?? '') ?></strong>
+                                                            <?php if (!empty($article['content'] ?? $article['body'] ?? '')): ?>
+                                                                <br><small class="text-muted"><?= esc(substr($article['content'] ?? $article['body'] ?? '', 0, 100)) ?>...</small>
                                                             <?php endif; ?>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-secondary"><?= esc($article['category']) ?></span>
+                                                    <span class="badge bg-secondary"><?= esc($article['category'] ?? 'Uncategorized') ?></span>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-<?= $article['status'] === 'published' ? 'success' : ($article['status'] === 'draft' ? 'warning' : 'secondary') ?>">
-                                                        <?= esc($article['status']) ?>
+                                                    <span class="badge bg-<?= ($article['status'] ?? 'draft') === 'published' ? 'success' : (($article['status'] ?? 'draft') === 'draft' ? 'warning' : 'secondary') ?>">
+                                                        <?= esc($article['status'] ?? 'draft') ?>
                                                     </span>
                                                 </td>
                                                 <td><?= esc($article['author'] ?? 'N/A') ?></td>
@@ -370,26 +508,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Title</label>
                                                                             <input type="text" class="form-control" name="title" 
-                                                                                   value="<?= esc($article['title']) ?>" required>
+                                                                                   value="<?= esc($article['title'] ?? '') ?>" required>
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Content</label>
-                                                                            <textarea class="form-control" name="content" rows="6"><?= esc($article['content']) ?></textarea>
+                                                                            <textarea class="form-control" name="content" rows="6"><?= esc($article['content'] ?? $article['body'] ?? '') ?></textarea>
                                                                         </div>
                                                                     </div>
                                                                     <div class="col-md-4">
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Category</label>
                                                                             <select class="form-control" name="category">
-                                                                                <option value="news" <?= $article['category'] === 'news' ? 'selected' : '' ?>>News</option>
-                                                                                <option value="announcement" <?= $article['category'] === 'announcement' ? 'selected' : '' ?>>Announcement</option>
-                                                                                <option value="event" <?= $article['category'] === 'event' ? 'selected' : '' ?>>Event</option>
+                                                                                <option value="news" <?= ($article['category'] ?? '') === 'news' ? 'selected' : '' ?>>News</option>
+                                                                                <option value="announcement" <?= ($article['category'] ?? '') === 'announcement' ? 'selected' : '' ?>>Announcement</option>
+                                                                                <option value="event" <?= ($article['category'] ?? '') === 'event' ? 'selected' : '' ?>>Event</option>
                                                                             </select>
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Status</label>
                                                                             <select class="form-control" name="status">
-                                                                                <option value="draft" <?= $article['status'] === 'draft' ? 'selected' : '' ?>>Draft</option>
+                                                                                <option value="draft" <?= ($article['status'] ?? 'draft') === 'draft' ? 'selected' : '' ?>>Draft</option>
                                                                                 <option value="published" <?= $article['status'] === 'published' ? 'selected' : '' ?>>Published</option>
                                                                                 <option value="archived" <?= $article['status'] === 'archived' ? 'selected' : '' ?>>Archived</option>
                                                                             </select>

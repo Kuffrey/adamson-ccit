@@ -14,6 +14,7 @@ if (!Auth::check() || !Auth::is('dean')) {
 
 require_once __DIR__ . '/../../models/Event.php';
 require_once __DIR__ . '/../../models/DeanLogs.php';
+require_once __DIR__ . '/../../models/FacultySubmissions.php';
 
 // Helper function for escaping
 if (!function_exists('esc')) {
@@ -29,10 +30,14 @@ try {
     $status = $_GET['status'] ?? 'all';
     $events = Event::list($status);
     $counts = Event::statusCounts();
+    
+    // Get pending faculty event submissions
+    $pendingEventSubmissions = FacultySubmissions::getPendingByType('event');
 } catch (Exception $e) {
     $notice = 'Error loading data: ' . $e->getMessage();
     $events = [];
     $counts = ['all' => 0, 'draft' => 0, 'published' => 0, 'archived' => 0];
+    $pendingEventSubmissions = [];
 }
 
 // Helper function for dates
@@ -47,6 +52,23 @@ function dtfix(?string $v): ?string {
 /* ---------- Handle POST (CRUD) ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        // Handle faculty submission approval/rejection
+        if (!empty($_POST['faculty_action']) && !empty($_POST['submission_id'])) {
+            $submissionId = (int)$_POST['submission_id'];
+            $action = $_POST['faculty_action'];
+            $reviewNotes = trim($_POST['review_notes'] ?? '');
+            
+            if ($action === 'approve') {
+                FacultySubmissions::updateStatus($submissionId, 'approved', $user['id'] ?? null, $reviewNotes);
+                $notice = 'Faculty event submission approved and published successfully!';
+                DeanLogs::logApprove('faculty_submissions', $submissionId, $user['id'] ?? null, "Approved event submission: " . substr($reviewNotes, 0, 100));
+            } elseif ($action === 'reject') {
+                FacultySubmissions::updateStatus($submissionId, 'rejected', $user['id'] ?? null, $reviewNotes);
+                $notice = 'Faculty event submission rejected.';
+                DeanLogs::logReject('faculty_submissions', $submissionId, $user['id'] ?? null, "Rejected event submission: " . substr($reviewNotes, 0, 100));
+            }
+        }
+
         // Add new event
         if (!empty($_POST['add_event']) && !empty($_POST['title'])) {
             $title = trim($_POST['title']);
@@ -244,6 +266,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
+                <!-- Faculty Event Submissions for Approval -->
+                <?php if (!empty($pendingEventSubmissions)): ?>
+                <div class="card mb-4 border-warning">
+                    <div class="card-header bg-warning bg-opacity-10">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-clock text-warning me-2"></i>
+                            Pending Faculty Event Submissions (<?= count($pendingEventSubmissions) ?>)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Faculty</th>
+                                        <th>Event Title</th>
+                                        <th>Category</th>
+                                        <th>Submitted</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($pendingEventSubmissions as $submission): ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?></strong>
+                                                <br><small class="text-muted"><?= esc($submission['department_name'] ?? '') ?></small>
+                                            </td>
+                                            <td>
+                                                <strong><?= esc($submission['title']) ?></strong>
+                                                <?php if (!empty($submission['description'])): ?>
+                                                    <br><small class="text-muted"><?= esc(substr($submission['description'], 0, 100)) ?>...</small>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info"><?= esc($submission['category'] ?? 'Event') ?></span>
+                                            </td>
+                                            <td>
+                                                <small><?= date('M j, Y g:i A', strtotime($submission['submitted_at'])) ?></small>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-success btn-sm" 
+                                                            data-bs-toggle="modal" data-bs-target="#approveEventModal<?= $submission['id'] ?>">
+                                                        <i class="fas fa-check"></i> Approve
+                                                    </button>
+                                                    <button type="button" class="btn btn-danger btn-sm" 
+                                                            data-bs-toggle="modal" data-bs-target="#rejectEventModal<?= $submission['id'] ?>">
+                                                        <i class="fas fa-times"></i> Reject
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Approve Modal -->
+                                        <div class="modal fade" id="approveEventModal<?= $submission['id'] ?>" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Approve Event Submission</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <form method="POST">
+                                                        <div class="modal-body">
+                                                            <input type="hidden" name="faculty_action" value="approve">
+                                                            <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
+                                                            <p>Approve "<strong><?= esc($submission['title']) ?></strong>" by <?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?>?</p>
+                                                            <p class="text-muted">This will publish the event immediately.</p>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Review Notes (Optional)</label>
+                                                                <textarea class="form-control" name="review_notes" rows="3" placeholder="Add any feedback or notes..."></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-success">Approve & Publish</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Reject Modal -->
+                                        <div class="modal fade" id="rejectEventModal<?= $submission['id'] ?>" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Reject Event Submission</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <form method="POST">
+                                                        <div class="modal-body">
+                                                            <input type="hidden" name="faculty_action" value="reject">
+                                                            <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
+                                                            <p>Reject "<strong><?= esc($submission['title']) ?></strong>" by <?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?>?</p>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
+                                                                <textarea class="form-control" name="review_notes" rows="3" placeholder="Please provide a reason for rejection..." required></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-danger">Reject</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- Add New Event Card -->
                 <div class="card mb-4">
                     <div class="card-header">
@@ -354,7 +492,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <tr>
                                                 <td>
                                                     <div class="d-flex align-items-center">
-                                                        <?php if ($event['image_url']): ?>
+                                                        <?php if (!empty($event['image_url'])): ?>
                                                             <img src="<?= esc($event['image_url']) ?>" alt="Event Image" 
                                                                  class="rounded me-3" width="50" height="50" style="object-fit: cover;">
                                                         <?php endif; ?>
@@ -367,7 +505,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-secondary"><?= esc($event['category']) ?></span>
+                                                    <span class="badge bg-secondary"><?= esc($event['category'] ?? 'Uncategorized') ?></span>
                                                 </td>
                                                 <td>
                                                     <?php if ($event['start_at']): ?>
@@ -418,11 +556,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Title</label>
                                                                             <input type="text" class="form-control" name="title" 
-                                                                                   value="<?= esc($event['title']) ?>" required>
+                                                                                   value="<?= esc($event['title'] ?? '') ?>" required>
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Description</label>
-                                                                            <textarea class="form-control" name="description" rows="4"><?= esc($event['description']) ?></textarea>
+                                                                            <textarea class="form-control" name="description" rows="4"><?= esc($event['description'] ?? '') ?></textarea>
                                                                         </div>
                                                                         <div class="row">
                                                                             <div class="col-md-6">
@@ -443,12 +581,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Location</label>
                                                                             <input type="text" class="form-control" name="location" 
-                                                                                   value="<?= esc($event['location']) ?>">
+                                                                                   value="<?= esc($event['location'] ?? '') ?>">
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Registration URL</label>
                                                                             <input type="url" class="form-control" name="registration_url" 
-                                                                                   value="<?= esc($event['registration_url']) ?>">
+                                                                                   value="<?= esc($event['registration_url'] ?? '') ?>">
                                                                         </div>
                                                                     </div>
                                                                     <div class="col-md-4">

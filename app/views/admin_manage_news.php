@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   try {
     // Update news settings
     if (!empty($_POST['settings']) && class_exists('NewsPageSettings')) {
-      NewsPageSettings::saveSettings($_POST['settings']);
+      NewsPageSettings::updateSettings($_POST['settings']);
       $notice = 'Settings updated successfully!';
     }
 
@@ -177,8 +177,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <tr><td>Published</td><td><?= $counts['published'] ?></td></tr>
                   <tr><td>Drafts</td><td><?= $counts['draft'] ?></td></tr>
                   <tr><td>Archived</td><td><?= $counts['archived'] ?></td></tr>
-                  <tr><td>Page Title</td><td><?= esc($settings['page_title'] ?? '—') ?></td></tr>
-                  <tr><td>Hero Lead</td><td><?= esc($settings['hero_lead'] ?? '—') ?></td></tr>
+                  <tr><td>Subhero Lead</td><td><?= esc(substr($settings['subhero_lead'] ?? '—', 0, 50)) ?><?= strlen($settings['subhero_lead'] ?? '') > 50 ? '...' : '' ?></td></tr>
+                  <tr><td>Featured Announcement</td><td><?= esc(substr($settings['announcement'] ?? '—', 0, 50)) ?><?= strlen($settings['announcement'] ?? '') > 50 ? '...' : '' ?></td></tr>
                 </tbody>
               </table>
             </div>
@@ -204,23 +204,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <div class="collapse" id="settingsCollapse">
             <div class="card-body">
               <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Page Title</label>
-                  <input type="text" class="form-control" name="settings[page_title]" value="<?= esc($settings['page_title'] ?? '') ?>" placeholder="News & Updates">
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Hero Lead Text</label>
-                  <input type="text" class="form-control" name="settings[hero_lead]" value="<?= esc($settings['hero_lead'] ?? '') ?>" placeholder="Stay updated with the latest news">
+                <div class="col-md-12 mb-3">
+                  <label class="form-label">Subhero Lead Text</label>
+                  <input type="text" class="form-control" name="settings[subhero_lead]" value="<?= esc($settings['subhero_lead'] ?? '') ?>" placeholder="Stories from CCIT—research, achievements, announcements, and student life.">
                 </div>
               </div>
               <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Hero Background Image URL</label>
-                  <input type="text" class="form-control" name="settings[hero_bg_image]" value="<?= esc($settings['hero_bg_image'] ?? '') ?>" placeholder="/path/to/image.jpg">
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Items Per Page</label>
-                  <input type="number" class="form-control" name="settings[items_per_page]" value="<?= esc($settings['items_per_page'] ?? '12') ?>" min="1" max="50">
+                <div class="col-md-12 mb-3">
+                  <label class="form-label">Featured Announcement</label>
+                  <textarea class="form-control" name="settings[announcement]" rows="3" placeholder="Optional featured announcement text"><?= esc($settings['announcement'] ?? '') ?></textarea>
                 </div>
               </div>
             </div>
