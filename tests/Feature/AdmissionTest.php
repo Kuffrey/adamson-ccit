@@ -1,58 +1,80 @@
+
 <?php
 
+// Helper function to make HTTP requests to the admission pages
 function admissionPageRequest($method, $page, $data = null) {
+    // Build the URL for the requested page
     $url = "http://localhost/adamson-ccit/public/index.php?page={$page}";
+    // Initialize a cURL session
     $ch = curl_init($url);
+    // Set cURL to return the response as a string
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    // Follow redirects if any
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    // Set a timeout for the request
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    // If the method is POST, set POST options and attach data
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
     }
+    // Execute the request and get the response
     $response = curl_exec($ch);
+    // Get information about the request (e.g., HTTP status code)
     $info = curl_getinfo($ch);
+    // Close the cURL session
     curl_close($ch);
+    // Return both the response body and info array
     return [$response, $info];
 }
 
 // ========== HOME PAGE ENROLLMENT BUTTON TESTS ==========
 
+// Test if the home page loads without errors and returns content
 test('home page loads successfully', function () {
+    // Make a GET request to the home page
     [$response, $info] = admissionPageRequest('GET', '');
+    // Expect the HTTP status code to be 200 (OK)
     expect($info['http_code'])->toBe(200);
+    // Expect the response body to not be empty
     expect($response)->not->toBe('');
+    // Expect the response length to be greater than 100 characters
     expect(strlen($response))->toBeGreaterThan(100);
 });
 
+// Test if the home page contains the "Enroll Now" button with correct attributes
 test('home page has enroll now button', function () {
+    // Make a GET request to the home page
     [$response, $info] = admissionPageRequest('GET', '');
+    // Expect HTTP 200 OK
     expect($info['http_code'])->toBe(200);
+    // The button text should be present
     expect($response)->toContain('Enroll Now');
+    // The button should have the correct CSS class
     expect($response)->toContain('class="btn btn--solid"');
+    // The button should link to the freshman admission page
     expect($response)->toContain('href="/adamson-ccit/public/index.php?page=admission_freshman"');
 });
 
+// Test if the "Enroll Now" button works and redirects to the correct page
 test('home page enroll now button is working and redirects to admission freshman page', function () {
-    // First, get the home page to confirm the "Enroll Now" button exists and is properly configured
+    // Get the home page to confirm the button exists
     [$homeResponse, $homeInfo] = admissionPageRequest('GET', '');
+    // Expect HTTP 200 OK
     expect($homeInfo['http_code'])->toBe(200);
-    
-    // Verify the "Enroll Now" button is present with correct text
+    // The button text should be present
     expect($homeResponse)->toContain('Enroll Now');
-    
-    // Verify the button has the correct href attribute pointing to admission_freshman
+    // The button should link to the freshman admission page
     expect($homeResponse)->toContain('href="/adamson-ccit/public/index.php?page=admission_freshman"');
-    
-    // Verify the button has proper CSS classes for styling
+    // The button should have the correct CSS class
     expect($homeResponse)->toContain('class="btn btn--solid-blue"');
-    
-    // Verify the "Enroll Now" button is clickable and functional by testing the target page
+    // Simulate clicking the button by requesting the target page
     [$admissionResponse, $admissionInfo] = admissionPageRequest('GET', 'admission_freshman');
+    // Expect the target page to load successfully
     expect($admissionInfo['http_code'])->toBe(200);
+    // The target page should contain expected content
     expect($admissionResponse)->toContain('Freshman Admission');
     expect($admissionResponse)->toContain('How to Apply');
-    
     // Confirm the destination page is fully functional
     expect($admissionResponse)->toContain('Apply at Adamson.edu.ph');
     expect($admissionResponse)->toContain('class="btn btn--solid-blue"');

@@ -1,28 +1,35 @@
+
 <?php
 
+// Helper function to send a request to the chatbot endpoint
 function chatbotRequest($method, $data = null, $query = '') {
-	$url = 'http://localhost/adamson-ccit/public/chatbot.php' . $query;
-	$ch = curl_init($url);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	$url = 'http://localhost/adamson-ccit/public/chatbot.php' . $query; // Build the URL
+	$ch = curl_init($url); // Initialize cURL session
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Return response as string
 	if ($method === 'POST') {
-		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+		curl_setopt($ch, CURLOPT_POST, true); // Set POST method
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $data); // Attach POST data
 	}
-	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-	$response = curl_exec($ch);
-	$info = curl_getinfo($ch);
-	curl_close($ch);
-	return [$response, $info];
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
+	$response = curl_exec($ch); // Execute request
+	$info = curl_getinfo($ch); // Get response info
+	curl_close($ch); // Close cURL session
+	return [$response, $info]; // Return response and info
 }
+
 
 // ========== HEALTH CHECK TESTS ==========
 
+
+// Test: GET /chatbot.php returns 'pong' for health check
 test('chatbot health GET returns pong', function () {
 	[$response, $info] = chatbotRequest('GET');
-	expect($info['http_code'])->toBe(200);
-	expect($response)->toContain('pong');
+	expect($info['http_code'])->toBe(200); // Should return HTTP 200
+	expect($response)->toContain('pong'); // Should contain 'pong'
 });
 
+
+// Test: GET /chatbot.php?selftest=1 returns a response (200 or 500)
 test('chatbot selftest GET returns response', function () {
 	[$response, $info] = chatbotRequest('GET', null, '?selftest=1');
 	// Accept either 200 or 500 for selftest since it might fail due to Dialogflow
@@ -30,26 +37,34 @@ test('chatbot selftest GET returns response', function () {
 	expect($response)->not->toBe('');
 });
 
+
 // ========== BASIC FUNCTIONALITY TESTS ==========
 
+
+// Test: POST with empty message returns error
 test('chatbot POST with empty message returns error', function () {
 	[$response, $info] = chatbotRequest('POST', ['message' => '']);
-	expect($info['http_code'])->toBe(400);
-	expect($response)->toContain('Empty message');
+	expect($info['http_code'])->toBe(400); // Should return HTTP 400
+	expect($response)->toContain('Empty message'); // Should mention empty message
 });
 
+
+// Test: POST with missing message returns error
 test('chatbot POST with missing message returns error', function () {
 	[$response, $info] = chatbotRequest('POST', []);
-	expect($info['http_code'])->toBe(400);
-	expect($response)->toContain('Empty message');
+	expect($info['http_code'])->toBe(400); // Should return HTTP 400
+	expect($response)->toContain('Empty message'); // Should mention empty message
 });
 
+
+// Test: POST with valid message returns a response
 test('chatbot POST with valid message returns response', function () {
 	[$response, $info] = chatbotRequest('POST', ['message' => 'Hello']);
-	expect($info['http_code'])->toBe(200);
-	expect($response)->not->toBe('');
-	expect(strlen($response))->toBeGreaterThan(0);
+	expect($info['http_code'])->toBe(200); // Should return HTTP 200
+	expect($response)->not->toBe(''); // Should not be empty
+	expect(strlen($response))->toBeGreaterThan(0); // Should have content
 });
+
 
 // ========== GREETING TESTS ==========
 

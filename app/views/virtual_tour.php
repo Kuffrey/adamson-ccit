@@ -28,7 +28,7 @@
       <div class="tour-embed">
         <div class="tour-wrapper">
           <iframe 
-            src="https://panoraven.com/en/embed/SanFRa53N6" 
+            src="https://panoraven.com/en/embed/D9fAkLEOv1" 
             width="100%" 
             height="600" 
             frameborder="0" 
