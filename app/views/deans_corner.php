@@ -1,0 +1,82 @@
+
+<?php
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../models/DeanCorner.php';
+$dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8";
+$pdo = new PDO($dsn, DB_USER, DB_PASS, [
+  PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+  PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+]);
+$dean = DeanCorner::get($pdo);
+?>
+
+<main>
+  <!-- ============ SUB-HERO ============ -->
+  <section class="subhero">
+    <div class="subhero__media" aria-hidden="true">
+      <img src="<?= htmlspecialchars($dean['subhero_image']) ?>" alt="Dean's Corner Banner">
+    </div>
+    <div class="subhero__scrim" aria-hidden="true"></div>
+    <div class="container subhero__inner">
+      <p class="eyebrow">About CCIT</p>
+      <h1 class="subhero__title">Dean's Corner</h1>
+      <p class="subhero__lead">Message from the Dean</p>
+    </div>
+  </section>
+
+  <!-- ============ LOCAL SUBNAV (About section tabs) ============ -->
+  <nav class="subnav" aria-label="About sub-navigation">
+    <div class="container">
+      <ul class="subnav__list" role="list">
+        <li>
+          <a href="/adamson-ccit/public/index.php?page=about_history">History</a>
+        </li>
+        <li>
+          <a href="/adamson-ccit/public/index.php?page=about_vision_mission">Vision &amp; Mission</a>
+        </li>
+        <li class="is-active">
+          <a href="/adamson-ccit/public/index.php?page=deans_corner" aria-current="page">Dean's Corner</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ============ CONTENT ============ -->
+  <section class="content">
+    <div class="container" style="display:flex;justify-content:center;">
+      <article class="content__main">
+        <header class="stack">
+          <h2 class="h2">Meet the Dean</h2>
+          <p class="lead" style="font-size:1.1rem;color:#374151; margin-bottom:18px;">
+            <?= htmlspecialchars($dean['title']) ?>
+          </p>
+        </header>
+        <section class="card" style="background:#fff;border:1px solid #e3e8f2;border-radius:18px;padding:36px 28px;box-shadow:0 2px 12px rgba(0,0,0,0.04);display:flex;flex-direction:column;align-items:center;">
+          <img src="<?= htmlspecialchars($dean['photo']) ?>" alt="Dean Photo" style="width:200px;height:200px;object-fit:cover;border-radius:18px;border:3px solid #0a204b;box-shadow:0 2px 12px rgba(0,0,0,0.10);margin-bottom:18px;">
+          <h3 style="margin:0;color:#0a204b;font-size:1.5rem;letter-spacing:1px;line-height:1.2;">
+            <?= htmlspecialchars($dean['name']) ?>
+          </h3>
+          <div style="color:#1e3c72;font-size:1.1rem;margin-top:6px;margin-bottom:18px;">
+            <?= htmlspecialchars($dean['title']) ?>
+          </div>
+          <p class="lead" style="font-size:1.18rem;line-height:1.85;color:#222;margin:0 0 18px 0;text-align:center;">
+            <?= nl2br(htmlspecialchars($dean['message'])) ?>
+          </p>
+          <span style="font-size:1rem;color:#374151;">Email: <a href="mailto:<?= htmlspecialchars($dean['email']) ?>" style="color:#0a204b;text-decoration:underline;"><?= htmlspecialchars($dean['email']) ?></a></span>
+        </section>
+      </article>
+        <!-- Aside removed for single-column layout -->
+    </div>
+  </section>
+
+  <!-- ============ CTA ============ -->
+  <section class="cta" style="padding:40px 0;">
+    <div class="container cta__inner" style="padding:0 24px;">
+      <div>
+        <h2><?= htmlspecialchars($dean['cta_title']) ?></h2>
+        <p><?= nl2br(htmlspecialchars($dean['cta_body'])) ?></p>
+      </div>
+      <a class="btn btn--solid" href="mailto:<?= htmlspecialchars($dean['email']) ?>"><?= htmlspecialchars($dean['cta_btn_label']) ?></a>
+    </div>
+  </section>
+</main>

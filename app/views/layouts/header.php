@@ -41,6 +41,7 @@ if (!$menus) {
     ['label'=>'About','type'=>'dropdown','items'=>[
       ['label'=>'History','url'=>'/adamson-ccit/public/index.php?page=about_history'],
       ['label'=>'Mission & Vision','url'=>'/adamson-ccit/public/index.php?page=about_vision_mission'],
+      ['label'=>'Dean\'s Corner','url'=>'/adamson-ccit/public/index.php?page=deans_corner'],
     ]],
     ['label'=>'News','url'=>'/adamson-ccit/public/index.php?page=news','type'=>'link'],
     ['label'=>'Admission','type'=>'dropdown','items'=>[

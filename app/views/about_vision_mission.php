@@ -29,6 +29,9 @@ $about = (new AboutVisionMission())->get();
         <li class="is-active">
           <a href="/adamson-ccit/public/index.php?page=about_vision_mission" aria-current="page">Vision &amp; Mission</a>
         </li>
+         <li>
+          <a href="/adamson-ccit/public/index.php?page=deans_corner">Dean's Corner</a>
+        </li>
       </ul>
     </div>
   </nav>

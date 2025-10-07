@@ -242,22 +242,8 @@
         <div class="actions">
           <button type="submit" class="btn btn--solid">Generate Pathway</button>
           <button type="button" id="btnReset" class="btn btn--outline-blue">Reset</button>
-          <button type="button" id="btnPrint" class="btn btn--outline-blue">Print / Save</button>
         </div>
       </form>
-
-      <!-- RESULTS -->
-      <section id="cpResults" class="results section-sep" aria-live="polite" aria-labelledby="res-head">
-        <div class="container">
-          <div class="sec__head">
-            <h2 id="res-head">Your Top Matches</h2>
-            <p class="sec__kicker">Based on your interests, preferences, and goals.</p>
-          </div>
-          <div id="resGrid" class="res__grid"></div>
-
-          <div id="resAlso" class="note-inline" hidden></div>
-        </div>
-      </section>
     </div>
   </section>
 </main>
@@ -280,43 +266,53 @@ const CATS = {
   dev:   {label:'Software & Web Development',
           roles:['Software Developer','Full-stack Developer','Back-end Developer','Mobile App Developer'],
           learn:['Programming fundamentals (OOP, DSA)','Web frameworks & APIs','Version control & testing'],
-          certs:['AWS Cloud Practitioner','Microsoft AZ-900','Oracle Java','GitHub Foundations']},
+          certs:['AWS Cloud Practitioner','Microsoft AZ-900','Oracle Java','GitHub Foundations'],
+          programs:['BSIT - Consumer & Enterprise Application Development','BSCS - Software Engineering']},
   mobile:{label:'Mobile & Enterprise Apps',
           roles:['Android/iOS Developer','Enterprise App Developer','Integration Engineer'],
           learn:['Mobile frameworks (Flutter/React Native)','REST/GraphQL APIs','CI/CD basics'],
-          certs:['Google Associate Android Dev','Apple App Dev (Swift)','Scrum Fundamentals']},
+          certs:['Google Associate Android Dev','Apple App Dev (Swift)','Scrum Fundamentals'],
+          programs:['BSIT - Consumer & Enterprise Application Development','BSCS - Software Engineering']},
   uiux:  {label:'UI/UX & Front-end',
           roles:['UI/UX Designer','Front-end Developer','Product Designer'],
           learn:['HCI & accessibility','Prototyping & design systems','HTML/CSS/JS fundamentals'],
-          certs:['Google UX Certificate','Adobe ACA','freeCodeCamp Responsive Web']},
+          certs:['Google UX Certificate','Adobe ACA','freeCodeCamp Responsive Web'],
+          programs:['BSIT - Consumer & Enterprise Application Development','BSCS - Web Science']},
   game:  {label:'Game Dev & Multimedia',
           roles:['Game Developer','Technical Artist','Interactive Media Dev'],
           learn:['Game engines (Unity/Unreal)','2D/3D assets & animation','Gameplay programming'],
-          certs:['Unity User/Associate','Autodesk/Adobe badges']},
+          certs:['Unity User/Associate','Autodesk/Adobe badges'],
+          programs:['BSIT - Game Development']},
   data:  {label:'Data & Databases',
           roles:['Data Analyst','BI Developer','Database Administrator'],
           learn:['SQL & data modeling','Python for data/ETL','Dashboards & storytelling'],
-          certs:['Google Data Analytics','Microsoft DP-900','Oracle Database Foundations']},
+          certs:['Google Data Analytics','Microsoft DP-900','Oracle Database Foundations'],
+          programs:['BSCS - Data Science','BSIS - Business Analytics']},
   sec:   {label:'Cybersecurity & Networks',
           roles:['Security Analyst','Network Admin','SOC Tier 1'],
           learn:['Networking & OS','Threats, vuln scanning','Hardening & incident basics'],
-          certs:['CompTIA Security+','Cisco CCNA','(ISC)² CC']},
+          certs:['CompTIA Security+','Cisco CCNA','(ISC)² CC'],
+          programs:['BSIT - Network Infrastructure & Data Security']},
   sys:   {label:'Systems, Cloud & DevOps',
           roles:['Systems Admin','DevOps Tech','Cloud Support Associate'],
           learn:['Linux/Windows admin','Scripting & automation','Containers & cloud basics'],
-          certs:['AWS Cloud Practitioner','Linux Essentials','Docker/CKA (later)']},
+          certs:['AWS Cloud Practitioner','Linux Essentials','Docker/CKA (later)'],
+          programs:['BSIT - Network Infrastructure & Data Security','BSCS - Software Engineering']},
   ai:    {label:'AI & Machine Learning',
           roles:['ML Engineer (entry)','Data Scientist (jr)','Research Assistant'],
           learn:['Linear algebra & stats','ML workflows & tooling','Responsible AI basics'],
-          certs:['Google ML/AI courses','Microsoft AI-900']},
+          certs:['Google ML/AI courses','Microsoft AI-900'],
+          programs:['BSCS - Data Science','BSCS - Computer Vision','Dual Degree - CS & Engineering']},
   cloud: {label:'Cloud, Blockchain & Emerging Tech',
           roles:['Cloud Practitioner','Blockchain Dev (jr)','Tech Innovator'],
           learn:['Cloud services & IaC','Distributed ledgers (intro)','APIs & integrations'],
-          certs:['AWS/Microsoft Fundamentals','Blockchain foundations']},
+          certs:['AWS/Microsoft Fundamentals','Blockchain foundations'],
+          programs:['BSIT - Consumer & Enterprise Application Development','BSCS - Software Engineering']},
   pm:    {label:'IT Project & Business Analysis',
           roles:['IT Project Coordinator','Business Analyst (jr)','Product Ops'],
           learn:['Project lifecycles & Agile','Requirements & documentation','Stakeholder comms'],
-          certs:['Scrum Master (PSM I)','CAPM','Agile Fundamentals']}
+          certs:['Scrum Master (PSM I)','CAPM','Agile Fundamentals'],
+          programs:['BSIS - Business Analytics','Dual Degree - CS & Business Administration']}
 };
 
 /* ---------- scoring weights ---------- */
@@ -390,57 +386,6 @@ function scoreFromForm(fd){
 function add(obj, key, w){ if(key && key in obj) obj[key]+=w; }
 function addAll(obj, m){ Object.entries(m).forEach(([k,v])=>add(obj,k,v)); }
 
-/* ---------- rendering ---------- */
-function renderResults(scores){
-  const entries = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
-  const top = entries.filter(e=>e[1]>0).slice(0,3);
-  const also = entries.slice(3,5).filter(e=>e[1]>0);
-
-  const resGrid = document.getElementById('resGrid');
-  resGrid.innerHTML = '';
-
-  if(top.length===0){
-    resGrid.innerHTML = '<div class="res"><div class="res__head"><strong>No clear match yet</strong></div><p class="muted">Try selecting at least a few interests and roles, then generate again.</p></div>';
-  }else{
-    top.forEach(([k,score])=>{
-      const c = CATS[k];
-      const roles = (c.roles||[]).slice(0,4).map(r=>`<span class="chip">${r}</span>`).join('');
-      const learn = (c.learn||[]).map(x=>`<li>${x}</li>`).join('');
-      const certs = (c.certs||[]).map(x=>`<li>${x}</li>`).join('');
-      const html = `
-        <article class="res">
-          <div class="res__head">
-            <h3 class="h3" style="margin:0">${c.label}</h3>
-            <span class="score">Score: ${score}</span>
-          </div>
-          <p class="muted">Why this appears: matches your interests, preferred tasks, and target roles.</p>
-          <div class="mini">${roles}</div>
-          <div class="hr"></div>
-          <h4 class="h4" style="margin:0 0 6px;color:#0b234c">Suggested next steps</h4>
-          <ul class="bullets" style="margin:0">
-            ${learn}
-          </ul>
-          <p class="muted" style="margin:8px 0 6px">Starter certifications / badges</p>
-          <ul class="bullets" style="margin:0">
-            ${certs}
-          </ul>
-        </article>`;
-      resGrid.insertAdjacentHTML('beforeend', html);
-    });
-  }
-
-  const alsoBox = document.getElementById('resAlso');
-  if(also.length){
-    const chips = also.map(([k,sc])=>`<span class="chip">${CATS[k].label} · ${sc}</span>`).join(' ');
-    alsoBox.innerHTML = `Also consider: ${chips}`;
-    alsoBox.hidden = false;
-  }else{
-    alsoBox.hidden = true;
-  }
-
-  document.getElementById('cpResults').style.display = 'block';
-}
-
 /* ---------- form handlers ---------- */
 const form = document.getElementById('cpForm');
 form.addEventListener('submit', e=>{
@@ -453,18 +398,16 @@ form.addEventListener('submit', e=>{
     return;
   }
   const scores = scoreFromForm(fd);
-  renderResults(scores);
-  window.scrollTo({top: document.getElementById('cpResults').offsetTop - 20, behavior: 'smooth'});
+  // Store results in sessionStorage and redirect to results page
+  sessionStorage.setItem('pathwayResults', JSON.stringify(scores));
+  window.location.href = '/adamson-ccit/public/index.php?page=career_pathway_results';
 });
 
 document.getElementById('btnReset').addEventListener('click', ()=>{
   form.reset();
   // re-enable any disabled boxes (after limiters)
   document.querySelectorAll('.opts[data-limit] input[type="checkbox"]').forEach(b=> b.disabled=false);
-  document.getElementById('cpResults').style.display='none';
 });
-
-document.getElementById('btnPrint').addEventListener('click', ()=> window.print());
 </script>
 
 </body>

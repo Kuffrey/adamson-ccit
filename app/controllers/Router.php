@@ -93,6 +93,9 @@ class Router {
             case 'about_industry_partners':
                 include __DIR__ . '/../views/about_industry_partners.php'; break;
 
+            case 'deans_corner':
+                include __DIR__ . '/../views/deans_corner.php'; break;
+
             /* -------------------- PUBLIC: NEWS/EVENTS/ANNOUNCEMENTS -------------------- */
             case 'news':
                 include __DIR__ . '/../views/news.php'; break;
@@ -164,6 +167,9 @@ class Router {
             /* -------------------- PUBLIC TOOL -------------------- */
             case 'career_pathway_generator':
                 include __DIR__ . '/../views/career_pathway_generator.php'; break;
+
+            case 'career_pathway_results':
+                include __DIR__ . '/../views/career_pathway_results.php'; break;
 
             case 'virtual_tour':
                 include __DIR__ . '/../views/virtual_tour.php'; break;
