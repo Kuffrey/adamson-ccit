@@ -6,6 +6,253 @@
   <title>Home | AdU-CCIT</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
   <script src="/adamson-ccit/public/assets/js/home.js" defer></script>
+  <style>
+    /* Program cards without images - professional solid color design */
+    .prog__header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 28px 28px 20px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .prog__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      background: #003169;
+      border-radius: 16px;
+      color: white;
+      flex-shrink: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(0, 49, 105, 0.15);
+    }
+    .prog__header h3 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #003169;
+      line-height: 1.3;
+      transition: all 0.3s ease;
+      letter-spacing: -0.02em;
+    }
+    .prog__body {
+      padding: 20px 28px 28px;
+    }
+    .prog__body p {
+      margin: 0;
+      color: #64748b;
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+    .prog__card:hover .prog__icon {
+      background: #0080c9;
+      transform: translateY(-4px) scale(1.1);
+      box-shadow: 0 12px 28px rgba(0, 128, 201, 0.25);
+    }
+    .prog__card:hover .prog__header h3 {
+      color: #0080c9;
+      transform: translateY(-2px);
+    }
+    .prog__card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      background: white;
+      text-decoration: none;
+      display: block;
+      cursor: pointer;
+      position: relative;
+    }
+    .prog__card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: #003169;
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+      transform-origin: left;
+    }
+    .prog__card:hover::before {
+      transform: scaleX(1);
+    }
+    .prog__card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 40px rgba(0, 49, 105, 0.18);
+      border-color: #0080c9;
+    }
+    .prog__card:active {
+      transform: translateY(-2px);
+      transition-duration: 0.1s;
+    }
+    
+    /* Enhanced Why Choose CCIT section */
+    .why__card {
+      display: block !important;
+      text-decoration: none;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(0, 49, 105, 0.06);
+    }
+    .why__card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 60px rgba(0, 49, 105, 0.15);
+      border-color: #0080c9;
+      text-decoration: none;
+    }
+    .why__image {
+      position: relative;
+      height: 220px;
+      overflow: hidden;
+    }
+    .why__image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+      filter: brightness(1.1);
+    }
+    .why__card:hover .why__image img {
+      transform: scale(1.08);
+    }
+    .why__overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(0, 49, 105, 0.85) 0%, rgba(0, 128, 201, 0.75) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    .why__card:hover .why__overlay {
+      opacity: 1;
+    }
+    .why__overlay .why__ico {
+      background: rgba(255, 255, 255, 0.2) !important;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      transform: scale(1.2);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1.2); }
+      50% { transform: scale(1.3); }
+    }
+    .why__content {
+      padding: 28px;
+    }
+    .why__header {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .why__ico {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      background: #0080c9;
+      border-radius: 20px;
+      color: white;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 128, 201, 0.3);
+    }
+    .why__card:hover .why__content .why__ico {
+      background: #003169;
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 8px 25px rgba(0, 49, 105, 0.4);
+    }
+    .why__header h3 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #003169;
+      line-height: 1.3;
+      transition: all 0.3s ease;
+      letter-spacing: -0.02em;
+    }
+    .why__card:hover .why__header h3 {
+      color: #0080c9;
+      transform: translateY(-2px);
+    }
+    .why__body {
+      margin: 0;
+    }
+    .why__body p {
+      margin: 0 0 16px 0;
+      color: #64748b;
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+    .why__link {
+      display: inline-flex;
+      align-items: center;
+      font-weight: 700;
+      color: #0080c9;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid transparent;
+    }
+    .why__card:hover .why__link {
+      color: #003169;
+      border-bottom-color: #003169;
+      transform: translateX(4px);
+    }
+    /* Special styling for cards without images */
+    .why__card:not(:has(.why__image)) .why__header {
+      align-items: flex-start;
+    }
+    .why__card:not(:has(.why__image)) .why__ico {
+      background: #00713D;
+      box-shadow: 0 4px 15px rgba(0, 113, 61, 0.3);
+    }
+    .why__card:not(:has(.why__image)) .why__ico:hover {
+      background: #003169;
+      box-shadow: 0 8px 25px rgba(0, 49, 105, 0.4);
+    }
+    /* Additional polish for the section */
+    .why .sec__head h2 {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #003169;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+    .why .sec__kicker {
+      font-size: 1.2rem;
+      color: #64748b;
+      font-weight: 400;
+      line-height: 1.6;
+    }
+    
+    /* Partners section highlighting */
+    .partners {
+      scroll-margin-top: 100px; /* Native scroll padding */
+      transition: all 0.5s ease;
+    }
+    .partners.highlighted {
+      background: rgba(0, 128, 201, 0.02);
+      box-shadow: 0 12px 40px rgba(0, 128, 201, 0.2);
+    }
+  </style>
 </head>
 <body>
 
@@ -66,14 +313,32 @@
 
       <div class="why__grid">
         <?php foreach (($why['cards'] ?? []) as $card): ?>
-        <article class="why__card">
-          <div class="why__ico" aria-hidden="true">
-            <?= $card['icon'] ?>
+        <a href="<?= htmlspecialchars($card['link_url'], ENT_QUOTES, 'UTF-8') ?>" class="why__card">
+          <?php if (!empty($card['image'])): ?>
+          <div class="why__image">
+            <img src="<?= htmlspecialchars($card['image'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8') ?>" />
+            <div class="why__overlay">
+              <div class="why__ico" aria-hidden="true">
+                <?= $card['icon'] ?>
+              </div>
+            </div>
           </div>
-          <h3><?= htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8') ?></h3>
-          <p><?= htmlspecialchars($card['description'], ENT_QUOTES, 'UTF-8') ?></p>
-          <a class="link" href="<?= htmlspecialchars($card['link_url'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($card['link_label'], ENT_QUOTES, 'UTF-8') ?></a>
-        </article>
+          <?php endif; ?>
+          <div class="why__content">
+            <div class="why__header">
+              <?php if (empty($card['image'])): ?>
+              <div class="why__ico" aria-hidden="true">
+                <?= $card['icon'] ?>
+              </div>
+              <?php endif; ?>
+              <h3><?= htmlspecialchars($card['title'], ENT_QUOTES, 'UTF-8') ?></h3>
+            </div>
+            <div class="why__body">
+              <p><?= htmlspecialchars($card['description'], ENT_QUOTES, 'UTF-8') ?></p>
+              <span class="why__link"><?= htmlspecialchars($card['link_label'] ?: 'Learn more', ENT_QUOTES, 'UTF-8') ?> →</span>
+            </div>
+          </div>
+        </a>
         <?php endforeach; ?>
       </div>
     </div>
@@ -116,11 +381,16 @@
       <div class="prog__grid">
         <?php foreach (($programs['list'] ?? []) as $prog): ?>
         <a class="prog__card" href="<?= htmlspecialchars($prog['url'], ENT_QUOTES, 'UTF-8') ?>">
-          <figure class="prog__media">
-            <img src="<?= htmlspecialchars($prog['image'], ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($prog['image_alt'], ENT_QUOTES, 'UTF-8') ?>" />
-          </figure>
-          <div class="prog__body">
+          <div class="prog__header">
+            <div class="prog__icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+              </svg>
+            </div>
             <h3><?= htmlspecialchars($prog['title'], ENT_QUOTES, 'UTF-8') ?></h3>
+          </div>
+          <div class="prog__body">
             <p><?= htmlspecialchars($prog['description'], ENT_QUOTES, 'UTF-8') ?></p>
           </div>
         </a>
@@ -130,7 +400,7 @@
   </section>
 
 <!-- ========================= CCIT INDUSTRY PARTNERS (carousel + details) ========================= -->
-<section class="partners" aria-labelledby="partners-title">
+<section class="partners" id="partners" aria-labelledby="partners-title">
   <div class="container partners__head">
     <h2 id="partners-title">CCIT Industry Partners</h2>
     <p class="partners__note">Collaborations that support internships, research, and careers.</p>
@@ -447,6 +717,7 @@ function closeEventModal() {
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM Content Loaded - Setting up event listeners');
   
+  // Event modal setup
   const eventLinks = document.querySelectorAll('.event-link');
   console.log('Found event links:', eventLinks.length);
   
@@ -463,6 +734,52 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('Event link clicked, event ID:', eventId);
       if (eventId) {
         openEventModal(eventId);
+      }
+    });
+  });
+
+  // Smooth scrolling for internal links (like #partners)
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      const href = this.getAttribute('href');
+      const targetId = href.substring(1);
+      const targetElement = document.getElementById(targetId);
+      
+      console.log('Anchor clicked:', href);
+      console.log('Target ID:', targetId);
+      console.log('Target element found:', !!targetElement);
+      
+      if (targetElement) {
+        e.preventDefault();
+        
+        // Calculate offset for sticky headers if any
+        const offset = 100; // Increased offset for better visibility
+        const elementPosition = targetElement.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+        console.log('Scrolling to position:', offsetPosition);
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+        
+        // Add a highlight effect to the target section
+        targetElement.style.transition = 'all 0.5s ease';
+        targetElement.style.transform = 'scale(1.01)';
+        targetElement.style.boxShadow = '0 12px 40px rgba(0, 128, 201, 0.2)';
+        targetElement.style.backgroundColor = 'rgba(0, 128, 201, 0.02)';
+        
+        setTimeout(() => {
+          targetElement.style.transform = '';
+          targetElement.style.boxShadow = '';
+          targetElement.style.backgroundColor = '';
+        }, 1500);
+      } else {
+        console.error('Target element not found for:', targetId);
+        // List all available IDs for debugging
+        const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+        console.log('Available IDs:', allIds);
       }
     });
   });

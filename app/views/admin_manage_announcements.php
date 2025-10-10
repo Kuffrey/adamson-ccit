@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!empty($_POST['add_announcement']) && !empty($_POST['title'])) {
       $title = trim($_POST['title']);
       $content = trim($_POST['content'] ?? '');
+      $excerpt = trim($_POST['excerpt'] ?? '');
       $category = $_POST['category'] ?? 'general';
       $nstatus = $_POST['status'] ?? 'draft';
       $date = $_POST['date'] ?? date('Y-m-d');
@@ -49,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
       }
 
-      $aid = Announcement::create($title, $content, $nstatus, $category, $date, $imageUrl);
+      $aid = Announcement::create($title, $content, $nstatus, $category, $date, $imageUrl, $excerpt);
       $notice = $aid ? 'Announcement added successfully!' : 'Failed to add announcement.';
     }
 
@@ -67,15 +68,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Edit announcement
     if (!empty($_POST['edit_announcement']) && !empty($_POST['id'])) {
+      $announcementId = (int)$_POST['id'];
+      $imageUrl = null;
+      $currentImageUrl = trim($_POST['current_image_url'] ?? '');
+      
+      // Debug logging
+      error_log('ADMIN ANNOUNCEMENT EDIT - ID: ' . $announcementId);
+      error_log('ADMIN ANNOUNCEMENT EDIT - POST data: ' . json_encode($_POST));
+      error_log('ADMIN ANNOUNCEMENT EDIT - Current image URL: ' . $currentImageUrl);
+      
+      // Handle image upload or removal
+      if (!empty($_POST['remove_image'])) {
+        // User wants to remove the current image
+        $imageUrl = null;
+        error_log('ADMIN ANNOUNCEMENT EDIT - Removing image');
+        // Optionally delete the physical file
+        if ($currentImageUrl && file_exists(__DIR__ . '/../../public' . str_replace('/adamson-ccit/public', '', $currentImageUrl))) {
+          @unlink(__DIR__ . '/../../public' . str_replace('/adamson-ccit/public', '', $currentImageUrl));
+        }
+      } elseif (!empty($_FILES['image']['tmp_name'])) {
+        // User uploaded a new image
+        error_log('ADMIN ANNOUNCEMENT EDIT - New image uploaded');
+        $imgTmp = $_FILES['image']['tmp_name'];
+        $imgName = time() . '-' . basename($_FILES['image']['name']);
+        $destDir = __DIR__ . '/../../public/uploads/announcements/';
+        if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
+        $dest = $destDir . $imgName;
+        if (move_uploaded_file($imgTmp, $dest)) {
+          $imageUrl = '/adamson-ccit/public/uploads/announcements/' . $imgName;
+          // Remove old image file if it exists
+          if ($currentImageUrl && file_exists(__DIR__ . '/../../public' . str_replace('/adamson-ccit/public', '', $currentImageUrl))) {
+            @unlink(__DIR__ . '/../../public' . str_replace('/adamson-ccit/public', '', $currentImageUrl));
+          }
+        } else {
+          $imageUrl = $currentImageUrl; // Keep current image if upload fails
+        }
+      } else {
+        // No new image uploaded and not removing, keep current image
+        $imageUrl = $currentImageUrl ?: null;
+        error_log('ADMIN ANNOUNCEMENT EDIT - Keeping current image: ' . ($imageUrl ?? 'NULL'));
+      }
+      
       $data = [
         'title' => trim($_POST['title'] ?? ''),
+        'excerpt' => trim($_POST['excerpt'] ?? ''),
         'content' => trim($_POST['content'] ?? ''),
         'category' => $_POST['category'] ?? 'general',
         'date' => $_POST['date'] ?? date('Y-m-d'),
-        'status' => $_POST['edit_status'] ?? 'draft'
+        'status' => $_POST['edit_status'] ?? 'draft',
+        'image_url' => $imageUrl
       ];
-      Announcement::update((int)$_POST['id'], $data);
-      $notice = 'Announcement updated successfully!';
+      
+      error_log('ADMIN ANNOUNCEMENT EDIT - Update data: ' . json_encode($data));
+      
+      $result = Announcement::update($announcementId, $data);
+      error_log('ADMIN ANNOUNCEMENT EDIT - Update result: ' . ($result ? 'SUCCESS' : 'FAILED'));
+      
+      $notice = $result ? 'Announcement updated successfully!' : 'Failed to update announcement!';
     }
 
     // Redirect to prevent double submission
@@ -225,6 +274,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
               </div>
               <div class="mb-3">
+                <label class="form-label">Excerpt</label>
+                <textarea name="excerpt" class="form-control excerpt-field" rows="2" placeholder="Brief summary (optional)" maxlength="255"></textarea>
+                <div class="form-text">Brief summary for announcement cards (<span class="char-count">0</span>/255 characters)</div>
+              </div>
+              <div class="mb-3">
                 <label class="form-label">Content</label>
                 <textarea name="content" class="form-control" rows="4" placeholder="Announcement content" required></textarea>
               </div>
@@ -291,8 +345,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </td>
                         <td>
                           <strong><?= esc($a['title']) ?></strong>
-                          <?php if (!empty($a['content'])): ?>
-                            <br><small class="text-muted"><?= esc(substr(strip_tags($a['content']), 0, 60)) ?>...</small>
+                          <?php 
+                          $excerpt = $a['excerpt'] ?? '';
+                          $content = $a['body'] ?? $a['content'] ?? '';
+                          if (!empty($excerpt)): ?>
+                            <br><small class="text-muted"><strong>Excerpt:</strong> <?= esc(substr($excerpt, 0, 60)) ?>...</small>
+                          <?php elseif (!empty($content)): ?>
+                            <br><small class="text-muted"><?= esc(substr(strip_tags($content), 0, 60)) ?>...</small>
                           <?php endif; ?>
                         </td>
                         <td><span class="badge bg-info"><?= esc($a['category'] ?? 'general') ?></span></td>
@@ -361,7 +420,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="modal fade" id="editAnnouncementModal<?= $a['id'] ?>" tabindex="-1" aria-labelledby="editAnnouncementModalLabel<?= $a['id'] ?>" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <form method="post">
+      <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="edit_announcement" value="1">
         <input type="hidden" name="id" value="<?= $a['id'] ?>">
         <div class="modal-header">
@@ -399,9 +458,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <input type="date" name="date" class="form-control" value="<?= esc($a['date'] ?? date('Y-m-d')) ?>">
             </div>
           </div>
+          
+          <!-- Current Image Display and New Image Upload -->
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Current Image</label>
+              <?php if (!empty($a['image_url'])): ?>
+                <div class="current-image-preview">
+                  <img src="<?= esc($a['image_url']) ?>" alt="Current announcement image" 
+                       style="max-width: 100%; max-height: 150px; border-radius: 8px; border: 1px solid #ddd;">
+                  <input type="hidden" name="current_image_url" value="<?= esc($a['image_url']) ?>">
+                </div>
+              <?php else: ?>
+                <p class="text-muted">No image uploaded</p>
+              <?php endif; ?>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Upload New Image</label>
+              <input type="file" name="image" class="form-control" accept="image/*">
+              <div class="form-text">Leave empty to keep current image. Upload a new image to replace it.</div>
+              
+              <?php if (!empty($a['image_url'])): ?>
+                <div class="form-check mt-2">
+                  <input type="checkbox" name="remove_image" value="1" class="form-check-input" id="removeImage<?= $a['id'] ?>">
+                  <label class="form-check-label text-danger" for="removeImage<?= $a['id'] ?>">
+                    Remove current image
+                  </label>
+                </div>
+              <?php endif; ?>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Excerpt</label>
+            <textarea name="excerpt" class="form-control excerpt-field" rows="2" maxlength="255"><?= esc($a['excerpt'] ?? '') ?></textarea>
+            <div class="form-text">Brief summary for announcement cards (<span class="char-count"><?= strlen($a['excerpt'] ?? '') ?></span>/255 characters)</div>
+          </div>
+          
           <div class="mb-3">
             <label class="form-label">Content</label>
-            <textarea name="content" class="form-control" rows="5"><?= esc($a['content'] ?? '') ?></textarea>
+            <textarea name="content" class="form-control" rows="5"><?= esc($a['body'] ?? $a['content'] ?? '') ?></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -441,6 +537,21 @@ document.addEventListener('DOMContentLoaded', () => {
   form?.addEventListener('input', () => {
     dirty = true;
     saveStatus.textContent = 'Unsaved changes';
+  });
+
+  // Character counting for excerpt fields
+  document.querySelectorAll('.excerpt-field').forEach(field => {
+    const updateCharCount = () => {
+      const charCount = field.value.length;
+      const charCountSpan = field.parentElement.querySelector('.char-count');
+      if (charCountSpan) {
+        charCountSpan.textContent = charCount;
+        charCountSpan.style.color = charCount > 255 ? '#dc3545' : '#6c757d';
+      }
+    };
+    
+    field.addEventListener('input', updateCharCount);
+    updateCharCount(); // Initial count
   });
 
   form?.addEventListener('submit', () => {

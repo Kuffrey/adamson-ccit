@@ -19,15 +19,13 @@ class Program extends Model {
             $data['slug'] = self::generateSlug($data['name']);
         }
         
-        $sql = 'INSERT INTO programs (slug, name, description, image, image_alt, url, is_active)
-                VALUES (:slug, :name, :description, :image, :image_alt, :url, :is_active)';
+        $sql = 'INSERT INTO programs (slug, name, description, url, is_active)
+                VALUES (:slug, :name, :description, :url, :is_active)';
         $stmt = self::db()->prepare($sql);
         return $stmt->execute([
             ':slug'       => trim($data['slug'] ?? ''),
             ':name'       => trim($data['name'] ?? ''),
             ':description'=> trim($data['description'] ?? ''),
-            ':image'      => trim($data['image'] ?? ''),
-            ':image_alt'  => trim($data['image_alt'] ?? ''),
             ':url'        => trim($data['url'] ?? ''),
             ':is_active'  => !empty($data['is_active']) ? 1 : 0,
         ]);
@@ -44,7 +42,7 @@ class Program extends Model {
     // New: update any subset of columns (safe allowlist)
     public static function update($id, array $data) {
         $id = (int)$id;
-        $allow = ['slug','name','description','image','image_alt','url','is_active'];
+        $allow = ['slug','name','description','url','is_active'];
         $set = [];
         $params = [];
         

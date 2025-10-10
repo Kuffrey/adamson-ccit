@@ -73,6 +73,7 @@ final class HomeController
                     'description' => $s['why_faculty_desc'] ?? '',
                     'link_label'  => $s['why_faculty_link_label'] ?? '',
                     'link_url'    => $s['why_faculty_link'] ?? '',
+                    'image'       => $s['why_faculty_image'] ?? '',
                 ],
                 [
                     'icon'        => '<svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M3 5h18v12H3z"/><path fill="currentColor" d="M2 19h20v2H2z"/></svg>',
@@ -80,6 +81,7 @@ final class HomeController
                     'description' => $s['why_facilities_desc'] ?? '',
                     'link_label'  => $s['why_facilities_link_label'] ?? '',
                     'link_url'    => $s['why_facilities_link'] ?? '',
+                    'image'       => $s['why_facilities_image'] ?? '',
                 ],
                 [
                     'icon'        => '<svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M10 2h4l1 3h4a1 1 0 0 1 1 1v13a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6a1 1 0 0 1 1-1h4l1-3zM7 10h10v2H7v-2z"/></svg>',
@@ -87,6 +89,7 @@ final class HomeController
                     'description' => $s['why_career_desc'] ?? '',
                     'link_label'  => $s['why_career_link_label'] ?? '',
                     'link_url'    => $s['why_career_link'] ?? '',
+                    'image'       => $s['why_career_image'] ?? '',
                 ],
             ],
         ];

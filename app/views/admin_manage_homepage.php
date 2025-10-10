@@ -67,8 +67,14 @@ $username = $user['username'] ?? ($_SESSION['user']['username'] ?? 'Admin');
             <tr><td>Why Title</td><td><?= esc($homepage['why_title'] ?? '') ?></td></tr>
             <tr><td>Why Subtitle</td><td><?= esc($homepage['why_subtitle'] ?? '') ?></td></tr>
             <tr><td>Faculty</td><td><?= esc($homepage['why_faculty_text'] ?? '') ?> — <?= esc($homepage['why_faculty_desc'] ?? '') ?></td></tr>
+            <tr><td>Faculty Image</td><td><?= esc($homepage['why_faculty_image'] ?? '—') ?></td></tr>
+            <tr><td>Faculty Link</td><td><?= esc($homepage['why_faculty_link_label'] ?? '') ?> → <?= esc($homepage['why_faculty_link'] ?? '') ?></td></tr>
             <tr><td>Facilities</td><td><?= esc($homepage['why_facilities_text'] ?? '') ?> — <?= esc($homepage['why_facilities_desc'] ?? '') ?></td></tr>
+            <tr><td>Facilities Image</td><td><?= esc($homepage['why_facilities_image'] ?? '—') ?></td></tr>
+            <tr><td>Facilities Link</td><td><?= esc($homepage['why_facilities_link_label'] ?? '') ?> → <?= esc($homepage['why_facilities_link'] ?? '') ?></td></tr>
             <tr><td>Career</td><td><?= esc($homepage['why_career_text'] ?? '') ?> — <?= esc($homepage['why_career_desc'] ?? '') ?></td></tr>
+            <tr><td>Career Image</td><td><?= esc($homepage['why_career_image'] ?? '—') ?></td></tr>
+            <tr><td>Career Link</td><td><?= esc($homepage['why_career_link_label'] ?? '') ?> → <?= esc($homepage['why_career_link'] ?? '') ?></td></tr>
             <tr><td>Spotlight Title</td><td><?= esc($homepage['spotlight_title'] ?? '') ?></td></tr>
             <tr><td>Programs - Undergraduate</td><td><?= esc($homepage['programs_undergrad_blurb'] ?? '') ?></td></tr>
             <tr><td>Programs - Dual Degree</td><td><?= esc($homepage['programs_dual_blurb'] ?? '') ?></td></tr>
@@ -121,14 +127,29 @@ $username = $user['username'] ?? ($_SESSION['user']['username'] ?? 'Admin');
             <div class="form-row">
               <div class="field"><label>Faculty Title</label><input type="text" name="why_faculty_text" value="<?= esc($homepage['why_faculty_text'] ?? '') ?>"></div>
               <div class="field"><label>Faculty Description</label><textarea name="why_faculty_desc" rows="2"><?= esc($homepage['why_faculty_desc'] ?? '') ?></textarea></div>
+              <div class="field"><label>Faculty Image</label><input type="text" name="why_faculty_image" value="<?= esc($homepage['why_faculty_image'] ?? '') ?>" placeholder="/path/to/faculty-image.jpg"></div>
+            </div>
+            <div class="form-row">
+              <div class="field"><label>Faculty Link Label</label><input type="text" name="why_faculty_link_label" value="<?= esc($homepage['why_faculty_link_label'] ?? '') ?>" placeholder="e.g., Meet Our Faculty"></div>
+              <div class="field"><label>Faculty Link URL</label><input type="text" name="why_faculty_link" value="<?= esc($homepage['why_faculty_link'] ?? '') ?>" placeholder="/faculty"></div>
             </div>
             <div class="form-row">
               <div class="field"><label>Facilities Title</label><input type="text" name="why_facilities_text" value="<?= esc($homepage['why_facilities_text'] ?? '') ?>"></div>
               <div class="field"><label>Facilities Description</label><textarea name="why_facilities_desc" rows="2"><?= esc($homepage['why_facilities_desc'] ?? '') ?></textarea></div>
+              <div class="field"><label>Facilities Image</label><input type="text" name="why_facilities_image" value="<?= esc($homepage['why_facilities_image'] ?? '') ?>" placeholder="/path/to/facilities-image.jpg"></div>
+            </div>
+            <div class="form-row">
+              <div class="field"><label>Facilities Link Label</label><input type="text" name="why_facilities_link_label" value="<?= esc($homepage['why_facilities_link_label'] ?? '') ?>" placeholder="e.g., Tour Our Campus"></div>
+              <div class="field"><label>Facilities Link URL</label><input type="text" name="why_facilities_link" value="<?= esc($homepage['why_facilities_link'] ?? '') ?>" placeholder="/facilities"></div>
             </div>
             <div class="form-row">
               <div class="field"><label>Career Title</label><input type="text" name="why_career_text" value="<?= esc($homepage['why_career_text'] ?? '') ?>"></div>
               <div class="field"><label>Career Description</label><textarea name="why_career_desc" rows="2"><?= esc($homepage['why_career_desc'] ?? '') ?></textarea></div>
+              <div class="field"><label>Career Image</label><input type="text" name="why_career_image" value="<?= esc($homepage['why_career_image'] ?? '') ?>" placeholder="/path/to/career-image.jpg"></div>
+            </div>
+            <div class="form-row">
+              <div class="field"><label>Career Link Label</label><input type="text" name="why_career_link_label" value="<?= esc($homepage['why_career_link_label'] ?? '') ?>" placeholder="e.g., Explore Careers"></div>
+              <div class="field"><label>Career Link URL</label><input type="text" name="why_career_link" value="<?= esc($homepage['why_career_link'] ?? '') ?>" placeholder="/careers"></div>
             </div>
           </fieldset>
         </div>

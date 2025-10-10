@@ -19,35 +19,18 @@ if (!function_exists('uploadFacultyAvatar')) {
         
         $file = $_FILES[$fileInput];
         
-        // Log detailed file information for debugging
-        error_log("=== FILE UPLOAD DEBUG ===");
-        error_log("File name: " . $file['name']);
-        error_log("File type (MIME): " . $file['type']);
-        error_log("File size: " . $file['size']);
-        error_log("File error: " . $file['error']);
-        
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-adobe-dng', 'image/dng', 'application/octet-stream'];
-        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'dng'];
-        $maxSize = 20 * 1024 * 1024; // 20MB
+        // Validate file type
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        $maxSize = 5 * 1024 * 1024; // 5MB
         
         // Get file extension
         $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        error_log("File extension: " . $extension);
         
-        // Validate file type - check both MIME type and extension for DNG files
-        $mimeTypeValid = in_array($file['type'], $allowedTypes);
-        $extensionValid = in_array($extension, $allowedExtensions);
-        
-        error_log("MIME type valid: " . ($mimeTypeValid ? 'YES' : 'NO'));
-        error_log("Extension valid: " . ($extensionValid ? 'YES' : 'NO'));
-        
-        if (!$mimeTypeValid && !$extensionValid) {
-            error_log("File upload rejected - Type: " . $file['type'] . ", Extension: " . $extension);
-            throw new Exception('Invalid file type. Please upload a JPEG, PNG, GIF, WebP, or DNG image.');
+        // Validate file type
+        if (!in_array($file['type'], $allowedTypes) && !in_array($extension, $allowedExtensions)) {
+            throw new Exception('Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.');
         }
-        
-        error_log("File validation passed!");
-        error_log("=========================");
         
         // Validate file size
         if ($file['size'] > $maxSize) {
@@ -55,38 +38,19 @@ if (!function_exists('uploadFacultyAvatar')) {
         }
         
         // Create uploads directory if it doesn't exist
-        $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/adamson-ccit/public/uploads/faculty/';
+        $uploadDir = __DIR__ . '/../../../public/uploads/faculty/';
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
         }
         
-        // Debug: Log the actual upload directory path
-        error_log("Upload directory: " . $uploadDir);
-        error_log("Upload directory realpath: " . realpath(dirname($uploadDir)));
-        
         // Generate unique filename
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
         $filename = 'faculty_' . uniqid() . '_' . time() . '.' . $extension;
         $filepath = $uploadDir . $filename;
         
-        // Debug: Log the file path and check if tmp file exists
-        error_log("Upload file path: " . $filepath);
-        error_log("Temp file exists: " . (file_exists($file['tmp_name']) ? 'yes' : 'no'));
-        error_log("Temp file path: " . $file['tmp_name']);
-        
         // Move uploaded file
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-            error_log("move_uploaded_file failed. Last error: " . error_get_last()['message']);
             throw new Exception('Failed to upload file.');
         }
-        
-        // Verify file was actually created
-        if (!file_exists($filepath)) {
-            error_log("File was not created at: " . $filepath);
-            throw new Exception('File upload verification failed.');
-        }
-        
-        error_log("File successfully uploaded to: " . $filepath);
         
         // Return relative URL for database storage
         return '/adamson-ccit/public/uploads/faculty/' . $filename;
@@ -139,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           $currentFaculty = FacultyProfile::getAll();
           foreach ($currentFaculty as $f) {
             if ($f['id'] == $facultyId && !empty($f['avatar_url']) && strpos($f['avatar_url'], '/uploads/faculty/') !== false) {
-              $oldImagePath = __DIR__ . '/../../../../public' . $f['avatar_url'];
+              $oldImagePath = __DIR__ . '/../../../public' . str_replace('/adamson-ccit/public', '', $f['avatar_url']);
               if (file_exists($oldImagePath)) {
                 unlink($oldImagePath);
               }
@@ -162,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $currentFaculty = FacultyProfile::getAll();
       foreach ($currentFaculty as $f) {
         if ($f['id'] == $facultyId && !empty($f['avatar_url']) && strpos($f['avatar_url'], '/uploads/faculty/') !== false) {
-          $imagePath = __DIR__ . '/../../../../public' . $f['avatar_url'];
+          $imagePath = __DIR__ . '/../../../public' . str_replace('/adamson-ccit/public', '', $f['avatar_url']);
           if (file_exists($imagePath)) {
             unlink($imagePath);
           }
@@ -260,10 +224,56 @@ $faculty = FacultyProfile::getAll();
             <form method="post" enctype="multipart/form-data" autocomplete="off">
               <input type="hidden" name="add_faculty" value="1">
               <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Name</label>
-                  <input type="text" class="form-control" name="faculty[name]" required>
+                <div class="col-md-2 mb-3">
+                  <label class="form-label">Prefix</label>
+                  <select class="form-select" name="faculty[prefix]">
+                    <option value="">No Prefix</option>
+                    <option value="Dr.">Dr.</option>
+                    <option value="Prof.">Prof.</option>
+                    <option value="Mr.">Mr.</option>
+                    <option value="Mrs.">Mrs.</option>
+                    <option value="Ms.">Ms.</option>
+                    <option value="Miss.">Miss.</option>
+                    <option value="Rev.">Rev.</option>
+                  </select>
                 </div>
+                <div class="col-md-3 mb-3">
+                  <label class="form-label">First Name</label>
+                  <input type="text" class="form-control" name="faculty[first_name]" placeholder="e.g., John Michael">
+                </div>
+                <div class="col-md-2 mb-3">
+                  <label class="form-label">Middle Initial</label>
+                  <input type="text" class="form-control" name="faculty[middle_initial]" maxlength="10" placeholder="e.g., A. or Antonio">
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label class="form-label">Surname (Last Name) *</label>
+                  <input type="text" class="form-control" name="faculty[surname]" required placeholder="e.g., Dela Cruz">
+                </div>
+                <div class="col-md-2 mb-3">
+                  <label class="form-label">Suffix</label>
+                  <select class="form-select" name="faculty[suffix]">
+                    <option value="">No Suffix</option>
+                    <option value="Jr.">Jr.</option>
+                    <option value="Sr.">Sr.</option>
+                    <option value="III">III</option>
+                    <option value="IV">IV</option>
+                    <option value="V">V</option>
+                    <option value="PhD">PhD</option>
+                    <option value="MIT">MIT</option>
+                    <option value="MSIT">MSIT</option>
+                    <option value="CPA">CPA</option>
+                    <option value="Esq.">Esq.</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-12 mb-3">
+                  <label class="form-label">Full Name (Auto-generated)</label>
+                  <input type="text" class="form-control" name="faculty[name]" readonly placeholder="Will be generated from all name components">
+                  <small class="form-text text-muted">This field is automatically populated from the name components above.</small>
+                </div>
+              </div>
+              <div class="row">
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Department</label>
                   <select class="form-select" name="faculty[dept]" required>
@@ -273,8 +283,6 @@ $faculty = FacultyProfile::getAll();
                     <option value="cs">CS</option>
                   </select>
                 </div>
-              </div>
-              <div class="row">
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Role</label>
                   <select class="form-select" name="faculty[role]" required>
@@ -286,29 +294,25 @@ $faculty = FacultyProfile::getAll();
                     <option value="lecturer">Special Lecturer</option>
                   </select>
                 </div>
+              </div>
+              <div class="row">
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Title</label>
                   <input type="text" class="form-control" name="faculty[title]" 
                          placeholder="e.g., Professor, PhD in Computer Science" required>
                 </div>
-              </div>
-              <div class="row">
                 <div class="col-md-6 mb-3">
-                  <label class="form-label">Avatar URL</label>
-                  <input type="url" class="form-control" name="faculty[avatar_url]" 
-                         placeholder="Link to profile photo">
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Avatar Initials</label>
+                  <label class="form-label">Avatar Initials (Auto-generated)</label>
                   <input type="text" class="form-control" name="faculty[avatar_initials]" 
-                         maxlength="4" placeholder="e.g., JD">
+                         maxlength="4" placeholder="e.g., JD" readonly>
+                  <small class="form-text text-muted">Auto-generated from name components.</small>
                 </div>
               </div>
               <div class="row">
                 <div class="col-md-12 mb-3">
                   <label class="form-label">Profile Image Upload</label>
                   <div class="input-group">
-                    <input type="file" class="form-control" name="faculty_avatar" id="avatarUpload" accept="image/*,.dng" 
+                    <input type="file" class="form-control" name="faculty_avatar" id="avatarUpload" accept="image/*" 
                            onchange="previewAvatar(this, 'avatarPreview')">
                     <button type="button" class="btn btn-outline-secondary" onclick="clearAvatar('avatarUpload', 'avatarPreview')">
                       <i class="fas fa-times"></i> Clear
@@ -323,14 +327,15 @@ $faculty = FacultyProfile::getAll();
               </div>
               <div class="row">
                 <div class="col-md-6 mb-3">
+                  <label class="form-label">Avatar URL (Optional)</label>
+                  <input type="url" class="form-control" name="faculty[avatar_url]" 
+                         placeholder="Link to profile photo">
+                </div>
+                <div class="col-md-6 mb-3">
                   <label class="form-label">Badges</label>
                   <input type="text" class="form-control" name="faculty[badges]" 
                          placeholder="e.g., Administration,PhD,Certified">
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Ordering</label>
-                  <input type="number" class="form-control" name="faculty[ordering]" 
-                         value="0" min="0">
+                  <small class="form-text text-muted">Comma-separated tags/badges for this faculty member.</small>
                 </div>
               </div>
               <button type="submit" class="btn btn-primary">
@@ -365,11 +370,10 @@ $faculty = FacultyProfile::getAll();
                   <thead class="table-dark">
                     <tr>
                       <th>Avatar</th>
-                      <th>Name</th>
+                      <th>Name (Role-Based Ordering)</th>
                       <th>Department</th>
-                      <th>Role</th>
+                      <th>Role & Order</th>
                       <th>Title</th>
-                      <th>Order</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -388,14 +392,21 @@ $faculty = FacultyProfile::getAll();
                         </td>
                         <td>
                           <strong><?= esc($f['name']) ?></strong>
-                          <?php if (!empty($f['badges'] ?? '')): ?>
-                            <br><small class="text-muted"><?= esc($f['badges'] ?? '') ?></small>
+                          <?php if (!empty($f['surname'])): ?>
+                            <br><small class="text-muted">Surname: <?= esc($f['surname']) ?></small>
+                          <?php endif; ?>
+                          <?php if (!empty($f['badges'])): ?>
+                            <br><small class="text-muted"><?= esc($f['badges']) ?></small>
                           <?php endif; ?>
                         </td>
                         <td><span class="badge bg-secondary"><?= esc(ucfirst($f['dept'])) ?></span></td>
-                        <td><?= esc($f['role']) ?></td>
+                        <td>
+                          <span class="badge bg-<?= $f['role'] === 'dean' ? 'danger' : ($f['role'] === 'chair' ? 'warning' : 'info') ?>">
+                            <?= esc(ucfirst($f['role'])) ?>
+                          </span>
+                          <br><small class="text-muted">Order: <?= esc($f['role_order'] ?? 'N/A') ?></small>
+                        </td>
                         <td><?= esc($f['title']) ?></td>
-                        <td><?= esc($f['ordering'] ?? '') ?></td>
                         <td>
                           <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal<?= $f['id'] ?>">
                             <i class="fas fa-edit"></i>
@@ -432,10 +443,56 @@ $faculty = FacultyProfile::getAll();
                   <input type="hidden" name="edit_faculty" value="1">
                   <input type="hidden" name="id" value="<?= (int)$f['id'] ?>">
                   <div class="row">
-                    <div class="col-md-6">
-                      <label class="form-label">Name</label>
-                      <input type="text" class="form-control" name="faculty[name]" value="<?= esc($f['name']) ?>" required>
+                    <div class="col-md-2">
+                      <label class="form-label">Prefix</label>
+                      <select class="form-select" name="faculty[prefix]">
+                        <option value="">No Prefix</option>
+                        <option value="Dr." <?= ($f['prefix'] ?? '') === 'Dr.' ? 'selected' : '' ?>>Dr.</option>
+                        <option value="Prof." <?= ($f['prefix'] ?? '') === 'Prof.' ? 'selected' : '' ?>>Prof.</option>
+                        <option value="Mr." <?= ($f['prefix'] ?? '') === 'Mr.' ? 'selected' : '' ?>>Mr.</option>
+                        <option value="Mrs." <?= ($f['prefix'] ?? '') === 'Mrs.' ? 'selected' : '' ?>>Mrs.</option>
+                        <option value="Ms." <?= ($f['prefix'] ?? '') === 'Ms.' ? 'selected' : '' ?>>Ms.</option>
+                        <option value="Miss." <?= ($f['prefix'] ?? '') === 'Miss.' ? 'selected' : '' ?>>Miss.</option>
+                        <option value="Rev." <?= ($f['prefix'] ?? '') === 'Rev.' ? 'selected' : '' ?>>Rev.</option>
+                      </select>
                     </div>
+                    <div class="col-md-3">
+                      <label class="form-label">First Name</label>
+                      <input type="text" class="form-control" name="faculty[first_name]" value="<?= esc($f['first_name'] ?? '') ?>">
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label">Middle Initial</label>
+                      <input type="text" class="form-control" name="faculty[middle_initial]" value="<?= esc($f['middle_initial'] ?? '') ?>" maxlength="10">
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label">Surname (Last Name) *</label>
+                      <input type="text" class="form-control" name="faculty[surname]" value="<?= esc($f['surname'] ?? '') ?>" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label">Suffix</label>
+                      <select class="form-select" name="faculty[suffix]">
+                        <option value="">No Suffix</option>
+                        <option value="Jr." <?= ($f['suffix'] ?? '') === 'Jr.' ? 'selected' : '' ?>>Jr.</option>
+                        <option value="Sr." <?= ($f['suffix'] ?? '') === 'Sr.' ? 'selected' : '' ?>>Sr.</option>
+                        <option value="III" <?= ($f['suffix'] ?? '') === 'III' ? 'selected' : '' ?>>III</option>
+                        <option value="IV" <?= ($f['suffix'] ?? '') === 'IV' ? 'selected' : '' ?>>IV</option>
+                        <option value="V" <?= ($f['suffix'] ?? '') === 'V' ? 'selected' : '' ?>>V</option>
+                        <option value="PhD" <?= ($f['suffix'] ?? '') === 'PhD' ? 'selected' : '' ?>>PhD</option>
+                        <option value="MIT" <?= ($f['suffix'] ?? '') === 'MIT' ? 'selected' : '' ?>>MIT</option>
+                        <option value="MSIT" <?= ($f['suffix'] ?? '') === 'MSIT' ? 'selected' : '' ?>>MSIT</option>
+                        <option value="CPA" <?= ($f['suffix'] ?? '') === 'CPA' ? 'selected' : '' ?>>CPA</option>
+                        <option value="Esq." <?= ($f['suffix'] ?? '') === 'Esq.' ? 'selected' : '' ?>>Esq.</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="row mt-3">
+                    <div class="col-md-12">
+                      <label class="form-label">Full Name (Auto-generated)</label>
+                      <input type="text" class="form-control" name="faculty[name]" value="<?= esc($f['name']) ?>" readonly>
+                      <small class="form-text text-muted">This field is automatically populated from the name components above.</small>
+                    </div>
+                  </div>
+                  <div class="row mt-3">
                     <div class="col-md-6">
                       <label class="form-label">Department</label>
                       <select class="form-select" name="faculty[dept]" required>
@@ -444,8 +501,6 @@ $faculty = FacultyProfile::getAll();
                         <option value="cs" <?= $f['dept'] === 'cs' ? 'selected' : '' ?>>CS</option>
                       </select>
                     </div>
-                  </div>
-                  <div class="row mt-3">
                     <div class="col-md-6">
                       <label class="form-label">Role</label>
                       <select class="form-select" name="faculty[role]" required>
@@ -456,26 +511,23 @@ $faculty = FacultyProfile::getAll();
                         <option value="lecturer" <?= $f['role'] === 'lecturer' ? 'selected' : '' ?>>Special Lecturer</option>
                       </select>
                     </div>
+                  </div>
+                  <div class="row mt-3">
                     <div class="col-md-6">
                       <label class="form-label">Title</label>
                       <input type="text" class="form-control" name="faculty[title]" value="<?= esc($f['title']) ?>" required>
                     </div>
-                  </div>
-                  <div class="row mt-3">
                     <div class="col-md-6">
-                      <label class="form-label">Avatar URL</label>
-                      <input type="url" class="form-control" name="faculty[avatar_url]" value="<?= esc($f['avatar_url']) ?>">
-                    </div>
-                    <div class="col-md-6">
-                      <label class="form-label">Avatar Initials</label>
-                      <input type="text" class="form-control" name="faculty[avatar_initials]" value="<?= esc($f['avatar_initials'] ?? '') ?>" maxlength="4">
+                      <label class="form-label">Avatar Initials (Auto-generated)</label>
+                      <input type="text" class="form-control" name="faculty[avatar_initials]" value="<?= esc($f['avatar_initials'] ?? '') ?>" maxlength="4" readonly>
+                      <small class="form-text text-muted">Auto-generated from name components.</small>
                     </div>
                   </div>
                   <div class="row mt-3">
                     <div class="col-md-12">
                       <label class="form-label">Update Profile Image</label>
                       <div class="input-group">
-                        <input type="file" class="form-control" name="faculty_avatar_edit_<?= $f['id'] ?>" id="avatarUpload<?= $f['id'] ?>" accept="image/*,.dng" 
+                        <input type="file" class="form-control" name="faculty_avatar_edit_<?= $f['id'] ?>" id="avatarUpload<?= $f['id'] ?>" accept="image/*" 
                                onchange="previewAvatar(this, 'avatarPreview<?= $f['id'] ?>')">
                         <button type="button" class="btn btn-outline-secondary" 
                                 onclick="clearAvatar('avatarUpload<?= $f['id'] ?>', 'avatarPreview<?= $f['id'] ?>')">
@@ -501,12 +553,13 @@ $faculty = FacultyProfile::getAll();
                   </div>
                   <div class="row mt-3">
                     <div class="col-md-6">
-                      <label class="form-label">Badges</label>
-                      <input type="text" class="form-control" name="faculty[badges]" value="<?= esc($f['badges'] ?? '') ?>">
+                      <label class="form-label">Avatar URL (Optional)</label>
+                      <input type="url" class="form-control" name="faculty[avatar_url]" value="<?= esc($f['avatar_url']) ?>">
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label">Ordering</label>
-                      <input type="number" class="form-control" name="faculty[ordering]" value="<?= esc($f['ordering'] ?? '') ?>" min="0">
+                      <label class="form-label">Badges</label>
+                      <input type="text" class="form-control" name="faculty[badges]" value="<?= esc($f['badges'] ?? '') ?>">
+                      <small class="form-text text-muted">Comma-separated tags/badges for this faculty member.</small>
                     </div>
                   </div>
                 </div>
@@ -531,20 +584,20 @@ function previewAvatar(input, previewId) {
   const file = input.files[0];
   
   if (file) {
-    // Validate file size (20MB)
-    if (file.size > 20 * 1024 * 1024) {
-      alert('File size must be less than 20MB.');
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB.');
       input.value = '';
       return;
     }
     
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/x-adobe-dng', 'image/dng', 'application/octet-stream'];
-    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'dng'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     const fileExtension = file.name.toLowerCase().split('.').pop();
     
     if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-      alert('Please upload a JPEG, PNG, GIF, WebP, or DNG image.');
+      alert('Please upload a JPEG, PNG, GIF, or WebP image.');
       input.value = '';
       return;
     }
@@ -579,19 +632,72 @@ function clearAvatar(inputId, previewId) {
   }
 }
 
-// Auto-generate initials from name
+// Auto-generate full name and initials
 document.addEventListener('DOMContentLoaded', function() {
-  const nameInputs = document.querySelectorAll('input[name$="[name]"]');
-  nameInputs.forEach(nameInput => {
-    nameInput.addEventListener('input', function() {
-      const initialsField = this.closest('form').querySelector('input[name$="[avatar_initials]"]');
-      if (initialsField && !initialsField.value) {
-        const name = this.value.trim();
-        if (name) {
-          const words = name.split(' ');
-          const initials = words.map(word => word.charAt(0).toUpperCase()).slice(0, 2).join('');
-          initialsField.value = initials;
+  // Function to update full name from components
+  function updateFullName(form) {
+    const prefix = form.querySelector('select[name$="[prefix]"]')?.value || '';
+    const firstName = form.querySelector('input[name$="[first_name]"]')?.value || '';
+    const middleInitial = form.querySelector('input[name$="[middle_initial]"]')?.value || '';
+    const surname = form.querySelector('input[name$="[surname]"]')?.value || '';
+    const suffix = form.querySelector('select[name$="[suffix]"]')?.value || '';
+    const nameField = form.querySelector('input[name$="[name]"]');
+    
+    if (nameField) {
+      // Build name parts
+      const nameParts = [prefix, firstName, middleInitial, surname].filter(part => part.trim());
+      let fullName = nameParts.join(' ');
+      
+      // Handle suffix with proper comma rules
+      if (suffix.trim()) {
+        // Generational suffixes that don't need commas
+        const generationalSuffixes = ['Jr.', 'Jr', 'Sr.', 'Sr', 'II', 'III', 'IV', 'V', '2nd', '3rd', '4th', '5th'];
+        
+        if (generationalSuffixes.includes(suffix)) {
+          fullName += ' ' + suffix;
+        } else {
+          // Academic titles and other suffixes get commas
+          fullName += ', ' + suffix;
         }
+      }
+      
+      nameField.value = fullName;
+    }
+  }
+  
+  // Function to update initials from name components
+  function updateInitials(form) {
+    const firstName = form.querySelector('input[name$="[first_name]"]')?.value || '';
+    const surname = form.querySelector('input[name$="[surname]"]')?.value || '';
+    const initialsField = form.querySelector('input[name$="[avatar_initials]"]');
+    
+    if (initialsField) {
+      const firstInitial = firstName.charAt(0).toUpperCase();
+      const lastInitial = surname.charAt(0).toUpperCase();
+      
+      // Use only first and last initials
+      const initials = firstInitial + lastInitial;
+      initialsField.value = initials.substring(0, 4);
+    }
+  }
+  
+  // Add event listeners to all forms
+  document.querySelectorAll('form').forEach(form => {
+    // Initialize initials for existing forms
+    updateInitials(form);
+    
+    // Listen for changes to name components
+    ['select[name$="[prefix]"]', 'input[name$="[first_name]"]', 'input[name$="[middle_initial]"]', 'input[name$="[surname]"]', 'select[name$="[suffix]"]'].forEach(selector => {
+      const element = form.querySelector(selector);
+      if (element) {
+        element.addEventListener('input', () => {
+          updateFullName(form);
+          updateInitials(form);
+        });
+        element.addEventListener('change', () => {
+          updateFullName(form);
+          updateInitials(form);
+        });
       }
     });
   });

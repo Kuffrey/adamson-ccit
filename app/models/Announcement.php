@@ -121,7 +121,8 @@ final class Announcement extends Model
         string $status='draft',
         ?string $category='general',
         ?string $date=null,
-        ?string $imageUrl=null
+        ?string $imageUrl=null,
+        ?string $excerpt=null
     ): int {
         $db = parent::db();
 
@@ -135,6 +136,10 @@ final class Announcement extends Model
             'status'   => $status,
             'category' => $category,
         ];
+
+        if (self::has('excerpt') && $excerpt) {
+            $cols['excerpt'] = $excerpt;
+        }
 
         if (self::has('image_url') && $imageUrl) {
             $cols['image_url'] = $imageUrl;
@@ -165,6 +170,63 @@ final class Announcement extends Model
         $st->execute();
 
         return (int)$db->lastInsertId();
+    }
+
+    /** Update an announcement with the given data. */
+    public static function update(int $id, array $data): bool {
+        $id = (int)$id;
+        if ($id <= 0) return false;
+
+        $db = parent::db();
+        $bcol = self::bodyCol();
+        
+        $sets = [];
+        $vals = [':id' => $id];
+
+        // Map input data to database columns
+        $map = [
+            'title'    => 'title',
+            'content'  => $bcol,
+            'excerpt'  => 'excerpt',
+            'category' => 'category',
+            'status'   => 'status',
+        ];
+
+        foreach ($map as $k => $col) {
+            if (array_key_exists($k, $data)) {
+                // Only set if column exists in database
+                if ($k === 'excerpt' && !self::has('excerpt')) continue;
+                
+                $sets[] = "$col = :$k";
+                $vals[":$k"] = $k === 'category' ? strtolower((string)$data[$k]) :
+                               ($k === 'status'   ? strtolower((string)$data[$k]) : $data[$k]);
+            }
+        }
+
+        // Handle image_url if column exists
+        if (self::has('image_url') && array_key_exists('image_url', $data)) {
+            $sets[] = "image_url = :image_url";
+            $vals[':image_url'] = $data['image_url'];
+        }
+
+        // Handle date
+        if (array_key_exists('date', $data) && $data['date']) {
+            $norm = preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['date']) ? ($data['date'].' 00:00:00') : $data['date'];
+            if (self::has('date')) {
+                $sets[] = "date = :date";
+                $vals[':date'] = $norm;
+            } elseif (isset($data['status']) && strtolower($data['status']) === 'published' && self::has('published_at')) {
+                $sets[] = "published_at = :published_at";
+                $vals[':published_at'] = $norm;
+            }
+        }
+
+        if (!$sets) return true; // nothing to update
+
+        $sets[] = "updated_at = NOW()";
+        $sql = "UPDATE announcements SET ".implode(', ', $sets)." WHERE id = :id";
+        $st = $db->prepare($sql);
+        return $st->execute($vals);
     }
 
     /** Update status (sets published_at on first publish if column exists). */

@@ -94,17 +94,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Edit event
     if (!empty($_POST['edit_event']) && !empty($_POST['id'])) {
+      $eventId = (int)$_POST['id'];
+      $imageUrl = null;
+      $currentImageUrl = trim($_POST['current_image_url'] ?? '');
+      
+      // Handle image upload or removal
+      if (!empty($_POST['remove_image'])) {
+        // User wants to remove the current image
+        $imageUrl = null;
+        // Optionally delete the physical file
+        if ($currentImageUrl && file_exists(__DIR__ . '/../../public' . str_replace('/adamson-ccit/public', '', $currentImageUrl))) {
+          @unlink(__DIR__ . '/../../public' . str_replace('/adamson-ccit/public', '', $currentImageUrl));
+        }
+      } elseif (!empty($_FILES['image']['tmp_name'])) {
+        // User uploaded a new image
+        $imgTmp = $_FILES['image']['tmp_name'];
+        $imgName = time() . '-' . basename($_FILES['image']['name']);
+        $destDir = __DIR__ . '/../../public/uploads/events/';
+        if (!is_dir($destDir)) { @mkdir($destDir, 0777, true); }
+        $dest = $destDir . $imgName;
+        if (move_uploaded_file($imgTmp, $dest)) {
+          $imageUrl = '/adamson-ccit/public/uploads/events/' . $imgName;
+          // Remove old image file if it exists
+          if ($currentImageUrl && file_exists(__DIR__ . '/../../public' . str_replace('/adamson-ccit/public', '', $currentImageUrl))) {
+            @unlink(__DIR__ . '/../../public' . str_replace('/adamson-ccit/public', '', $currentImageUrl));
+          }
+        } else {
+          $imageUrl = $currentImageUrl; // Keep current image if upload fails
+        }
+      } else {
+        // No new image uploaded and not removing, keep current image
+        $imageUrl = $currentImageUrl ?: null;
+      }
+      
       $data = [
         'title' => trim($_POST['title'] ?? ''),
         'description' => trim($_POST['description'] ?? ''),
         'location' => trim($_POST['location'] ?? ''),
         'category' => $_POST['category'] ?? 'career',
+        'image_url' => $imageUrl,
         'start_at' => dtfix($_POST['start_at'] ?? null),
         'end_at' => dtfix($_POST['end_at'] ?? null),
         'registration_url' => trim($_POST['registration_url'] ?? '') ?: null,
         'status' => $_POST['edit_status'] ?? 'draft'
       ];
-      Event::update((int)$_POST['id'], $data);
+      Event::update($eventId, $data);
       $notice = 'Event updated successfully!';
     }
 
@@ -414,7 +448,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="modal fade" id="editEventModal<?= $ev['id'] ?>" tabindex="-1" aria-labelledby="editEventModalLabel<?= $ev['id'] ?>" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <form method="post">
+      <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="edit_event" value="1">
         <input type="hidden" name="id" value="<?= $ev['id'] ?>">
         <div class="modal-header">
@@ -452,6 +486,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               <input type="text" name="location" class="form-control" value="<?= esc($ev['location'] ?? '') ?>">
             </div>
           </div>
+          
+          <!-- Current Image Display and New Image Upload -->
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Current Image</label>
+              <?php if (!empty($ev['image_url'])): ?>
+                <div class="current-image-preview">
+                  <img src="<?= esc($ev['image_url']) ?>" alt="Current event image" 
+                       style="max-width: 100%; max-height: 150px; border-radius: 8px; border: 1px solid #ddd;">
+                  <input type="hidden" name="current_image_url" value="<?= esc($ev['image_url']) ?>">
+                </div>
+              <?php else: ?>
+                <p class="text-muted">No image uploaded</p>
+              <?php endif; ?>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Upload New Image</label>
+              <input type="file" name="image" class="form-control" accept="image/*">
+              <div class="form-text">Leave empty to keep current image. Upload a new image to replace it.</div>
+              
+              <?php if (!empty($ev['image_url'])): ?>
+                <div class="form-check mt-2">
+                  <input type="checkbox" name="remove_image" value="1" class="form-check-input" id="removeImage<?= $ev['id'] ?>">
+                  <label class="form-check-label text-danger" for="removeImage<?= $ev['id'] ?>">
+                    Remove current image
+                  </label>
+                </div>
+              <?php endif; ?>
+            </div>
+          </div>
+          
           <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">Start Date & Time</label>

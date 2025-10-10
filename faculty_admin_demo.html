@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Admin Interface Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .demo-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+        }
+        .feature-card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .role-badge {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+        }
+        .order-indicator {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #28a745;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-header">
+        <div class="container">
+            <h1><i class="fas fa-users"></i> Faculty Admin Interface</h1>
+            <p class="lead">Role-Based Ordering + Middle Initial Support</p>
+            <p class="mb-0">✅ Fully Implemented & Ready for Production</p>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <!-- Features Overview -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2 class="text-center mb-4">🎉 New Features Implemented</h2>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-sort-numeric-down fa-3x text-primary mb-3"></i>
+                        <h5>Role-Based Ordering</h5>
+                        <p>Faculty automatically ordered by hierarchy: Dean → Chair → Full-Time → Part-Time → Lecturer</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-signature fa-3x text-success mb-3"></i>
+                        <h5>Middle Initial Support</h5>
+                        <p>Separate field for middle initials with auto-generation of full names and enhanced initials</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-user-edit fa-3x text-info mb-3"></i>
+                        <h5>Enhanced Admin UI</h5>
+                        <p>Structured name input, auto-generation, role color coding, and improved validation</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Faculty Hierarchy Demo -->
+        <div class="row">
+            <div class="col-12">
+                <h2 class="text-center mb-4">📊 Current Faculty Hierarchy</h2>
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-users"></i> Faculty Members (Role-Based Ordering)</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Dean Section -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="order-indicator bg-danger me-2">1</div>
+                                <h6 class="mb-0">👑 DEAN</h6>
+                            </div>
+                            <div class="ps-4">
+                                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-2">
+                                    <div>
+                                        <strong>Dr. Leonard L. Alejandro</strong>
+                                        <br><small class="text-muted">Components: Dr. | Leonard L. | [None] | Alejandro</small>
+                                    </div>
+                                    <span class="badge bg-danger role-badge">DEAN</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-2">
+                                    <div>
+                                        <strong>Dr. Angelo M. De La Cruz</strong>
+                                        <br><small class="text-muted">Components: Dr. | Angelo | M. | De La Cruz</small>
+                                        <br><small class="text-success"><i class="fas fa-check"></i> Has middle initial</small>
+                                    </div>
+                                    <span class="badge bg-danger role-badge">DEAN</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chairpersons Section -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="order-indicator bg-warning me-2">2</div>
+                                <h6 class="mb-0">🪑 CHAIRPERSONS</h6>
+                            </div>
+                            <div class="ps-4">
+                                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-2">
+                                    <div>
+                                        <strong>Ms. Ma. Christina R. Navarro</strong>
+                                        <br><small class="text-muted">Components: Ms. | Ma. Christina R. | [None] | Navarro</small>
+                                    </div>
+                                    <span class="badge bg-warning role-badge">CHAIR</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-2">
+                                    <div>
+                                        <strong>Mr. Archie G. Santiago, MSIT</strong>
+                                        <br><small class="text-muted">Components: Mr. | Archie G. | [None] | Santiago</small>
+                                    </div>
+                                    <span class="badge bg-warning role-badge">CHAIR</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Full-Time Faculty Section -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="order-indicator bg-info me-2">3</div>
+                                <h6 class="mb-0">👨‍🏫 FULL-TIME FACULTY</h6>
+                            </div>
+                            <div class="ps-4">
+                                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-2">
+                                    <div>
+                                        <strong>Dr. Maria Elena S. Rodriguez</strong>
+                                        <br><small class="text-muted">Components: Dr. | Maria Elena | S. | Rodriguez</small>
+                                        <br><small class="text-success"><i class="fas fa-check"></i> Has middle initial</small>
+                                    </div>
+                                    <span class="badge bg-info role-badge">FULL-TIME</span>
+                                </div>
+                                <small class="text-muted">+ 3 more full-time faculty members...</small>
+                            </div>
+                        </div>
+
+                        <!-- Lecturers Section -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="order-indicator bg-secondary me-2">5</div>
+                                <h6 class="mb-0">🎓 LECTURERS</h6>
+                            </div>
+                            <div class="ps-4">
+                                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-2">
+                                    <div>
+                                        <strong>Prof. Ana Maria B. Santos</strong>
+                                        <br><small class="text-muted">Components: Prof. | Ana Maria | B. | Santos</small>
+                                        <br><small class="text-success"><i class="fas fa-check"></i> Has middle initial</small>
+                                    </div>
+                                    <span class="badge bg-secondary role-badge">LECTURER</span>
+                                </div>
+                                <small class="text-muted">+ 1 more lecturer...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Form Preview -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <h2 class="text-center mb-4">🎛️ Admin Form Preview</h2>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Add New Faculty Member</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <label class="form-label">Prefix</label>
+                                <select class="form-select" disabled>
+                                    <option>Dr.</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">First Name</label>
+                                <input type="text" class="form-control" value="Maria Elena" disabled>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Middle Initial</label>
+                                <input type="text" class="form-control" value="S." disabled>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Surname *</label>
+                                <input type="text" class="form-control" value="Rodriguez" disabled>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <label class="form-label">Full Name (Auto-generated)</label>
+                                <input type="text" class="form-control" value="Dr. Maria Elena S. Rodriguez" readonly>
+                                <small class="form-text text-muted">This field is automatically populated from the name components above.</small>
+                            </div>
+                        </div>
+                        <div class="alert alert-success mt-3">
+                            <i class="fas fa-magic"></i> <strong>Auto-Generation Features:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Full name automatically generated from components</li>
+                                <li>Avatar initials include middle initial (MER instead of MR)</li>
+                                <li>Role order automatically assigned based on selected role</li>
+                                <li>Real-time validation and form updates</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Implementation Summary -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">✅ Implementation Complete</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>✅ Database Changes:</h6>
+                                <ul>
+                                    <li>Added <code>middle_initial</code> field (VARCHAR(10))</li>
+                                    <li>Added <code>role_order</code> field (INT)</li>
+                                    <li>Updated existing data with proper role ordering</li>
+                                    <li>Cleaned up duplicate entries</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>✅ Admin Interface Updates:</h6>
+                                <ul>
+                                    <li>Structured name input form</li>
+                                    <li>Auto-generation JavaScript</li>
+                                    <li>Role-based color coding</li>
+                                    <li>Enhanced validation and UX</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6>✅ Model Improvements:</h6>
+                                <ul>
+                                    <li>Updated CRUD operations</li>
+                                    <li>Role-based ordering logic</li>
+                                    <li>Name parsing functions</li>
+                                    <li>Enhanced data validation</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>✅ Ordering System:</h6>
+                                <ul>
+                                    <li>Dean (Order: 1) - Always first</li>
+                                    <li>Chairpersons (Order: 2)</li>
+                                    <li>Full-Time Faculty (Order: 3)</li>
+                                    <li>Part-Time Faculty (Order: 4)</li>
+                                    <li>Lecturers (Order: 5) - Always last</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

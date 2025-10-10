@@ -164,17 +164,6 @@ if (!empty($_GET['success'])) {
                   <input type="text" name="new_program[url]" class="form-control" placeholder="Optional URL">
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label class="form-label">Image URL</label>
-                  <input type="text" name="new_program[image]" class="form-control" placeholder="Image URL">
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Image Alt Text</label>
-                  <input type="text" name="new_program[image_alt]" class="form-control" placeholder="Alt text for image">
-                </div>
-                <div class="col-md-6 mb-3">
                   <label class="form-label">Status</label>
                   <div class="form-check">
                     <input type="checkbox" name="new_program[is_active]" value="1" class="form-check-input" id="new_active" checked>
@@ -311,17 +300,6 @@ if (!empty($_GET['success'])) {
             <div class="col-md-6 mb-3">
               <label class="form-label">URL (optional)</label>
               <input type="text" name="program[<?= (int)$p['id'] ?>][url]" class="form-control" value="<?= esc($p['url'] ?? '') ?>">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Image URL</label>
-              <input type="text" name="program[<?= (int)$p['id'] ?>][image]" class="form-control" value="<?= esc($p['image'] ?? '') ?>">
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Image Alt Text</label>
-              <input type="text" name="program[<?= (int)$p['id'] ?>][image_alt]" class="form-control" value="<?= esc($p['image_alt'] ?? '') ?>">
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Status</label>

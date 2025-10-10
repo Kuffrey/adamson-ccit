@@ -28,15 +28,26 @@ if ($_POST) {
   
   try {
     if ($action === 'save_settings') {
+      // Debug logging
+      error_log('DEBUG: Processing save_settings action');
+      error_log('DEBUG: POST data: ' . json_encode($_POST));
+      
       if (!empty($_POST['gs'])) {
+        error_log('DEBUG: Saving settings: ' . json_encode($_POST['gs']));
         ProgramsGraduateSettings::saveSettings($_POST['gs']);
+        $notice = 'Settings saved successfully!';
       }
       
       if (!empty($_POST['add_card'])) {
+        error_log('DEBUG: Creating card: ' . json_encode($_POST['add_card']));
         ProgramsGraduateSettings::createCard($_POST['add_card']);
+        $notice = 'Program card added successfully!';
       }
       
-      $notice = 'Changes saved successfully!';
+      if (empty($_POST['gs']) && empty($_POST['add_card'])) {
+        $notice = 'No data to save.';
+      }
+      
     } elseif ($action === 'delete_card') {
       ProgramsGraduateSettings::deleteCard((int)($_POST['card_id'] ?? 0));
       $notice = 'Card deleted successfully!';
@@ -132,7 +143,7 @@ if ($_POST) {
             </div>
           </div>
           
-          <div class="collapse" id="subheroCollapse">
+          <div class="collapse show" id="subheroCollapse">
             <div class="card-body">
               <div class="row">
                 <div class="col-md-6 mb-3">
@@ -148,7 +159,49 @@ if ($_POST) {
           </div>
         </div>
 
-        <!-- Add Program Card -->
+        <!-- Call to Action -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0">Call to Action</h5>
+              <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
+                      data-bs-target="#ctaCollapse" aria-expanded="false" aria-controls="ctaCollapse">
+                <i class="fas fa-chevron-down"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="collapse" id="ctaCollapse">
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Title</label>
+                  <input type="text" class="form-control" name="gs[cta_title]" value="<?= esc($gs['cta_title'] ?? '') ?>">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Description</label>
+                  <input type="text" class="form-control" name="gs[cta_description]" value="<?= esc($gs['cta_description'] ?? '') ?>">
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Action URL</label>
+                  <input type="text" class="form-control" name="gs[cta_action_url]" value="<?= esc($gs['cta_action_url'] ?? '') ?>">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Action Label</label>
+                  <input type="text" class="form-control" name="gs[cta_action_label]" value="<?= esc($gs['cta_action_label'] ?? '') ?>">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Add Program Card - Separate Form -->
+      <form id="addCardForm" method="post" autocomplete="off">
+        <input type="hidden" name="action" value="save_settings">
+        
         <div class="card mb-4">
           <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
@@ -164,7 +217,7 @@ if ($_POST) {
             <div class="card-body">
               <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
-                Fill this and click <strong>Save Changes</strong>. Will add as a new card (positioned last).
+                Fill this and click <strong>Add Program Card</strong>. Will add as a new card (positioned last).
               </div>
 
               <div class="row mb-3">
@@ -231,43 +284,11 @@ if ($_POST) {
                 <label class="form-label">Apply URL</label>
                 <input type="text" class="form-control" name="add_card[apply_url]" placeholder="/adamson-ccit/public/index.php?page=admission_graduate_school">
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Call to Action -->
-        <div class="card mb-4">
-          <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="card-title mb-0">Call to Action</h5>
-              <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
-                      data-bs-target="#ctaCollapse" aria-expanded="false" aria-controls="ctaCollapse">
-                <i class="fas fa-chevron-down"></i>
-              </button>
-            </div>
-          </div>
-          
-          <div class="collapse" id="ctaCollapse">
-            <div class="card-body">
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Title</label>
-                  <input type="text" class="form-control" name="gs[cta_title]" value="<?= esc($gs['cta_title'] ?? '') ?>">
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Description</label>
-                  <input type="text" class="form-control" name="gs[cta_description]" value="<?= esc($gs['cta_description'] ?? '') ?>">
-                </div>
-              </div>
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Action URL</label>
-                  <input type="text" class="form-control" name="gs[cta_action_url]" value="<?= esc($gs['cta_action_url'] ?? '') ?>">
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Action Label</label>
-                  <input type="text" class="form-control" name="gs[cta_action_label]" value="<?= esc($gs['cta_action_label'] ?? '') ?>">
-                </div>
+              
+              <div class="text-end">
+                <button type="submit" class="btn btn-success">
+                  <i class="fas fa-plus"></i> Add Program Card
+                </button>
               </div>
             </div>
           </div>
@@ -485,19 +506,25 @@ if ($_POST) {
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('gradForm');
+  const gradForm = document.getElementById('gradForm');
+  const addCardForm = document.getElementById('addCardForm');
   const saveStatus = document.getElementById('saveStatus');
   let dirty = false;
 
-  // Track changes
-  form?.addEventListener('input', () => {
+  // Track changes for settings form
+  gradForm?.addEventListener('input', () => {
     dirty = true;
     saveStatus.textContent = 'Unsaved changes';
   });
 
-  form?.addEventListener('submit', () => {
+  gradForm?.addEventListener('submit', () => {
     dirty = false;
     saveStatus.textContent = 'Saving...';
+  });
+
+  // Handle add card form submission
+  addCardForm?.addEventListener('submit', () => {
+    saveStatus.textContent = 'Adding card...';
   });
 
   // Prevent accidental navigation

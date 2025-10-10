@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Avatar Initials Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-case { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        input { margin: 5px; padding: 5px; }
+        .result { font-weight: bold; color: green; }
+    </style>
+</head>
+<body>
+    <h1>Avatar Initials Generation Test</h1>
+    
+    <div class="test-case">
+        <h3>Test Form</h3>
+        <form>
+            <label>First Name: </label>
+            <input type="text" name="faculty[first_name]" placeholder="Enter first name" value="">
+            <br>
+            <label>Surname: </label>
+            <input type="text" name="faculty[surname]" placeholder="Enter surname" value="">
+            <br>
+            <label>Avatar Initials: </label>
+            <input type="text" name="faculty[avatar_initials]" readonly style="background: #f5f5f5;">
+            <br>
+            <button type="button" onclick="testUpdate(this.form)">Update Initials</button>
+        </form>
+    </div>
+
+    <div class="test-case">
+        <h3>Pre-filled Test Cases</h3>
+        <div id="testResults"></div>
+    </div>
+
+<script>
+// Function to update initials from name components (same as in admin)
+function updateInitials(form) {
+    const firstName = form.querySelector('input[name$="[first_name]"]')?.value || '';
+    const surname = form.querySelector('input[name$="[surname]"]')?.value || '';
+    const initialsField = form.querySelector('input[name$="[avatar_initials]"]');
+    
+    if (initialsField) {
+        const firstInitial = firstName.charAt(0).toUpperCase();
+        const lastInitial = surname.charAt(0).toUpperCase();
+        
+        // Use only first and last initials
+        const initials = firstInitial + lastInitial;
+        initialsField.value = initials.substring(0, 4);
+    }
+}
+
+function testUpdate(form) {
+    updateInitials(form);
+}
+
+// Test cases
+const testCases = [
+    { first: 'John', last: 'Doe', expected: 'JD' },
+    { first: 'Maria', last: 'Garcia', expected: 'MG' },
+    { first: 'Leonard', last: 'Alejandro', expected: 'LA' },
+    { first: 'A', last: 'B', expected: 'AB' },
+    { first: '', last: 'Smith', expected: 'S' },
+    { first: 'John', last: '', expected: 'J' },
+    { first: '', last: '', expected: '' }
+];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const resultsDiv = document.getElementById('testResults');
+    
+    testCases.forEach((testCase, index) => {
+        // Create a temporary form for testing
+        const testForm = document.createElement('form');
+        testForm.innerHTML = `
+            <input type="text" name="faculty[first_name]" value="${testCase.first}">
+            <input type="text" name="faculty[surname]" value="${testCase.last}">
+            <input type="text" name="faculty[avatar_initials]">
+        `;
+        
+        // Update initials
+        updateInitials(testForm);
+        
+        const actual = testForm.querySelector('input[name$="[avatar_initials]"]').value;
+        const passed = actual === testCase.expected;
+        
+        const resultDiv = document.createElement('div');
+        resultDiv.innerHTML = `
+            <strong>Test ${index + 1}:</strong> 
+            First: "${testCase.first}", Last: "${testCase.last}" → 
+            Expected: "${testCase.expected}", Got: "${actual}" 
+            <span style="color: ${passed ? 'green' : 'red'}">${passed ? '✅ PASS' : '❌ FAIL'}</span>
+        `;
+        resultsDiv.appendChild(resultDiv);
+    });
+    
+    // Add event listeners to the interactive form
+    const form = document.querySelector('form');
+    ['input[name$="[first_name]"]', 'input[name$="[surname]"]'].forEach(selector => {
+        const element = form.querySelector(selector);
+        if (element) {
+            element.addEventListener('input', () => updateInitials(form));
+        }
+    });
+    
+    // Initialize
+    updateInitials(form);
+});
+</script>
+</body>
+</html>
