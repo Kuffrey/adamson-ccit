@@ -1,12 +1,10 @@
 <?php
 require_once __DIR__ . '/../app/lib/Auth.php';
 require_once __DIR__ . '/../app/models/Model.php';
+require_once __DIR__ . '/../app/models/DeanPortfolio.php';
 
 // Ensure user is authenticated as dean
 Auth::requireRole(['dean'], '/adamson-ccit/public/index.php?page=login');
-
-class _DBX extends Model { public function d(){ return parent::db(); } }
-$_db = (new _DBX())->d();
 
 $user = Auth::user() ?? [];
 $deanId = $user['id'] ?? null;
@@ -16,133 +14,179 @@ if (!$deanId) {
     exit;
 }
 
-// Handle portfolio save - check for POST data
-if ($_POST && isset($_POST['mode'])) {
-    $mode = $_POST['mode']; // 'create' or 'update'
-    $id = (int)($_POST['id'] ?? 0);
-    
-    // Validate required fields
-    $errors = [];
-    $name = trim($_POST['name'] ?? '');
-    $companyId = (int)($_POST['company_id'] ?? 0);
-    
-    if (empty($name)) {
-        $errors[] = 'Certification name is required';
-    }
-    if (empty($companyId)) {
-        $errors[] = 'Issuing organization is required';
-    }
+// Handle all portfolio actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Handle Edit Profile Information
+    if ($_POST['action'] === 'edit_profile') {
+        $userId = intval($_POST['user_id'] ?? 0);
+        $data = [
+            'full_name' => trim($_POST['full_name'] ?? ''),
+            'employee_id' => trim($_POST['employee_id'] ?? ''),
+            'work_email' => trim($_POST['work_email'] ?? ''),
+            'position' => trim($_POST['position'] ?? ''),
+            'department' => trim($_POST['department'] ?? ''),
+            'employment_type' => trim($_POST['employment_type'] ?? ''),
+            'date_hired' => $_POST['date_hired'] ?? null,
+            'office_location' => trim($_POST['office_location'] ?? ''),
+            'status' => trim($_POST['status'] ?? ''),
+            'bio' => trim($_POST['bio'] ?? ''),
+            'specializations' => trim($_POST['specializations'] ?? ''),
+            'languages' => trim($_POST['languages'] ?? '')
+        ];
 
-    if (empty($errors)) {
-        try {
-            // Prepare data
-            $data = [
-                'user_id' => $deanId,
-                'name' => $name,
-                'company_id' => $companyId,
-                'issue_month' => !empty($_POST['issue_month']) ? (int)$_POST['issue_month'] : null,
-                'issue_year' => !empty($_POST['issue_year']) ? (int)$_POST['issue_year'] : null,
-                'expires' => isset($_POST['no_expire']) ? 0 : 1, // 0 = no expiry, 1 = has expiry
-                'expire_month' => !empty($_POST['expire_month']) ? (int)$_POST['expire_month'] : null,
-                'expire_year' => !empty($_POST['expire_year']) ? (int)$_POST['expire_year'] : null,
-                'credential_id' => trim($_POST['credential_id'] ?? ''),
-                'credential_url' => trim($_POST['credential_url'] ?? ''),
-                'visibility' => trim($_POST['visibility'] ?? 'public')
-            ];
-
-            // Clear expiry data if no_expire is checked
-            if (!$data['expires']) {
-                $data['expire_month'] = null;
-                $data['expire_year'] = null;
-            }
-
-            $_db->beginTransaction();
-            
-            if ($mode === 'create') {
-                // Insert new certification
-                $insertSQL = "INSERT INTO faculty_portfolio 
-                    (user_id, name, company_id, issue_month, issue_year, expires, expire_month, expire_year, credential_id, credential_url, visibility, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
-                $stmt = $_db->prepare($insertSQL);
-                $stmt->execute([
-                    $data['user_id'], $data['name'], $data['company_id'], 
-                    $data['issue_month'], $data['issue_year'], $data['expires'], 
-                    $data['expire_month'], $data['expire_year'], $data['credential_id'], 
-                    $data['credential_url'], $data['visibility']
-                ]);
-            } else {
-                // Update existing certification - ensure it belongs to this dean
-                $checkStmt = $_db->prepare("SELECT id FROM faculty_portfolio WHERE id = ? AND user_id = ?");
-                $checkStmt->execute([$id, $deanId]);
-                
-                if (!$checkStmt->fetch()) {
-                    throw new Exception('Certification not found or access denied');
+        // Handle profile photo upload
+        if (!empty($_FILES['profile_photo']['name']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . '/../public/assets/images/';
+            $ext = strtolower(pathinfo($_FILES['profile_photo']['name'], PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+            if (in_array($ext, $allowed)) {
+                $filename = 'profile_' . $userId . '_' . time() . '.' . $ext;
+                $targetPath = $uploadDir . $filename;
+                if (move_uploaded_file($_FILES['profile_photo']['tmp_name'], $targetPath)) {
+                    $data['profile_photo'] = '/adamson-ccit/public/assets/images/' . $filename;
                 }
-                
-                $updateSQL = "UPDATE faculty_portfolio SET 
-                    name = ?, company_id = ?, issue_month = ?, issue_year = ?, expires = ?, 
-                    expire_month = ?, expire_year = ?, credential_id = ?, credential_url = ?, 
-                    visibility = ?, updated_at = CURRENT_TIMESTAMP 
-                    WHERE id = ? AND user_id = ?";
-                $stmt = $_db->prepare($updateSQL);
-                $stmt->execute([
-                    $data['name'], $data['company_id'], $data['issue_month'], $data['issue_year'], 
-                    $data['expires'], $data['expire_month'], $data['expire_year'], $data['credential_id'], 
-                    $data['credential_url'], $data['visibility'], $id, $deanId
-                ]);
             }
-            
-            $_db->commit();
-            
-            // Redirect back to portfolio with success message
-            header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&saved=1');
-            exit;
-            
-        } catch (Exception $e) {
-            if (isset($_db)) {
-                $_db->rollback();
+        } else {
+            // Keep existing photo if not uploading new one
+            $profile = DeanPortfolio::getProfile($userId);
+            if (!empty($profile['profile_photo'])) {
+                $data['profile_photo'] = $profile['profile_photo'];
             }
-            error_log("Dean portfolio save error: " . $e->getMessage());
-            $error = 'Failed to save certification. Please try again.';
         }
-    } else {
-        $error = implode(', ', $errors);
-    }
-    
-    // If we get here, there was an error
-    header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&error=' . urlencode($error));
-    exit;
-}
 
-// Handle delete request
-if ($_GET && isset($_GET['id']) && isset($_GET['page']) && $_GET['page'] === 'dean_portfolio_delete') {
-    $id = (int)$_GET['id'];
-    
-    try {
-        $_db->beginTransaction();
-        
-        // Delete certification - ensure it belongs to this dean
-        $deleteStmt = $_db->prepare("DELETE FROM faculty_portfolio WHERE id = ? AND user_id = ?");
-        $result = $deleteStmt->execute([$id, $deanId]);
-        
-        if ($deleteStmt->rowCount() === 0) {
-            throw new Exception('Certification not found or access denied');
+        $result = DeanPortfolio::updateProfile($userId, $data);
+        if ($result) {
+            header('Location: /adamson-ccit/app/views/dean/dean_portfolio.php?saved=1&folder=general');
+            exit;
+        } else {
+            header('Location: /adamson-ccit/app/views/dean/dean_portfolio.php?error=Unable to save profile&folder=general');
+            exit;
         }
+    }
+
+    try {
+        $action = $_POST['action'];
         
-        $_db->commit();
-        
-        // Redirect back with success message
-        header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&deleted=1');
-        exit;
+        switch ($action) {
+            case 'add_certification':
+                $result = DeanPortfolio::createCertification($deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=certifications&saved=1');
+                exit;
+                
+            case 'edit_certification':
+                $certId = $_POST['cert_id'] ?? $_POST['id'];
+                $result = DeanPortfolio::updateCertification($certId, $deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=certifications&saved=1');
+                exit;
+                
+            case 'delete_certification':
+                $certId = $_POST['cert_id'] ?? $_POST['id'];
+                $result = DeanPortfolio::deleteCertification($certId, $deanId);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=certifications&deleted=1');
+                exit;
+                
+            case 'add_experience':
+                $result = DeanPortfolio::createExperience($deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=experience&saved=1');
+                exit;
+                
+            case 'edit_experience':
+                $result = DeanPortfolio::updateExperience($_POST['exp_id'], $deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=experience&saved=1');
+                exit;
+                
+            case 'delete_experience':
+                $result = DeanPortfolio::deleteExperience($_POST['exp_id'], $deanId);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=experience&deleted=1');
+                exit;
+                
+            case 'add_education':
+                $result = DeanPortfolio::createEducation($deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=education&saved=1');
+                exit;
+                
+            case 'edit_education':
+                $result = DeanPortfolio::updateEducation($_POST['edu_id'], $deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=education&saved=1');
+                exit;
+                
+            case 'delete_education':
+                $result = DeanPortfolio::deleteEducation($_POST['edu_id'], $deanId);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=education&deleted=1');
+                exit;
+                
+            case 'edit_personal':
+                $result = DeanPortfolio::updatePersonal($deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=personal&saved=1');
+                exit;
+                
+            case 'add_research':
+                $result = DeanPortfolio::createResearch($deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=research&saved=1');
+                exit;
+                
+            case 'edit_research':
+                $result = DeanPortfolio::updateResearch($_POST['research_id'], $deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=research&saved=1');
+                exit;
+                
+            case 'delete_research':
+                $result = DeanPortfolio::deleteResearch($_POST['research_id'], $deanId);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=research&deleted=1');
+                exit;
+                
+            case 'add_training':
+                $result = DeanPortfolio::createTraining($deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=trainings&saved=1');
+                exit;
+            case 'edit_training':
+                $result = DeanPortfolio::updateTraining($_POST['training_id'], $deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=trainings&saved=1');
+                exit;
+            case 'delete_training':
+                $result = DeanPortfolio::deleteTraining($_POST['training_id'], $deanId);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=trainings&deleted=1');
+                exit;
+
+            case 'add_performance':
+                $result = DeanPortfolio::createPerformance($deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=performance&saved=1');
+                exit;
+            case 'edit_performance':
+                $result = DeanPortfolio::updatePerformance($_POST['performance_id'], $deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=performance&saved=1');
+                exit;
+            case 'delete_performance':
+                $result = DeanPortfolio::deletePerformance($_POST['performance_id'], $deanId);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=performance&deleted=1');
+                exit;
+
+            case 'add_award':
+                $result = DeanPortfolio::createAward($deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=awards&saved=1');
+                exit;
+            case 'edit_award':
+                $result = DeanPortfolio::updateAward($_POST['award_id'], $deanId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=awards&saved=1');
+                exit;
+            case 'delete_award':
+                $result = DeanPortfolio::deleteAward($_POST['award_id'], $deanId);
+                header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&folder=awards&deleted=1');
+                exit;
+                
+            default:
+                throw new Exception('Invalid action: ' . $action);
+        }
         
     } catch (Exception $e) {
-        if (isset($_db)) {
-            $_db->rollback();
-        }
-        error_log("Dean portfolio delete error: " . $e->getMessage());
-        $error = 'Failed to delete certification. Please try again.';
+        error_log("Dean portfolio handler error: " . $e->getMessage());
+        $error = 'Failed to process request: ' . $e->getMessage();
         header('Location: /adamson-ccit/public/index.php?page=dean_portfolio&error=' . urlencode($error));
         exit;
     }
 }
+
+// If no valid POST action, redirect to portfolio
+header('Location: /adamson-ccit/public/index.php?page=dean_portfolio');
+exit;
 ?>

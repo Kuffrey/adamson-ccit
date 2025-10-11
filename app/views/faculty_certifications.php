@@ -150,7 +150,18 @@ foreach ($grouped as $year => $issuersData) {
                   <div class="cert-list" style="display: grid; gap: 8px;">
                     <?php foreach ($certs as $cert_title => $cert): ?>
                       <div class="cert-item" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-                        <div style="font-weight: 600; color: #0b234c; margin-bottom: 4px;">• <?= htmlspecialchars($cert_title) ?></div>
+                        <div style="font-weight: 600; color: #0b234c; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                          • <?= htmlspecialchars($cert_title) ?>
+                          <?php 
+                          // Add status indicators for expired/revoked certifications
+                          if (isset($cert['status'])):
+                            if ($cert['status'] === 'Expired'): ?>
+                              <span style="background: #fee2e2; color: #dc2626; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700;">EXPIRED</span>
+                            <?php elseif ($cert['status'] === 'Revoked'): ?>
+                              <span style="background: #fef2f2; color: #dc2626; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700;">REVOKED</span>
+                            <?php endif;
+                          endif; ?>
+                        </div>
                         <ul style="margin: 0 0 0 16px; padding: 0; list-style: disc; color: #64748b; font-size: 14px;">
                           <?php foreach ($cert['faculty'] as $faculty_name): ?>
                             <li style="margin-bottom: 2px;"><?= htmlspecialchars($faculty_name) ?></li>

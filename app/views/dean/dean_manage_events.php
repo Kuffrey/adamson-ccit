@@ -192,77 +192,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
+<?php
+// We only collect modal markup here and print it at the end of <body>.
+$__eventsCollectedModals = '';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Events | CCIT Dean</title>
-    <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
-    <link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
+    <link rel="stylesheet" href="/adamson-ccit/public/assets/css/dean.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="admin-cms-layout">
+    <div class="admin-layout">
         <?php include __DIR__ . '/_dean_sidebar.php'; ?>
-        
         <main class="admin-main">
             <header class="admin-topbar">
-                <span class="admin-topbar__title">Events Management</span>
-                <div class="admin-topbar__spacer"></div>
-                <div class="admin-topbar__user">
-                    <span class="admin-topbar__avatar"><?= esc(strtoupper($username[0] ?? 'D')) ?></span>
-                    <span class="admin-topbar__name"><?= esc($username) ?></span>
-                </div>
+                <button class="topbar__btn hide-desktop" type="button" aria-label="Open navigation menu" data-sb-open>
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="admin-topbar__title">CCIT Events Management</span>
+                <span class="admin-topbar__spacer"></span>
             </header>
+            <section class="admin-section">
 
-            <section class="admin-cms-section">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h1 class="admin-cms-section__title mb-1">Events Management</h1>
-                        <p class="text-muted mb-0">Create and manage department events</p>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <div class="badge bg-primary">Total: <?= $counts['all'] ?></div>
-                        <div class="badge bg-success">Published: <?= $counts['published'] ?></div>
-                        <div class="badge bg-warning">Draft: <?= $counts['draft'] ?></div>
-                    </div>
-                </div>
-
+                <!-- Enhanced message handling -->
                 <?php if ($notice): ?>
-                    <div class="alert <?= str_starts_with($notice, 'Error') ? 'alert-danger' : 'alert-success' ?> alert-dismissible fade show" role="alert">
-                        <i class="fas <?= str_starts_with($notice, 'Error') ? 'fa-exclamation-triangle' : 'fa-check-circle' ?> me-2"></i>
+                    <div class="alert <?= str_starts_with($notice, 'Error') ? 'alert-danger' : 'alert-success' ?> alert-dismissible fade show modern-alert" role="alert">
+                        <i class="fas <?= str_starts_with($notice, 'Error') ? 'fa-exclamation-circle' : 'fa-check-circle' ?>"></i>
                         <?= esc($notice) ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 <?php endif; ?>
 
                 <!-- Filter Tabs -->
-                <div class="card mb-4">
+                <div class="card">
                     <div class="card-body">
-                        <ul class="nav nav-pills">
-                            <li class="nav-item">
-                                <a class="nav-link <?= $status === 'all' ? 'active' : '' ?>" href="?page=dean_manage_events&status=all">
-                                    All Events (<?= $counts['all'] ?>)
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <?= $status === 'published' ? 'active' : '' ?>" href="?page=dean_manage_events&status=published">
-                                    Published (<?= $counts['published'] ?>)
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <?= $status === 'draft' ? 'active' : '' ?>" href="?page=dean_manage_events&status=draft">
-                                    Draft (<?= $counts['draft'] ?>)
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <?= $status === 'archived' ? 'active' : '' ?>" href="?page=dean_manage_events&status=archived">
-                                    Archived (<?= $counts['archived'] ?>)
-                                </a>
-                            </li>
-                        </ul>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <ul class="nav nav-pills">
+                                <li class="nav-item">
+                                    <a class="nav-link <?= $status === 'all' ? 'active' : '' ?>" href="?page=dean_manage_events&status=all">
+                                        All Events (<?= $counts['all'] ?>)
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link <?= $status === 'published' ? 'active' : '' ?>" href="?page=dean_manage_events&status=published">
+                                        Published (<?= $counts['published'] ?>)
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link <?= $status === 'draft' ? 'active' : '' ?>" href="?page=dean_manage_events&status=draft">
+                                        Draft (<?= $counts['draft'] ?>)
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link <?= $status === 'archived' ? 'active' : '' ?>" href="?page=dean_manage_events&status=archived">
+                                        Archived (<?= $counts['archived'] ?>)
+                                    </a>
+                                </li>
+                            </ul>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEventModal">
+                                <i class="fas fa-plus me-2"></i>Add Event
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -289,39 +284,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </thead>
                                 <tbody>
                                     <?php foreach ($pendingEventSubmissions as $submission): ?>
+                                        <?php
+                                            $sid = (int)$submission['id'];
+                                            $sfac = esc($submission['faculty_name'] ?? 'Unknown Faculty');
+                                            $sdept = esc($submission['department_name'] ?? '');
+                                            $stitle = esc($submission['title']);
+                                            $scat = esc($submission['category'] ?? 'Event');
+                                            $ssub = date('M j, Y g:i A', strtotime($submission['submitted_at']));
+                                        ?>
                                         <tr>
                                             <td>
-                                                <strong><?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?></strong>
-                                                <br><small class="text-muted"><?= esc($submission['department_name'] ?? '') ?></small>
+                                                <strong><?= $sfac ?></strong>
+                                                <br><small class="text-muted"><?= $sdept ?></small>
                                             </td>
                                             <td>
-                                                <strong><?= esc($submission['title']) ?></strong>
-                                                <?php if (!empty($submission['description'])): ?>
-                                                    <br><small class="text-muted"><?= esc(substr($submission['description'], 0, 100)) ?>...</small>
-                                                <?php endif; ?>
+                                                <strong><?= $stitle ?></strong>
                                             </td>
                                             <td>
-                                                <span class="badge bg-info"><?= esc($submission['category'] ?? 'Event') ?></span>
+                                                <span class="badge badge--category"><?= $scat ?></span>
                                             </td>
                                             <td>
-                                                <small><?= date('M j, Y g:i A', strtotime($submission['submitted_at'])) ?></small>
+                                                <small><?= $ssub ?></small>
                                             </td>
                                             <td>
                                                 <div class="btn-group" role="group">
                                                     <button type="button" class="btn btn-success btn-sm" 
-                                                            data-bs-toggle="modal" data-bs-target="#approveEventModal<?= $submission['id'] ?>">
+                                                            data-bs-toggle="modal" data-bs-target="#approveEventModal<?= $sid ?>">
                                                         <i class="fas fa-check"></i> Approve
                                                     </button>
                                                     <button type="button" class="btn btn-danger btn-sm" 
-                                                            data-bs-toggle="modal" data-bs-target="#rejectEventModal<?= $submission['id'] ?>">
+                                                            data-bs-toggle="modal" data-bs-target="#rejectEventModal<?= $sid ?>">
                                                         <i class="fas fa-times"></i> Reject
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
-
+                                        <?php
+                                            // Collect the approve/reject modals into the buffer (printed at end of body)
+                                            ob_start();
+                                        ?>
                                         <!-- Approve Modal -->
-                                        <div class="modal fade" id="approveEventModal<?= $submission['id'] ?>" tabindex="-1">
+                                        <div class="modal fade" id="approveEventModal<?= $sid ?>" tabindex="-1">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
@@ -331,8 +334,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     <form method="POST">
                                                         <div class="modal-body">
                                                             <input type="hidden" name="faculty_action" value="approve">
-                                                            <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
-                                                            <p>Approve "<strong><?= esc($submission['title']) ?></strong>" by <?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?>?</p>
+                                                            <input type="hidden" name="submission_id" value="<?= $sid ?>">
+                                                            <p>Approve "<strong><?= $stitle ?></strong>" by <?= $sfac ?>?</p>
                                                             <p class="text-muted">This will publish the event immediately.</p>
                                                             <div class="mb-3">
                                                                 <label class="form-label">Review Notes (Optional)</label>
@@ -349,7 +352,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </div>
 
                                         <!-- Reject Modal -->
-                                        <div class="modal fade" id="rejectEventModal<?= $submission['id'] ?>" tabindex="-1">
+                                        <div class="modal fade" id="rejectEventModal<?= $sid ?>" tabindex="-1">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
@@ -359,8 +362,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     <form method="POST">
                                                         <div class="modal-body">
                                                             <input type="hidden" name="faculty_action" value="reject">
-                                                            <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
-                                                            <p>Reject "<strong><?= esc($submission['title']) ?></strong>" by <?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?>?</p>
+                                                            <input type="hidden" name="submission_id" value="<?= $sid ?>">
+                                                            <p>Reject "<strong><?= $stitle ?></strong>" by <?= $sfac ?>?</p>
                                                             <div class="mb-3">
                                                                 <label class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
                                                                 <textarea class="form-control" name="review_notes" rows="3" placeholder="Please provide a reason for rejection..." required></textarea>
@@ -374,6 +377,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 </div>
                                             </div>
                                         </div>
+                                        <?php
+                                            $__eventsCollectedModals .= ob_get_clean();
+                                        ?>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
@@ -382,102 +388,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <?php endif; ?>
 
-                <!-- Add New Event Card -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0"><i class="fas fa-plus me-2"></i>Add New Event</h5>
-                            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
-                                    data-bs-target="#addEventCollapse" aria-expanded="false">
-                                <i class="fas fa-chevron-down"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="collapse" id="addEventCollapse">
-                        <div class="card-body">
-                            <form method="POST" enctype="multipart/form-data">
-                                <input type="hidden" name="add_event" value="1">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="mb-3">
-                                            <label for="title" class="form-label">Event Title</label>
-                                            <input type="text" class="form-control" id="title" name="title" required>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="description" class="form-label">Description</label>
-                                            <textarea class="form-control" id="description" name="description" rows="4"></textarea>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="start_at" class="form-label">Start Date & Time</label>
-                                                    <input type="datetime-local" class="form-control" id="start_at" name="start_at">
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="mb-3">
-                                                    <label for="end_at" class="form-label">End Date & Time</label>
-                                                    <input type="datetime-local" class="form-control" id="end_at" name="end_at">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="location" class="form-label">Location</label>
-                                            <input type="text" class="form-control" id="location" name="location">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="registration_url" class="form-label">Registration URL</label>
-                                            <input type="url" class="form-control" id="registration_url" name="registration_url">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="category" class="form-label">Category</label>
-                                            <select class="form-control" id="category" name="category">
-                                                <option value="career">Career</option>
-                                                <option value="academic">Academic</option>
-                                                <option value="social">Social</option>
-                                                <option value="workshop">Workshop</option>
-                                                <option value="seminar">Seminar</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="status" class="form-label">Status</label>
-                                            <select class="form-control" id="status" name="status">
-                                                <option value="draft">Draft</option>
-                                                <option value="published">Published</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="image" class="form-label">Event Image</label>
-                                            <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                                        </div>
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-plus"></i> Add Event
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Events List -->
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="fas fa-calendar-alt me-2"></i>Events (<?= count($events) ?>)</h5>
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-calendar-alt me-2"></i>Events (<?= count($events) ?>)
+                        </h5>
                     </div>
-                    
                     <div class="card-body">
                         <?php if (empty($events)): ?>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i> No events found.
+                            <div class="empty-state-card">
+                                <i class="fas fa-calendar-alt fa-3x"></i>
+                                <h6>No Events Found</h6>
+                                <div class="text-muted">Start by adding an event using the <strong>Add Event</strong> button above.</div>
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
-                                <table class="table table-striped table-hover">
-                                    <thead class="table-dark">
+                                <table class="table table-hover">
+                                    <thead>
                                         <tr>
                                             <th>Event</th>
                                             <th>Category</th>
@@ -489,48 +417,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </thead>
                                     <tbody>
                                         <?php foreach ($events as $event): ?>
+                                            <?php
+                                                $eid = (int)$event['id'];
+                                                $etitle = esc($event['title']);
+                                                $ecat = esc($event['category'] ?? 'Uncategorized');
+                                                $estatus = esc($event['status'] ?? 'draft');
+                                                $eloc = esc($event['location'] ?: 'TBA');
+                                                $start_at = $event['start_at'] ?? null;
+                                                $end_at = $event['end_at'] ?? null;
+                                                $startDateDisp = $start_at ? date('M j, Y', strtotime($start_at)) : '';
+                                                $startTimeDisp = $start_at ? date('g:i A', strtotime($start_at)) : '';
+                                                $startValue = $start_at ? date('Y-m-d\TH:i', strtotime($start_at)) : '';
+                                                $endValue = $end_at ? date('Y-m-d\TH:i', strtotime($end_at)) : '';
+                                                $ereg = esc($event['registration_url'] ?? '');
+                                                $edesc = esc($event['description'] ?? '');
+                                                $hasImg = !empty($event['image_url']);
+                                            ?>
                                             <tr>
                                                 <td>
-                                                    <div class="d-flex align-items-center">
-                                                        <?php if (!empty($event['image_url'])): ?>
-                                                            <img src="<?= esc($event['image_url']) ?>" alt="Event Image" 
-                                                                 class="rounded me-3" width="50" height="50" style="object-fit: cover;">
-                                                        <?php endif; ?>
-                                                        <div>
-                                                            <strong><?= esc($event['title']) ?></strong>
-                                                            <?php if (!empty($event['description'])): ?>
-                                                                <br><small class="text-muted"><?= esc(substr($event['description'], 0, 80)) ?>...</small>
-                                                            <?php endif; ?>
-                                                        </div>
-                                                    </div>
+                                                    <strong><?= $etitle ?></strong>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-secondary"><?= esc($event['category'] ?? 'Uncategorized') ?></span>
+                                                    <span class="badge badge--category"><?= $ecat ?></span>
                                                 </td>
                                                 <td>
-                                                    <?php if ($event['start_at']): ?>
-                                                        <strong><?= date('M j, Y', strtotime($event['start_at'])) ?></strong>
-                                                        <br><small><?= date('g:i A', strtotime($event['start_at'])) ?></small>
+                                                    <?php if ($start_at): ?>
+                                                        <strong><?= $startDateDisp ?></strong>
+                                                        <br><small><?= $startTimeDisp ?></small>
                                                     <?php else: ?>
                                                         <small class="text-muted">No date set</small>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td><?= esc($event['location'] ?: 'TBA') ?></td>
+                                                <td><?= $eloc ?></td>
                                                 <td>
-                                                    <span class="badge bg-<?= $event['status'] === 'published' ? 'success' : ($event['status'] === 'draft' ? 'warning' : 'secondary') ?>">
-                                                        <?= esc($event['status']) ?>
+                                                    <span class="badge badge--status badge--<?= $estatus ?>">
+                                                        <?= $estatus ?>
                                                     </span>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">
                                                         <button type="button" class="btn btn-sm btn-warning" 
-                                                                data-bs-toggle="modal" data-bs-target="#editEventModal<?= $event['id'] ?>">
+                                                                data-bs-toggle="modal" data-bs-target="#editEventModal<?= $eid ?>">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
                                                         <form method="POST" style="display: inline;" 
                                                               onsubmit="return confirm('Are you sure you want to delete this event?');">
                                                             <input type="hidden" name="delete_event" value="1">
-                                                            <input type="hidden" name="id" value="<?= $event['id'] ?>">
+                                                            <input type="hidden" name="id" value="<?= $eid ?>">
                                                             <button type="submit" class="btn btn-sm btn-danger">
                                                                 <i class="fas fa-trash"></i>
                                                             </button>
@@ -538,9 +471,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     </div>
                                                 </td>
                                             </tr>
-
+                                            <?php
+                                                // Collect the edit modal into the buffer (printed at end of body)
+                                                ob_start();
+                                            ?>
                                             <!-- Edit Event Modal -->
-                                            <div class="modal fade" id="editEventModal<?= $event['id'] ?>" tabindex="-1">
+                                            <div class="modal fade" id="editEventModal<?= $eid ?>" tabindex="-1">
                                                 <div class="modal-dialog modal-lg">
                                                     <div class="modal-content">
                                                         <div class="modal-header">
@@ -549,69 +485,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                         </div>
                                                         <form method="POST" enctype="multipart/form-data">
                                                             <input type="hidden" name="edit_event" value="1">
-                                                            <input type="hidden" name="id" value="<?= $event['id'] ?>">
+                                                            <input type="hidden" name="id" value="<?= $eid ?>">
                                                             <div class="modal-body">
                                                                 <div class="row">
                                                                     <div class="col-md-8">
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Title</label>
                                                                             <input type="text" class="form-control" name="title" 
-                                                                                   value="<?= esc($event['title'] ?? '') ?>" required>
+                                                                                value="<?= $etitle ?>" required>
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Description</label>
-                                                                            <textarea class="form-control" name="description" rows="4"><?= esc($event['description'] ?? '') ?></textarea>
+                                                                            <textarea class="form-control" name="description" rows="4"><?= $edesc ?></textarea>
                                                                         </div>
                                                                         <div class="row">
                                                                             <div class="col-md-6">
                                                                                 <div class="mb-3">
                                                                                     <label class="form-label">Start Date & Time</label>
                                                                                     <input type="datetime-local" class="form-control" name="start_at" 
-                                                                                           value="<?= $event['start_at'] ? date('Y-m-d\TH:i', strtotime($event['start_at'])) : '' ?>">
+                                                                                        value="<?= $startValue ?>">
                                                                                 </div>
                                                                             </div>
                                                                             <div class="col-md-6">
                                                                                 <div class="mb-3">
                                                                                     <label class="form-label">End Date & Time</label>
                                                                                     <input type="datetime-local" class="form-control" name="end_at" 
-                                                                                           value="<?= $event['end_at'] ? date('Y-m-d\TH:i', strtotime($event['end_at'])) : '' ?>">
+                                                                                        value="<?= $endValue ?>">
                                                                                 </div>
                                                                             </div>
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Location</label>
                                                                             <input type="text" class="form-control" name="location" 
-                                                                                   value="<?= esc($event['location'] ?? '') ?>">
+                                                                                value="<?= esc($event['location'] ?? '') ?>">
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Registration URL</label>
                                                                             <input type="url" class="form-control" name="registration_url" 
-                                                                                   value="<?= esc($event['registration_url'] ?? '') ?>">
+                                                                                value="<?= $ereg ?>">
                                                                         </div>
                                                                     </div>
                                                                     <div class="col-md-4">
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Category</label>
                                                                             <select class="form-control" name="category">
-                                                                                <option value="career" <?= $event['category'] === 'career' ? 'selected' : '' ?>>Career</option>
-                                                                                <option value="academic" <?= $event['category'] === 'academic' ? 'selected' : '' ?>>Academic</option>
-                                                                                <option value="social" <?= $event['category'] === 'social' ? 'selected' : '' ?>>Social</option>
-                                                                                <option value="workshop" <?= $event['category'] === 'workshop' ? 'selected' : '' ?>>Workshop</option>
-                                                                                <option value="seminar" <?= $event['category'] === 'seminar' ? 'selected' : '' ?>>Seminar</option>
+                                                                                <option value="career" <?= ($event['category'] === 'career') ? 'selected' : '' ?>>Career</option>
+                                                                                <option value="academic" <?= ($event['category'] === 'academic') ? 'selected' : '' ?>>Academic</option>
+                                                                                <option value="social" <?= ($event['category'] === 'social') ? 'selected' : '' ?>>Social</option>
+                                                                                <option value="workshop" <?= ($event['category'] === 'workshop') ? 'selected' : '' ?>>Workshop</option>
+                                                                                <option value="seminar" <?= ($event['category'] === 'seminar') ? 'selected' : '' ?>>Seminar</option>
                                                                             </select>
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Status</label>
                                                                             <select class="form-control" name="status">
-                                                                                <option value="draft" <?= $event['status'] === 'draft' ? 'selected' : '' ?>>Draft</option>
-                                                                                <option value="published" <?= $event['status'] === 'published' ? 'selected' : '' ?>>Published</option>
-                                                                                <option value="archived" <?= $event['status'] === 'archived' ? 'selected' : '' ?>>Archived</option>
+                                                                                <option value="draft" <?= ($event['status'] === 'draft') ? 'selected' : '' ?>>Draft</option>
+                                                                                <option value="published" <?= ($event['status'] === 'published') ? 'selected' : '' ?>>Published</option>
+                                                                                <option value="archived" <?= ($event['status'] === 'archived') ? 'selected' : '' ?>>Archived</option>
                                                                             </select>
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Update Image</label>
                                                                             <input type="file" class="form-control" name="image" accept="image/*">
-                                                                            <?php if ($event['image_url']): ?>
+                                                                            <?php if ($hasImg): ?>
                                                                                 <small class="text-muted">Current image will be replaced if new one is uploaded</small>
                                                                             <?php endif; ?>
                                                                         </div>
@@ -626,6 +562,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     </div>
                                                 </div>
                                             </div>
+                                            <?php
+                                                $__eventsCollectedModals .= ob_get_clean();
+                                            ?>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
@@ -636,6 +575,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </section>
         </main>
     </div>
+
+    <!-- =========================
+         ALL MODALS RENDER HERE
+         ========================= -->
+
+    <!-- Add Event Modal (moved here, unchanged) -->
+    <div class="modal fade" id="addEventModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="add_event" value="1">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add Event</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="title" class="form-label">Event Title</label>
+                                    <input type="text" class="form-control" id="title" name="title" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description</label>
+                                    <textarea class="form-control" id="description" name="description" rows="4"></textarea>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="start_at" class="form-label">Start Date & Time</label>
+                                            <input type="datetime-local" class="form-control" id="start_at" name="start_at">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="end_at" class="form-label">End Date & Time</label>
+                                            <input type="datetime-local" class="form-control" id="end_at" name="end_at">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" id="location" name="location">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="registration_url" class="form-label">Registration URL</label>
+                                    <input type="url" class="form-control" id="registration_url" name="registration_url">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="category" class="form-label">Category</label>
+                                    <select class="form-control" id="category" name="category">
+                                        <option value="career">Career</option>
+                                        <option value="academic">Academic</option>
+                                        <option value="social">Social</option>
+                                        <option value="workshop">Workshop</option>
+                                        <option value="seminar">Seminar</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-control" id="status" name="status">
+                                        <option value="draft">Draft</option>
+                                        <option value="published">Published</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="image" class="form-label">Event Image</label>
+                                    <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Event
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collected approve/reject/edit modals -->
+    <?= $__eventsCollectedModals ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

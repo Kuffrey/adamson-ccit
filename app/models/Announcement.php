@@ -172,85 +172,120 @@ final class Announcement extends Model
         return (int)$db->lastInsertId();
     }
 
-    /** Update an announcement with the given data. */
-    public static function update(int $id, array $data): bool {
-        $id = (int)$id;
-        if ($id <= 0) return false;
-
-        $db = parent::db();
-        $bcol = self::bodyCol();
-        
-        $sets = [];
-        $vals = [':id' => $id];
-
-        // Map input data to database columns
-        $map = [
-            'title'    => 'title',
-            'content'  => $bcol,
-            'excerpt'  => 'excerpt',
-            'category' => 'category',
-            'status'   => 'status',
-        ];
-
-        foreach ($map as $k => $col) {
-            if (array_key_exists($k, $data)) {
-                // Only set if column exists in database
-                if ($k === 'excerpt' && !self::has('excerpt')) continue;
-                
-                $sets[] = "$col = :$k";
-                $vals[":$k"] = $k === 'category' ? strtolower((string)$data[$k]) :
-                               ($k === 'status'   ? strtolower((string)$data[$k]) : $data[$k]);
-            }
+    /**
+     * Get database connection
+     */
+    private static function getConnection() {
+        try {
+            $pdo = new PDO(
+                "mysql:host=localhost;dbname=adamson_ccit;charset=utf8mb4",
+                "root",
+                "",
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false
+                ]
+            );
+            return $pdo;
+        } catch (PDOException $e) {
+            error_log("Database connection error: " . $e->getMessage());
+            throw new Exception("Database connection failed");
         }
-
-        // Handle image_url if column exists
-        if (self::has('image_url') && array_key_exists('image_url', $data)) {
-            $sets[] = "image_url = :image_url";
-            $vals[':image_url'] = $data['image_url'];
-        }
-
-        // Handle date
-        if (array_key_exists('date', $data) && $data['date']) {
-            $norm = preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['date']) ? ($data['date'].' 00:00:00') : $data['date'];
-            if (self::has('date')) {
-                $sets[] = "date = :date";
-                $vals[':date'] = $norm;
-            } elseif (isset($data['status']) && strtolower($data['status']) === 'published' && self::has('published_at')) {
-                $sets[] = "published_at = :published_at";
-                $vals[':published_at'] = $norm;
-            }
-        }
-
-        if (!$sets) return true; // nothing to update
-
-        $sets[] = "updated_at = NOW()";
-        $sql = "UPDATE announcements SET ".implode(', ', $sets)." WHERE id = :id";
-        $st = $db->prepare($sql);
-        return $st->execute($vals);
     }
 
-    /** Update status (sets published_at on first publish if column exists). */
-    public static function updateStatus(int $id, string $status): bool {
-        $status=strtolower($status);
-        if (!in_array($status,self::$allowedStatus,true)) return false;
-
-        $hasPubAt = self::has('published_at');
-        if ($status==='published' && $hasPubAt) {
-            $sql = "UPDATE announcements
-                    SET status=:s, published_at=COALESCE(published_at,NOW()), updated_at=NOW()
-                    WHERE id=:id";
-        } else {
-            $sql = "UPDATE announcements
-                    SET status=:s, updated_at=NOW()
-                    WHERE id=:id";
+    /**
+     * Update an announcement
+     */
+    public static function update($id, $data) {
+        try {
+            $pdo = self::getConnection();
+            
+            // Build the SET clause dynamically based on provided data
+            $setParts = [];
+            $params = ['id' => $id];
+            
+            if (isset($data['title'])) {
+                $setParts[] = "title = :title";
+                $params['title'] = $data['title'];
+            }
+            
+            if (isset($data['content'])) {
+                $setParts[] = "body = :content";
+                $params['content'] = $data['content'];
+            }
+            
+            if (isset($data['category'])) {
+                $setParts[] = "category = :category";
+                $params['category'] = $data['category'];
+            }
+            
+            if (isset($data['date'])) {
+                $setParts[] = "date = :date";
+                $params['date'] = $data['date'];
+            }
+            
+            if (isset($data['status'])) {
+                $setParts[] = "status = :status";
+                $params['status'] = $data['status'];
+            }
+            
+            if (isset($data['image_url'])) {
+                $setParts[] = "image_url = :image_url";
+                $params['image_url'] = $data['image_url'];
+            }
+            
+            // Add updated_at timestamp
+            $setParts[] = "updated_at = NOW()";
+            
+            if (empty($setParts)) {
+                return false; // Nothing to update
+            }
+            
+            $sql = "UPDATE announcements SET " . implode(', ', $setParts) . " WHERE id = :id";
+            $stmt = $pdo->prepare($sql);
+            
+            return $stmt->execute($params);
+            
+        } catch (PDOException $e) {
+            error_log("Announcement update error: " . $e->getMessage());
+            return false;
         }
-        $st = parent::db()->prepare($sql);
-        return $st->execute([':s'=>$status, ':id'=>$id]);
     }
 
-    public static function delete(int|string $id): bool {
-        $st = parent::db()->prepare("DELETE FROM announcements WHERE id=:id");
-        return $st->execute([':id'=>(int)$id]);
+    /**
+     * Update announcement status
+     */
+    public static function updateStatus($id, $status) {
+        try {
+            $pdo = self::getConnection();
+            $stmt = $pdo->prepare("UPDATE announcements SET status = :status, updated_at = NOW() WHERE id = :id");
+            
+            return $stmt->execute([
+                'id' => $id,
+                'status' => $status
+            ]);
+            
+        } catch (PDOException $e) {
+            error_log("Announcement status update error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Delete an announcement
+     */
+    public static function delete($id) {
+        try {
+            $pdo = self::getConnection();
+            $stmt = $pdo->prepare("DELETE FROM announcements WHERE id = :id");
+            
+            return $stmt->execute(['id' => $id]);
+            
+        } catch (PDOException $e) {
+            error_log("Announcement delete error: " . $e->getMessage());
+            return false;
+        }
     }
 
     /** Public listing with filters (published only). */

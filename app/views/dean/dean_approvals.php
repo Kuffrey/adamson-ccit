@@ -37,9 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action']) && !empty(
             
             // Log the approval action (essential CRUD operation)
             DeanLogs::logApprove(
-                $user['id'] ?? null,
                 'faculty_submissions',
                 $submissionId,
+                $user['id'] ?? null,
                 'Submission approved' . ($reviewNotes ? ': ' . substr($reviewNotes, 0, 100) : '')
             );
             
@@ -49,9 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action']) && !empty(
             
             // Log the rejection action (essential CRUD operation)  
             DeanLogs::logReject(
-                $user['id'] ?? null,
                 'faculty_submissions',
                 $submissionId,
+                $user['id'] ?? null,
                 'Submission rejected' . ($reviewNotes ? ': ' . substr($reviewNotes, 0, 100) : '')
             );
         }
@@ -60,18 +60,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action']) && !empty(
     }
 }
 
-// Get pending submissions for dean approval (research and news only)
+// Get pending submissions for dean approval
 try {
     $pendingSubmissions = FacultySubmissions::getPendingByReviewer();
-    // Filter research, news, events, and announcements submissions
+    // Filter research, news, and certifications submissions only
     $pendingSubmissions = array_filter($pendingSubmissions, function($submission) {
-        return in_array($submission['submission_type'], ['research', 'news', 'event', 'announcement']);
+        return in_array($submission['submission_type'], ['research', 'news', 'certification']);
     });
     
     $submissionCounts = FacultySubmissions::getPendingCountsByType();
 } catch (Exception $e) {
     $pendingSubmissions = [];
-    $submissionCounts = ['research' => 0, 'news' => 0, 'event' => 0, 'announcement' => 0];
+    $submissionCounts = ['research' => 0, 'news' => 0];
     $notice = 'Error loading submissions: ' . $e->getMessage();
 }
 
@@ -79,14 +79,51 @@ try {
 $groupedSubmissions = [
     'research' => [],
     'news' => [],
-    'event' => [],
-    'announcement' => []
+    'certification' => []
 ];
 
 foreach ($pendingSubmissions as $submission) {
     if (isset($groupedSubmissions[$submission['submission_type']])) {
         $groupedSubmissions[$submission['submission_type']][] = $submission;
     }
+}
+
+// Get filter from URL
+$filter = $_GET['filter'] ?? 'all';
+$totalPending = count($pendingSubmissions);
+
+// Create tables for submissions and logs
+try {
+    $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS faculty_submissions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            faculty_id INT NOT NULL,
+            submission_type VARCHAR(50) NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            description TEXT,
+            content TEXT,
+            category VARCHAR(100),
+            status VARCHAR(30) DEFAULT 'submitted',
+            review_notes TEXT,
+            submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS dean_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            table_name VARCHAR(100) NOT NULL,
+            record_id INT NOT NULL,
+            dean_id INT NOT NULL,
+            action VARCHAR(30) NOT NULL,
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
+} catch (PDOException $e) {
+    // Handle migration error (optional: log or display)
 }
 ?>
 
@@ -96,48 +133,79 @@ foreach ($pendingSubmissions as $submission) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pending Approvals | CCIT Dean</title>
-    <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
-    <link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
+    <link rel="stylesheet" href="/adamson-ccit/public/assets/css/dean.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="admin-cms-layout">
+    <div class="admin-layout">
         <?php include __DIR__ . '/_dean_sidebar.php'; ?>
         
         <main class="admin-main">
             <header class="admin-topbar">
+                <button class="topbar__btn hide-desktop" type="button" aria-label="Open navigation menu" data-sb-open>
+                    <i class="fas fa-bars"></i>
+                </button>
                 <span class="admin-topbar__title">Pending Approvals</span>
-                <div class="admin-topbar__spacer"></div>
-                <div class="admin-topbar__user">
-                    <span class="admin-topbar__avatar"><?= esc(strtoupper($username[0] ?? 'D')) ?></span>
-                    <span class="admin-topbar__name"><?= esc($username) ?></span>
-                </div>
+                <span class="admin-topbar__spacer"></span>
             </header>
 
-            <section class="admin-cms-section">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h1 class="admin-cms-section__title mb-1">Pending Approvals</h1>
-                        <p class="text-muted mb-0">Review and approve faculty submissions</p>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <div class="badge bg-warning">Research: <?= $submissionCounts['research'] ?></div>
-                        <div class="badge bg-info">News: <?= $submissionCounts['news'] ?></div>
-                        <div class="badge bg-primary">Total: <?= ($submissionCounts['research'] + $submissionCounts['news']) ?></div>
-                    </div>
-                </div>
-
+            <section class="admin-section">
+                <!-- Enhanced message handling -->
                 <?php if ($notice): ?>
-                    <div class="alert <?= str_starts_with($notice, 'Error') ? 'alert-danger' : 'alert-success' ?> alert-dismissible fade show" role="alert">
-                        <i class="fas <?= str_starts_with($notice, 'Error') ? 'fa-exclamation-triangle' : 'fa-check-circle' ?> me-2"></i>
+                    <div class="alert <?= str_starts_with($notice, 'Error') ? 'alert-danger' : 'alert-success' ?> alert-dismissible fade show modern-alert" role="alert">
+                        <i class="fas <?= str_starts_with($notice, 'Error') ? 'fa-exclamation-circle' : 'fa-check-circle' ?>"></i>
                         <?= esc($notice) ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 <?php endif; ?>
 
+                <!-- Filter Tabs -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <ul class="nav nav-pills">
+                                <li class="nav-item">
+                                    <a class="nav-link <?= $filter === 'all' ? 'active' : '' ?>" href="?page=dean_approvals&filter=all">
+                                        All Pending (<?= $totalPending ?>)
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link <?= $filter === 'research' ? 'active' : '' ?>" href="?page=dean_approvals&filter=research">
+                                        Research (<?= count($groupedSubmissions['research']) ?>)
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link <?= $filter === 'news' ? 'active' : '' ?>" href="?page=dean_approvals&filter=news">
+                                        News (<?= count($groupedSubmissions['news']) ?>)
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link <?= $filter === 'certification' ? 'active' : '' ?>" href="?page=dean_approvals&filter=certification">
+                                        Certifications (<?= count($groupedSubmissions['certification']) ?>)
+                                    </a>
+                                </li>
+                            </ul>
+                            <div class="d-flex gap-2">
+                                <span class="badge badge--status badge--draft">Total: <?= $totalPending ?></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <?php 
+                // Filter which sections to show based on filter parameter
+                $sectionsToShow = [];
+                if ($filter === 'all') {
+                    $sectionsToShow = ['research', 'news', 'certification'];
+                } else {
+                    $sectionsToShow = [$filter];
+                }
+                ?>
+
+                <?php if (in_array('research', $sectionsToShow)): ?>
                 <!-- Research Submissions -->
-                <div class="card mb-4">
+                <div class="card">
                     <div class="card-header">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-microscope me-2"></i>Research Submissions (<?= count($groupedSubmissions['research']) ?>)
@@ -145,13 +213,15 @@ foreach ($pendingSubmissions as $submission) {
                     </div>
                     <div class="card-body">
                         <?php if (empty($groupedSubmissions['research'])): ?>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i> No pending research submissions.
+                            <div class="empty-state-card">
+                                <i class="fas fa-microscope fa-3x"></i>
+                                <h6>No Pending Research Submissions</h6>
+                                <div class="text-muted">All research submissions have been processed.</div>
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
-                                <table class="table table-striped table-hover">
-                                    <thead class="table-dark">
+                                <table class="table table-hover">
+                                    <thead>
                                         <tr>
                                             <th>Faculty</th>
                                             <th>Title</th>
@@ -176,18 +246,18 @@ foreach ($pendingSubmissions as $submission) {
                                                 </td>
                                                 <td>
                                                     <?php if ($submission['category']): ?>
-                                                        <span class="badge bg-secondary"><?= esc($submission['category']) ?></span>
+                                                        <span class="badge badge--category"><?= esc($submission['category']) ?></span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td>
-                                                    <?= $submission['submitted_at'] ? date('M j, Y', strtotime($submission['submitted_at'])) : '' ?>
+                                                    <small><?= $submission['submitted_at'] ? date('M j, Y', strtotime($submission['submitted_at'])) : '' ?></small>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-warning"><?= esc($submission['status']) ?></span>
+                                                    <span class="badge badge--status badge--draft"><?= esc($submission['status']) ?></span>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-sm btn-outline-info" 
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" 
                                                                 data-bs-toggle="modal" data-bs-target="#viewModal<?= $submission['id'] ?>">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
@@ -209,7 +279,9 @@ foreach ($pendingSubmissions as $submission) {
                         <?php endif; ?>
                     </div>
                 </div>
+                <?php endif; ?>
 
+                <?php if (in_array('news', $sectionsToShow)): ?>
                 <!-- News Submissions -->
                 <div class="card">
                     <div class="card-header">
@@ -219,13 +291,15 @@ foreach ($pendingSubmissions as $submission) {
                     </div>
                     <div class="card-body">
                         <?php if (empty($groupedSubmissions['news'])): ?>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i> No pending news submissions.
+                            <div class="empty-state-card">
+                                <i class="fas fa-newspaper fa-3x"></i>
+                                <h6>No Pending News Submissions</h6>
+                                <div class="text-muted">All news submissions have been processed.</div>
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
-                                <table class="table table-striped table-hover">
-                                    <thead class="table-dark">
+                                <table class="table table-hover">
+                                    <thead>
                                         <tr>
                                             <th>Faculty</th>
                                             <th>Title</th>
@@ -250,18 +324,18 @@ foreach ($pendingSubmissions as $submission) {
                                                 </td>
                                                 <td>
                                                     <?php if ($submission['category']): ?>
-                                                        <span class="badge bg-info"><?= esc($submission['category']) ?></span>
+                                                        <span class="badge badge--category"><?= esc($submission['category']) ?></span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td>
-                                                    <?= $submission['submitted_at'] ? date('M j, Y', strtotime($submission['submitted_at'])) : '' ?>
+                                                    <small><?= $submission['submitted_at'] ? date('M j, Y', strtotime($submission['submitted_at'])) : '' ?></small>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-warning"><?= esc($submission['status']) ?></span>
+                                                    <span class="badge badge--status badge--draft"><?= esc($submission['status']) ?></span>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-sm btn-outline-info" 
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" 
                                                                 data-bs-toggle="modal" data-bs-target="#viewModal<?= $submission['id'] ?>">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
@@ -283,18 +357,22 @@ foreach ($pendingSubmissions as $submission) {
                         <?php endif; ?>
                     </div>
                 </div>
+                <?php endif; ?>
 
-                <!-- Event Submissions -->
-                <div class="card mb-4">
+                <?php if (in_array('certification', $sectionsToShow)): ?>
+                <!-- Certification Submissions -->
+                <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-calendar-alt me-2"></i>Event Submissions (<?= count($groupedSubmissions['event']) ?>)
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-certificate me-2"></i>Certification Submissions (<?= count($groupedSubmissions['certification']) ?>)
                         </h5>
                     </div>
                     <div class="card-body">
-                        <?php if (empty($groupedSubmissions['event'])): ?>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i> No pending event submissions.
+                        <?php if (empty($groupedSubmissions['certification'])): ?>
+                            <div class="empty-state-card">
+                                <i class="fas fa-certificate fa-3x"></i>
+                                <h6>No Pending Certification Submissions</h6>
+                                <div class="text-muted">All certification submissions have been processed.</div>
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
@@ -302,18 +380,20 @@ foreach ($pendingSubmissions as $submission) {
                                     <thead>
                                         <tr>
                                             <th>Faculty</th>
-                                            <th>Event Title</th>
+                                            <th>Title</th>
+                                            <th>Issuer</th>
                                             <th>Submitted</th>
                                             <th>Status</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($groupedSubmissions['event'] as $submission): ?>
+                                        <?php foreach ($groupedSubmissions['certification'] as $submission): ?>
+                                            <?php $certData = json_decode($submission['content'] ?? '{}', true) ?: []; ?>
                                             <tr>
                                                 <td>
                                                     <strong><?= esc($submission['faculty_name']) ?></strong>
-                                                    <br><small class="text-muted"><?= esc($submission['department_name']) ?></small>
+                                                    <br><small class="text-muted"><?= esc($submission['department_name'] ?? '') ?></small>
                                                 </td>
                                                 <td>
                                                     <strong><?= esc($submission['title']) ?></strong>
@@ -322,14 +402,17 @@ foreach ($pendingSubmissions as $submission) {
                                                     <?php endif; ?>
                                                 </td>
                                                 <td>
-                                                    <?= $submission['submitted_at'] ? date('M j, Y', strtotime($submission['submitted_at'])) : '' ?>
+                                                    <span class="badge badge--category"><?= esc($certData['issuer'] ?? 'Unknown') ?></span>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-warning"><?= esc($submission['status']) ?></span>
+                                                    <small><?= $submission['submitted_at'] ? date('M j, Y', strtotime($submission['submitted_at'])) : '' ?></small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge badge--status badge--draft"><?= esc($submission['status']) ?></span>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-sm btn-outline-info" 
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" 
                                                                 data-bs-toggle="modal" data-bs-target="#viewModal<?= $submission['id'] ?>">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
@@ -351,74 +434,7 @@ foreach ($pendingSubmissions as $submission) {
                         <?php endif; ?>
                     </div>
                 </div>
-
-                <!-- Announcement Submissions -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-bullhorn me-2"></i>Announcement Submissions (<?= count($groupedSubmissions['announcement']) ?>)
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <?php if (empty($groupedSubmissions['announcement'])): ?>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i> No pending announcement submissions.
-                            </div>
-                        <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Faculty</th>
-                                            <th>Announcement Title</th>
-                                            <th>Submitted</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($groupedSubmissions['announcement'] as $submission): ?>
-                                            <tr>
-                                                <td>
-                                                    <strong><?= esc($submission['faculty_name']) ?></strong>
-                                                    <br><small class="text-muted"><?= esc($submission['department_name']) ?></small>
-                                                </td>
-                                                <td>
-                                                    <strong><?= esc($submission['title']) ?></strong>
-                                                    <?php if (!empty($submission['description'])): ?>
-                                                        <br><small class="text-muted"><?= esc(substr($submission['description'], 0, 80)) ?>...</small>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <?= $submission['submitted_at'] ? date('M j, Y', strtotime($submission['submitted_at'])) : '' ?>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-warning"><?= esc($submission['status']) ?></span>
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-sm btn-outline-info" 
-                                                                data-bs-toggle="modal" data-bs-target="#viewModal<?= $submission['id'] ?>">
-                                                            <i class="fas fa-eye"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-success" 
-                                                                data-bs-toggle="modal" data-bs-target="#approveModal<?= $submission['id'] ?>">
-                                                            <i class="fas fa-check"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-danger" 
-                                                                data-bs-toggle="modal" data-bs-target="#rejectModal<?= $submission['id'] ?>">
-                                                            <i class="fas fa-times"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
+                <?php endif; ?>
             </section>
         </main>
     </div>
@@ -430,24 +446,55 @@ foreach ($pendingSubmissions as $submission) {
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">View Submission</h5>
+                        <h5 class="modal-title">
+                            <i class="fas fa-eye me-2"></i>View Submission
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <h6><strong>Title:</strong> <?= esc($submission['title']) ?></h6>
-                        <p><strong>Faculty:</strong> <?= esc($submission['faculty_name']) ?> (<?= esc($submission['department_name']) ?>)</p>
-                        <p><strong>Type:</strong> <?= esc($submission['submission_type']) ?></p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><strong>Title:</strong></h6>
+                                <p><?= esc($submission['title']) ?></p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><strong>Type:</strong></h6>
+                                <p><span class="badge badge--category"><?= esc($submission['submission_type']) ?></span></p>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><strong>Faculty:</strong></h6>
+                                <p><?= esc($submission['faculty_name']) ?> (<?= esc($submission['department_name']) ?>)</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><strong>Submitted:</strong></h6>
+                                <p><?= $submission['submitted_at'] ? date('M j, Y g:i A', strtotime($submission['submitted_at'])) : '' ?></p>
+                            </div>
+                        </div>
                         <?php if ($submission['category']): ?>
-                            <p><strong>Category:</strong> <?= esc($submission['category']) ?></p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><strong>Category:</strong></h6>
+                                    <p><?= esc($submission['category']) ?></p>
+                                </div>
+                            </div>
                         <?php endif; ?>
-                        <p><strong>Submitted:</strong> <?= $submission['submitted_at'] ? date('M j, Y g:i A', strtotime($submission['submitted_at'])) : '' ?></p>
                         <?php if ($submission['description']): ?>
-                            <p><strong>Description:</strong></p>
-                            <div class="border p-3 rounded"><?= nl2br(esc($submission['description'])) ?></div>
+                            <h6><strong>Description:</strong></h6>
+                            <div class="card">
+                                <div class="card-body">
+                                    <?= nl2br(esc($submission['description'])) ?>
+                                </div>
+                            </div>
                         <?php endif; ?>
                         <?php if ($submission['content']): ?>
-                            <p><strong>Content:</strong></p>
-                            <div class="border p-3 rounded" style="max-height: 300px; overflow-y: auto;"><?= nl2br(esc($submission['content'])) ?></div>
+                            <h6><strong>Content:</strong></h6>
+                            <div class="card">
+                                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                    <?= nl2br(esc($submission['content'])) ?>
+                                </div>
+                            </div>
                         <?php endif; ?>
                     </div>
                     <div class="modal-footer">
@@ -462,7 +509,9 @@ foreach ($pendingSubmissions as $submission) {
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Approve Submission</h5>
+                        <h5 class="modal-title">
+                            <i class="fas fa-check me-2"></i>Approve Submission
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <form method="POST">
@@ -471,6 +520,7 @@ foreach ($pendingSubmissions as $submission) {
                         <div class="modal-body">
                             <p>Are you sure you want to approve this <?= esc($submission['submission_type']) ?> submission?</p>
                             <p><strong><?= esc($submission['title']) ?></strong></p>
+                            <p class="text-muted">This will publish the submission immediately.</p>
                             <div class="mb-3">
                                 <label for="review_notes_<?= $submission['id'] ?>" class="form-label">Review Notes (Optional)</label>
                                 <textarea class="form-control" id="review_notes_<?= $submission['id'] ?>" name="review_notes" rows="3" 
@@ -479,7 +529,9 @@ foreach ($pendingSubmissions as $submission) {
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-success">Approve</button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check"></i> Approve & Publish
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -491,7 +543,9 @@ foreach ($pendingSubmissions as $submission) {
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Reject Submission</h5>
+                        <h5 class="modal-title">
+                            <i class="fas fa-times me-2"></i>Reject Submission
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <form method="POST">
@@ -508,7 +562,9 @@ foreach ($pendingSubmissions as $submission) {
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-danger">Reject</button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
                         </div>
                     </form>
                 </div>

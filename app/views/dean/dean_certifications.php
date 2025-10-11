@@ -141,64 +141,42 @@ try {
     $notice = 'Error loading certification submissions: ' . $e->getMessage();
 }
 ?>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certifications Approvals | CCIT Dean</title>
-<link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
-<link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-faculty.css">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/adamson-ccit/public/assets/css/dean.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+    .card { border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+    .card-header { background: #f8fafc; border-bottom: 1px solid #e5e7eb; padding: 20px 24px; font-size: 1.05rem; font-weight: 700; color: var(--navy);}
+    .card-body { padding: 20px 24px; }
+    .table th { font-weight: 600; font-size: .85rem; background: #f1f5f9; }
+    .table td { font-size: .95rem; }
+    .badge { font-size: .8rem; font-weight: 700; padding: 6px 12px; border-radius: 6px; }
+    .modal-content { border-radius: 12px; }
+    .alert { border-radius: 10px; font-size: .95rem; font-weight: 500; }
+    .empty-state-card { text-align: center; padding: 32px 0; color: #6c757d; }
+    </style>
 </head>
-<style>
-.card {
-  border-radius: 15px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-}
-.table th {
-  font-weight: 600;
-  font-size: 0.875rem;
-  letter-spacing: 0.5px;
-}
-.btn {
-  border-radius: 8px;
-  font-weight: 500;
-}
-.modal-content {
-  border-radius: 15px;
-}
-.alert {
-  border-radius: 10px;
-}
-.badge {
-  font-size: 0.75rem;
-  padding: 0.375rem 0.75rem;
-}
-</style>
-
-<div class="admin-cms-layout">
+<body>
+<div class="admin-layout">
     <?php include __DIR__ . '/_dean_sidebar.php'; ?>
-    
     <main class="admin-main">
         <header class="admin-topbar">
+            <button class="topbar__btn hide-desktop" type="button" aria-label="Open navigation menu" data-sb-open>
+                <i class="fas fa-bars"></i>
+            </button>
             <span class="admin-topbar__title">Certification Approvals</span>
-            <div class="admin-topbar__spacer"></div>
-            <div class="admin-topbar__user">
-                <span class="admin-topbar__avatar"><?= esc(strtoupper($username[0] ?? 'D')) ?></span>
-                <span class="admin-topbar__name"><?= esc($username) ?></span>
-            </div>
+            <span class="admin-topbar__spacer"></span>
         </header>
-
-        <section class="admin-cms-section">
+        <section class="admin-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h1 class="admin-cms-section__title mb-1">Certification Approval Center</h1>
-                    <p class="text-muted mb-0">Review and approve faculty certification submissions</p>
+                    <!-- Removed heading and description -->
                 </div>
                 <div class="d-flex gap-2">
                     <a href="?page=dean_manage_certifications" class="btn btn-outline-primary">
@@ -206,15 +184,12 @@ try {
                     </a>
                 </div>
             </div>
-            
             <?php if ($notice): ?>
-                <div class="alert alert-<?= str_starts_with($notice, 'Error:') ? 'danger' : 'success' ?> alert-dismissible fade show" role="alert">
+                <div class="alert alert-<?= str_starts_with($notice, 'Error:') ? 'danger' : 'success' ?> alert-dismissible fade show modern-alert" role="alert">
                     <?= esc($notice) ?>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             <?php endif; ?>
-
-            <!-- Tabs for Different Certification States -->
             <ul class="nav nav-tabs mb-4" id="certificationTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
@@ -235,96 +210,111 @@ try {
                     </button>
                 </li>
             </ul>
-
-            <!-- Tab Content -->
             <div class="tab-content" id="certificationTabContent">
                 <!-- Pending Certifications -->
                 <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab">
-                    <?php if (empty($pendingCertifications)): ?>
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No certification submissions pending approval at this time.
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-clock me-2"></i>Pending Certifications (<?= count($pendingCertifications) ?>)
                         </div>
-                    <?php else: ?>
-                        <div class="card">
-                            <div class="card-body">
+                        <div class="card-body">
+                            <?php if (empty($pendingCertifications)): ?>
+                                <div class="empty-state-card">
+                                    <i class="fas fa-certificate fa-3x"></i>
+                                    <h6>No certification submissions pending approval at this time.</h6>
+                                    <div class="text-muted">All certification submissions have been processed.</div>
+                                </div>
+                            <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table table-hover">
-                                        <thead class="table-dark">
+                                        <thead>
                                             <tr>
-                                                <th>Certification</th>
                                                 <th>Faculty</th>
+                                                <th>Certification</th>
+                                                <th>Issuer</th>
                                                 <th>Submitted</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php foreach ($pendingCertifications as $submission): ?>
+                                                <?php $certData = json_decode($submission['content'] ?? '{}', true) ?: []; ?>
                                                 <tr>
                                                     <td>
+                                                        <span class="badge bg-secondary"><?= esc($submission['faculty_name'] ?? 'Unknown') ?></span>
+                                                    </td>
+                                                    <td>
                                                         <strong><?= esc($submission['title']) ?></strong>
-                                                        <?php
-                                                        $certData = json_decode($submission['content'] ?? '{}', true) ?: [];
-                                                        if (!empty($certData['issuer'])): ?>
-                                                            <br><small class="text-muted">Issuer: <?= esc($certData['issuer']) ?></small>
-                                                        <?php endif; ?>
                                                         <?php if (!empty($submission['description'])): ?>
-                                                            <br><small class="text-muted"><?= esc(substr($submission['description'], 0, 100)) ?>...</small>
+                                                            <br><small class="text-muted"><?= esc(substr($submission['description'], 0, 80)) ?>...</small>
                                                         <?php endif; ?>
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-secondary"><?= esc($submission['faculty_name'] ?? 'Unknown') ?></span>
+                                                        <span class="badge badge--category"><?= esc($certData['issuer'] ?? 'Unknown') ?></span>
                                                     </td>
                                                     <td>
                                                         <small><?= $submission['submitted_at'] ? date('M j, Y g:i A', strtotime($submission['submitted_at'])) : '-' ?></small>
                                                     </td>
                                                     <td>
-                                                        <button class="btn btn-sm btn-success me-1" data-bs-toggle="modal" data-bs-target="#approveModal<?= $submission['id'] ?>">
-                                                            <i class="fas fa-check"></i> Approve
-                                                        </button>
-                                                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal<?= $submission['id'] ?>">
-                                                            <i class="fas fa-times"></i> Reject
-                                                        </button>
+                                                        <div class="btn-group" role="group">
+                                                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewModal<?= $submission['id'] ?>">
+                                                                <i class="fas fa-eye"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal<?= $submission['id'] ?>">
+                                                                <i class="fas fa-check"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal<?= $submission['id'] ?>">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
+                    </div>
                 </div>
-
                 <!-- Approved Certifications -->
                 <div class="tab-pane fade" id="approved" role="tabpanel" aria-labelledby="approved-tab">
-                    <?php if (empty($approvedCertifications)): ?>
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No approved certifications found.
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-check me-2"></i>Approved Certifications (<?= count($approvedCertifications) ?>)
                         </div>
-                    <?php else: ?>
-                        <div class="card">
-                            <div class="card-body">
+                        <div class="card-body">
+                            <?php if (empty($approvedCertifications)): ?>
+                                <div class="empty-state-card">
+                                    <i class="fas fa-certificate fa-3x"></i>
+                                    <h6>No approved certifications found.</h6>
+                                    <div class="text-muted">No certifications have been approved yet.</div>
+                                </div>
+                            <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table table-hover">
-                                        <thead class="table-dark">
+                                        <thead>
                                             <tr>
-                                                <th>Certification</th>
                                                 <th>Faculty</th>
+                                                <th>Certification</th>
+                                                <th>Issuer</th>
                                                 <th>Approved</th>
                                                 <th>Notes</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php foreach ($approvedCertifications as $submission): ?>
+                                                <?php $certData = json_decode($submission['content'] ?? '{}', true) ?: []; ?>
                                                 <tr>
+                                                    <td>
+                                                        <span class="badge bg-secondary"><?= esc($submission['faculty_name'] ?? 'Unknown') ?></span>
+                                                    </td>
                                                     <td>
                                                         <strong><?= esc($submission['title']) ?></strong>
                                                         <span class="badge bg-success ms-2">Approved</span>
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-secondary"><?= esc($submission['faculty_name'] ?? 'Unknown') ?></span>
+                                                        <span class="badge badge--category"><?= esc($certData['issuer'] ?? 'Unknown') ?></span>
                                                     </td>
                                                     <td>
                                                         <small><?= $submission['reviewed_at'] ? date('M j, Y g:i A', strtotime($submission['reviewed_at'])) : '-' ?></small>
@@ -337,40 +327,48 @@ try {
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
+                    </div>
                 </div>
-
                 <!-- Rejected Certifications -->
                 <div class="tab-pane fade" id="rejected" role="tabpanel" aria-labelledby="rejected-tab">
-                    <?php if (empty($rejectedCertifications)): ?>
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            No rejected certifications found.
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-times me-2"></i>Rejected Certifications (<?= count($rejectedCertifications) ?>)
                         </div>
-                    <?php else: ?>
-                        <div class="card">
-                            <div class="card-body">
+                        <div class="card-body">
+                            <?php if (empty($rejectedCertifications)): ?>
+                                <div class="empty-state-card">
+                                    <i class="fas fa-certificate fa-3x"></i>
+                                    <h6>No rejected certifications found.</h6>
+                                    <div class="text-muted">No certifications have been rejected yet.</div>
+                                </div>
+                            <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table table-hover">
-                                        <thead class="table-dark">
+                                        <thead>
                                             <tr>
-                                                <th>Certification</th>
                                                 <th>Faculty</th>
+                                                <th>Certification</th>
+                                                <th>Issuer</th>
                                                 <th>Rejected</th>
                                                 <th>Reason</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php foreach ($rejectedCertifications as $submission): ?>
+                                                <?php $certData = json_decode($submission['content'] ?? '{}', true) ?: []; ?>
                                                 <tr>
+                                                    <td>
+                                                        <span class="badge bg-secondary"><?= esc($submission['faculty_name'] ?? 'Unknown') ?></span>
+                                                    </td>
                                                     <td>
                                                         <strong><?= esc($submission['title']) ?></strong>
                                                         <span class="badge bg-danger ms-2">Rejected</span>
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-secondary"><?= esc($submission['faculty_name'] ?? 'Unknown') ?></span>
+                                                        <span class="badge badge--category"><?= esc($certData['issuer'] ?? 'Unknown') ?></span>
                                                     </td>
                                                     <td>
                                                         <small><?= $submission['reviewed_at'] ? date('M j, Y g:i A', strtotime($submission['reviewed_at'])) : '-' ?></small>
@@ -383,14 +381,67 @@ try {
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
+                    </div>
                 </div>
             </div>
-
-            <!-- Approval/Rejection Modals -->
+        </div>
             <?php foreach ($pendingCertifications as $submission): ?>
+                <!-- View Modal -->
+                <div class="modal fade" id="viewModal<?= $submission['id'] ?>" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-eye me-2"></i>View Certification Submission
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><strong>Title:</strong></h6>
+                                        <p><?= esc($submission['title']) ?></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><strong>Faculty:</strong></h6>
+                                        <p><?= esc($submission['faculty_name'] ?? 'Unknown') ?></p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><strong>Issuer:</strong></h6>
+                                        <p><?= esc($certData['issuer'] ?? 'Unknown') ?></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><strong>Submitted:</strong></h6>
+                                        <p><?= $submission['submitted_at'] ? date('M j, Y g:i A', strtotime($submission['submitted_at'])) : '-' ?></p>
+                                    </div>
+                                </div>
+                                <?php if (!empty($submission['description'])): ?>
+                                    <h6><strong>Description:</strong></h6>
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <?= nl2br(esc($submission['description'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($submission['content'])): ?>
+                                    <h6><strong>Certification Details:</strong></h6>
+                                    <div class="card">
+                                        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                            <?= nl2br(esc($submission['content'])) ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <!-- Approve Modal -->
                 <div class="modal fade" id="approveModal<?= $submission['id'] ?>" tabindex="-1">
                     <div class="modal-dialog">
@@ -403,10 +454,8 @@ try {
                                 <div class="modal-body">
                                     <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
                                     <input type="hidden" name="action" value="approve">
-                                    
                                     <p><strong>Title:</strong> <?= esc($submission['title']) ?></p>
                                     <p><strong>Faculty:</strong> <?= esc($submission['faculty_name'] ?? 'Unknown') ?></p>
-                                    
                                     <?php
                                     $certData = json_decode($submission['content'] ?? '{}', true) ?: [];
                                     if (!empty($certData)): ?>
@@ -429,14 +478,12 @@ try {
                                             <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
-                                    
                                     <?php if (!empty($submission['description'])): ?>
                                         <p><strong>Description:</strong></p>
                                         <div class="border p-2 rounded bg-light">
                                             <small><?= nl2br(esc($submission['description'])) ?></small>
                                         </div>
                                     <?php endif; ?>
-                                    
                                     <div class="mt-3">
                                         <label class="form-label">Approval Notes (Optional)</label>
                                         <textarea class="form-control" name="review_notes" rows="3" 
@@ -453,7 +500,6 @@ try {
                         </div>
                     </div>
                 </div>
-
                 <!-- Reject Modal -->
                 <div class="modal fade" id="rejectModal<?= $submission['id'] ?>" tabindex="-1">
                     <div class="modal-dialog">
@@ -466,10 +512,8 @@ try {
                                 <div class="modal-body">
                                     <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
                                     <input type="hidden" name="action" value="reject">
-                                    
                                     <p><strong>Title:</strong> <?= esc($submission['title']) ?></p>
                                     <p><strong>Faculty:</strong> <?= esc($submission['faculty_name'] ?? 'Unknown') ?></p>
-                                    
                                     <div class="mb-3">
                                         <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
                                         <textarea class="form-control" name="review_notes" rows="3" required
@@ -489,6 +533,7 @@ try {
             <?php endforeach; ?>
         </section>
     </main>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

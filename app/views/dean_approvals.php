@@ -19,6 +19,56 @@ if (!function_exists('esc')) {
     function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 }
 
+// Add helper to decode JSON if valid
+function try_decode_json($str) {
+    $data = json_decode($str, true);
+    return (json_last_error() === JSON_ERROR_NONE && is_array($data)) ? $data : null;
+}
+
+// Add helper to format content for modal display
+function format_submission_content($type, $jsonContent) {
+    // Define which fields to show for each type
+    $fields = [
+        'research' => [
+            'type' => 'Type',
+            'year' => 'Year',
+            'authors' => 'Authors',
+            'venue' => 'Venue',
+            'description' => 'Description'
+        ],
+        'certification' => [
+            'cert_title' => 'Title',
+            'issuer' => 'Issuer',
+            'year_earned' => 'Year Earned',
+            'year_expiry' => 'Year Expiry',
+            'description' => 'Description'
+        ],
+        'news' => [
+            'headline' => 'Headline',
+            'date' => 'Date',
+            'description' => 'Description'
+        ]
+    ];
+    $output = '';
+    if (isset($fields[$type])) {
+        $output .= '<table class="table table-sm table-bordered mb-0"><tbody>';
+        foreach ($fields[$type] as $key => $label) {
+            if (!empty($jsonContent[$key])) {
+                $output .= '<tr><th style="width:30%;">' . esc($label) . '</th><td>' . esc($jsonContent[$key]) . '</td></tr>';
+            }
+        }
+        $output .= '</tbody></table>';
+    } else {
+        // fallback: show all fields
+        $output .= '<table class="table table-sm table-bordered mb-0"><tbody>';
+        foreach ($jsonContent as $key => $value) {
+            $output .= '<tr><th style="width:30%;">' . esc(ucwords(str_replace('_', ' ', $key))) . '</th><td>' . esc(is_array($value) ? json_encode($value) : $value) . '</td></tr>';
+        }
+        $output .= '</tbody></table>';
+    }
+    return $output;
+}
+
 $user = Auth::user();
 $username = $user['username'] ?? 'Dean';
 $notice = '';
@@ -311,7 +361,14 @@ try {
                         
                         <?php if ($submission['content']): ?>
                             <h6><strong>Content:</strong></h6>
-                            <div class="border p-3 rounded mb-3" style="max-height: 200px; overflow-y: auto;"><?= nl2br(esc($submission['content'])) ?></div>
+                            <?php $jsonContent = try_decode_json($submission['content']); ?>
+                            <?php if ($jsonContent): ?>
+                                <div class="border p-3 rounded mb-3" style="max-height: 200px; overflow-y: auto;">
+                                    <?= format_submission_content($submission['submission_type'], $jsonContent) ?>
+                            </div>
+                            <?php else: ?>
+                                <div class="border p-3 rounded mb-3" style="max-height: 200px; overflow-y: auto;"><?= nl2br(esc($submission['content'])) ?></div>
+                            <?php endif; ?>
                         <?php endif; ?>
                         
                         <!-- Review Form -->

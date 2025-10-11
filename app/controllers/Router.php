@@ -368,8 +368,8 @@ class Router {
                 echo (new DeanController())->dashboard(); break;
 
             case 'dean_portfolio':
-                Auth::requireRole(['dean'], $base . 'login');
-                require_once __DIR__ . '/../views/dean_portfolio.php'; break;
+                include __DIR__ . '/../views/dean/dean_portfolio.php';
+                break;
 
             case 'dean_portfolio_save':
                 Auth::requireRole(['dean'], $base . 'login');

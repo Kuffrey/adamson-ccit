@@ -133,10 +133,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // Note: The Announcement model doesn't have a general update method
-            // This functionality might need to be implemented in the model
-            // Announcement::update($id, $updateData);
-            $notice = 'Announcement editing functionality needs to be implemented in the model.';
+            if (Announcement::update($id, $updateData)) {
+                DeanLogs::logUpdate('announcements', $id, $user['id'] ?? null, "Updated announcement: {$title}");
+                $notice = 'Announcement updated successfully!';
+            } else {
+                $notice = 'Failed to update announcement.';
+            }
         }
 
         // Delete announcement
@@ -148,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $announcementTitle = $announcementToDelete['title'] ?? "Announcement ID {$id}";
             
             if (Announcement::delete($id)) {
-                DeanLogs::logDelete('announcements', $id, $user['id'] ?? null, "Deleted announcement: {$announcementTitle}");
+                DeanLogs::logDelete($user['id'] ?? null, 'announcements', $id, "Deleted announcement: {$announcementTitle}");
                 $notice = 'Announcement deleted successfully!';
             } else {
                 $notice = 'Failed to delete announcement.';
@@ -182,77 +184,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
+<?php
+// Buffer for collecting modal markup (printed once at end of <body>)
+$__annCollectedModals = '';
+
+// Ensure esc() exists
+if (!function_exists('esc')) {
+    function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Announcements | CCIT Dean</title>
-    <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
-    <link rel="stylesheet" href="/adamson-ccit/public/assets/css/admin-dashboard.css">
+    <link rel="stylesheet" href="/adamson-ccit/public/assets/css/dean.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="admin-cms-layout">
+    <div class="admin-layout">
         <?php include __DIR__ . '/_dean_sidebar.php'; ?>
-        
         <main class="admin-main">
             <header class="admin-topbar">
-                <span class="admin-topbar__title">Announcements Management</span>
-                <div class="admin-topbar__spacer"></div>
-                <div class="admin-topbar__user">
-                    <span class="admin-topbar__avatar"><?= esc(strtoupper($username[0] ?? 'D')) ?></span>
-                    <span class="admin-topbar__name"><?= esc($username) ?></span>
-                </div>
+                <button class="topbar__btn hide-desktop" type="button" aria-label="Open navigation menu" data-sb-open>
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="admin-topbar__title">CCIT Announcements Management</span>
+                <span class="admin-topbar__spacer"></span>
             </header>
+            <section class="admin-section">
 
-            <section class="admin-cms-section">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h1 class="admin-cms-section__title mb-1">Announcements Management</h1>
-                        <p class="text-muted mb-0">Create and manage department announcements</p>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <div class="badge bg-primary">Total: <?= $counts['all'] ?></div>
-                        <div class="badge bg-success">Published: <?= $counts['published'] ?></div>
-                        <div class="badge bg-warning">Draft: <?= $counts['draft'] ?></div>
-                    </div>
-                </div>
-
-                <?php if ($notice): ?>
-                    <div class="alert <?= str_starts_with($notice, 'Error') || str_starts_with($notice, 'Failed') ? 'alert-danger' : 'alert-success' ?> alert-dismissible fade show" role="alert">
-                        <i class="fas <?= str_starts_with($notice, 'Error') || str_starts_with($notice, 'Failed') ? 'fa-exclamation-triangle' : 'fa-check-circle' ?> me-2"></i>
+                <!-- Enhanced message handling -->
+                <?php if (!empty($notice)): ?>
+                    <div class="alert <?= (str_starts_with($notice, 'Error') || str_starts_with($notice, 'Failed')) ? 'alert-danger' : 'alert-success' ?> alert-dismissible fade show modern-alert" role="alert">
+                        <i class="fas <?= (str_starts_with($notice, 'Error') || str_starts_with($notice, 'Failed')) ? 'fa-exclamation-circle' : 'fa-check-circle' ?>"></i>
                         <?= esc($notice) ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 <?php endif; ?>
 
                 <!-- Filter Tabs -->
-                <div class="card mb-4">
+                <div class="card">
                     <div class="card-body">
-                        <ul class="nav nav-pills">
-                            <li class="nav-item">
-                                <a class="nav-link <?= $status === 'all' ? 'active' : '' ?>" href="?page=dean_manage_announcements&status=all">
-                                    All Announcements (<?= $counts['all'] ?>)
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <?= $status === 'published' ? 'active' : '' ?>" href="?page=dean_manage_announcements&status=published">
-                                    Published (<?= $counts['published'] ?>)
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <?= $status === 'draft' ? 'active' : '' ?>" href="?page=dean_manage_announcements&status=draft">
-                                    Draft (<?= $counts['draft'] ?>)
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <?= $status === 'archived' ? 'active' : '' ?>" href="?page=dean_manage_announcements&status=archived">
-                                    Archived (<?= $counts['archived'] ?>)
-                                </a>
-                            </li>
-                        </ul>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <ul class="nav nav-pills">
+                                <li class="nav-item">
+                                    <a class="nav-link <?= ($status ?? 'all') === 'all' ? 'active' : '' ?>" href="?page=dean_manage_announcements&status=all">
+                                        All Announcements (<?= (int)($counts['all'] ?? 0) ?>)
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link <?= ($status ?? '') === 'published' ? 'active' : '' ?>" href="?page=dean_manage_announcements&status=published">
+                                        Published (<?= (int)($counts['published'] ?? 0) ?>)
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link <?= ($status ?? '') === 'draft' ? 'active' : '' ?>" href="?page=dean_manage_announcements&status=draft">
+                                        Draft (<?= (int)($counts['draft'] ?? 0) ?>)
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link <?= ($status ?? '') === 'archived' ? 'active' : '' ?>" href="?page=dean_manage_announcements&status=archived">
+                                        Archived (<?= (int)($counts['archived'] ?? 0) ?>)
+                                    </a>
+                                </li>
+                            </ul>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAnnouncementModal">
+                                <i class="fas fa-plus me-2"></i>Add Announcement
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -279,39 +281,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </thead>
                                 <tbody>
                                     <?php foreach ($pendingAnnouncementSubmissions as $submission): ?>
+                                        <?php
+                                            $sid   = (int)$submission['id'];
+                                            $sfac  = esc($submission['faculty_name'] ?? 'Unknown Faculty');
+                                            $sdept = esc($submission['department_name'] ?? '');
+                                            $stitle= esc($submission['title'] ?? '');
+                                            $scat  = esc($submission['category'] ?? 'Announcement');
+                                            $ssub  = !empty($submission['submitted_at']) ? date('M j, Y g:i A', strtotime($submission['submitted_at'])) : '';
+                                        ?>
                                         <tr>
                                             <td>
-                                                <strong><?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?></strong>
-                                                <br><small class="text-muted"><?= esc($submission['department_name'] ?? '') ?></small>
+                                                <strong><?= $sfac ?></strong>
+                                                <br><small class="text-muted"><?= $sdept ?></small>
                                             </td>
-                                            <td>
-                                                <strong><?= esc($submission['title']) ?></strong>
-                                                <?php if (!empty($submission['description'])): ?>
-                                                    <br><small class="text-muted"><?= esc(substr($submission['description'], 0, 100)) ?>...</small>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-info"><?= esc($submission['category'] ?? 'Announcement') ?></span>
-                                            </td>
-                                            <td>
-                                                <small><?= date('M j, Y g:i A', strtotime($submission['submitted_at'])) ?></small>
-                                            </td>
+                                            <td><strong><?= $stitle ?></strong></td>
+                                            <td><span class="badge badge--category"><?= $scat ?></span></td>
+                                            <td><small><?= esc($ssub) ?></small></td>
                                             <td>
                                                 <div class="btn-group" role="group">
                                                     <button type="button" class="btn btn-success btn-sm" 
-                                                            data-bs-toggle="modal" data-bs-target="#approveAnnouncementModal<?= $submission['id'] ?>">
+                                                            data-bs-toggle="modal" data-bs-target="#approveAnnouncementModal<?= $sid ?>">
                                                         <i class="fas fa-check"></i> Approve
                                                     </button>
                                                     <button type="button" class="btn btn-danger btn-sm" 
-                                                            data-bs-toggle="modal" data-bs-target="#rejectAnnouncementModal<?= $submission['id'] ?>">
+                                                            data-bs-toggle="modal" data-bs-target="#rejectAnnouncementModal<?= $sid ?>">
                                                         <i class="fas fa-times"></i> Reject
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
-
+                                        <?php
+                                            // Collect approve/reject modals for this submission (printed at end of body)
+                                            ob_start();
+                                        ?>
                                         <!-- Approve Modal -->
-                                        <div class="modal fade" id="approveAnnouncementModal<?= $submission['id'] ?>" tabindex="-1">
+                                        <div class="modal fade" id="approveAnnouncementModal<?= $sid ?>" tabindex="-1" aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
@@ -321,8 +325,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     <form method="POST">
                                                         <div class="modal-body">
                                                             <input type="hidden" name="faculty_action" value="approve">
-                                                            <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
-                                                            <p>Approve "<strong><?= esc($submission['title']) ?></strong>" by <?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?>?</p>
+                                                            <input type="hidden" name="submission_id" value="<?= $sid ?>">
+                                                            <p>Approve "<strong><?= $stitle ?></strong>" by <?= $sfac ?>?</p>
                                                             <p class="text-muted">This will publish the announcement immediately.</p>
                                                             <div class="mb-3">
                                                                 <label class="form-label">Review Notes (Optional)</label>
@@ -331,7 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                         </div>
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                            <button type="submit" class="btn btn-success">Approve & Publish</button>
+                                                            <button type="submit" class="btn btn-success">Approve &amp; Publish</button>
                                                         </div>
                                                     </form>
                                                 </div>
@@ -339,7 +343,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </div>
 
                                         <!-- Reject Modal -->
-                                        <div class="modal fade" id="rejectAnnouncementModal<?= $submission['id'] ?>" tabindex="-1">
+                                        <div class="modal fade" id="rejectAnnouncementModal<?= $sid ?>" tabindex="-1" aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
@@ -349,8 +353,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     <form method="POST">
                                                         <div class="modal-body">
                                                             <input type="hidden" name="faculty_action" value="reject">
-                                                            <input type="hidden" name="submission_id" value="<?= $submission['id'] ?>">
-                                                            <p>Reject "<strong><?= esc($submission['title']) ?></strong>" by <?= esc($submission['faculty_name'] ?? 'Unknown Faculty') ?>?</p>
+                                                            <input type="hidden" name="submission_id" value="<?= $sid ?>">
+                                                            <p>Reject "<strong><?= $stitle ?></strong>" by <?= $sfac ?>?</p>
                                                             <div class="mb-3">
                                                                 <label class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
                                                                 <textarea class="form-control" name="review_notes" rows="3" placeholder="Please provide a reason for rejection..." required></textarea>
@@ -364,6 +368,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 </div>
                                             </div>
                                         </div>
+                                        <?php
+                                            $__annCollectedModals .= ob_get_clean();
+                                        ?>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
@@ -372,85 +379,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <?php endif; ?>
 
-                <!-- Add New Announcement Card -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="card-title mb-0"><i class="fas fa-plus me-2"></i>Add New Announcement</h5>
-                            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" 
-                                    data-bs-target="#addAnnouncementCollapse" aria-expanded="false">
-                                <i class="fas fa-chevron-down"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="collapse" id="addAnnouncementCollapse">
-                        <div class="card-body">
-                            <form method="POST" enctype="multipart/form-data">
-                                <input type="hidden" name="add_announcement" value="1">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <div class="mb-3">
-                                            <label for="title" class="form-label">Announcement Title</label>
-                                            <input type="text" class="form-control" id="title" name="title" required>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="content" class="form-label">Content</label>
-                                            <textarea class="form-control" id="content" name="content" rows="6"></textarea>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label for="category" class="form-label">Category</label>
-                                            <select class="form-control" id="category" name="category">
-                                                <option value="general">General</option>
-                                                <option value="academic">Academic</option>
-                                                <option value="registration">Registration</option>
-                                                <option value="deadline">Deadline</option>
-                                                <option value="holiday">Holiday</option>
-                                                <option value="emergency">Emergency</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="date" class="form-label">Date</label>
-                                            <input type="date" class="form-control" id="date" name="date" value="<?= date('Y-m-d') ?>">
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="status" class="form-label">Status</label>
-                                            <select class="form-control" id="status" name="status">
-                                                <option value="draft">Draft</option>
-                                                <option value="published">Published</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label for="image" class="form-label">Announcement Image</label>
-                                            <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                                        </div>
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-plus"></i> Add Announcement
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Announcements List -->
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="fas fa-bullhorn me-2"></i>Announcements (<?= count($announcements) ?>)</h5>
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-bullhorn me-2"></i>Announcements (<?= count($announcements ?? []) ?>)
+                        </h5>
                     </div>
-                    
                     <div class="card-body">
                         <?php if (empty($announcements)): ?>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i> No announcements found.
+                            <div class="empty-state-card">
+                                <i class="fas fa-bullhorn fa-3x"></i>
+                                <h6>No Announcements Found</h6>
+                                <div class="text-muted">Start by adding an announcement using the <strong>Add Announcement</strong> button above.</div>
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
-                                <table class="table table-striped table-hover">
-                                    <thead class="table-dark">
+                                <table class="table table-hover">
+                                    <thead>
                                         <tr>
                                             <th>Announcement</th>
                                             <th>Category</th>
@@ -461,66 +407,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     </thead>
                                     <tbody>
                                         <?php foreach ($announcements as $announcement): ?>
+                                            <?php
+                                                $aid     = (int)$announcement['id'];
+                                                $atitle  = esc($announcement['title'] ?? '');
+                                                $acat    = esc($announcement['category'] ?? 'General');
+                                                $adate   = $announcement['date'] ?? '';
+                                                $adisp   = $adate ? date('M j, Y', strtotime($adate)) : '';
+                                                $astatus = esc($announcement['status'] ?? 'draft');
+                                                $abody   = esc($announcement['body'] ?? '');
+                                                $hasImg  = !empty($announcement['image_url'] ?? '');
+                                            ?>
                                             <tr>
+                                                <td><strong><?= $atitle ?></strong></td>
+                                                <td><span class="badge badge--category"><?= $acat ?></span></td>
+                                                <td><?= esc($adisp) ?></td>
                                                 <td>
-                                                    <div class="d-flex align-items-start">
-                                                        <?php if (!empty($announcement['image_url'])): ?>
-                                                            <img src="<?= esc($announcement['image_url']) ?>" alt="Announcement Image" 
-                                                                 class="rounded me-3" width="50" height="50" style="object-fit: cover;">
-                                                        <?php endif; ?>
-                                                        <div>
-                                                            <strong><?= esc($announcement['title']) ?></strong>
-                                                            <?php if (!empty($announcement['body'] ?? '')): ?>
-                                                                <br><small class="text-muted"><?= esc(substr($announcement['body'] ?? '', 0, 100)) ?>...</small>
-                                                            <?php endif; ?>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-<?= 
-                                                        ($announcement['category'] ?? '') === 'emergency' ? 'danger' : 
-                                                        (($announcement['category'] ?? '') === 'deadline' ? 'warning' : 
-                                                        (($announcement['category'] ?? '') === 'academic' ? 'info' : 'secondary')) 
-                                                    ?>">
-                                                        <?= esc($announcement['category'] ?? '') ?>
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <?= ($announcement['date'] ?? '') ? date('M j, Y', strtotime($announcement['date'])) : '' ?>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-<?= ($announcement['status'] ?? '') === 'published' ? 'success' : (($announcement['status'] ?? '') === 'draft' ? 'warning' : 'secondary') ?>">
-                                                        <?= esc($announcement['status'] ?? '') ?>
+                                                    <span class="badge badge--status badge--<?= $astatus ?>">
+                                                        <?= $astatus ?>
                                                     </span>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <?php if (($announcement['status'] ?? '') === 'draft'): ?>
-                                                            <form method="POST" style="display: inline;">
-                                                                <input type="hidden" name="update_status" value="published">
-                                                                <input type="hidden" name="id" value="<?= $announcement['id'] ?>">
-                                                                <button type="submit" class="btn btn-sm btn-success" title="Publish">
-                                                                    <i class="fas fa-play"></i>
-                                                                </button>
-                                                            </form>
-                                                        <?php elseif (($announcement['status'] ?? '') === 'published'): ?>
-                                                            <form method="POST" style="display: inline;">
-                                                                <input type="hidden" name="update_status" value="archived">
-                                                                <input type="hidden" name="id" value="<?= $announcement['id'] ?>">
-                                                                <button type="submit" class="btn btn-sm btn-secondary" title="Archive">
-                                                                    <i class="fas fa-archive"></i>
-                                                                </button>
-                                                            </form>
-                                                        <?php endif; ?>
-                                                        
                                                         <button type="button" class="btn btn-sm btn-warning" 
-                                                                data-bs-toggle="modal" data-bs-target="#editAnnouncementModal<?= $announcement['id'] ?>">
+                                                                data-bs-toggle="modal" data-bs-target="#editAnnouncementModal<?= $aid ?>">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
                                                         <form method="POST" style="display: inline;" 
                                                               onsubmit="return confirm('Are you sure you want to delete this announcement?');">
                                                             <input type="hidden" name="delete_announcement" value="1">
-                                                            <input type="hidden" name="id" value="<?= $announcement['id'] ?>">
+                                                            <input type="hidden" name="id" value="<?= $aid ?>">
                                                             <button type="submit" class="btn btn-sm btn-danger">
                                                                 <i class="fas fa-trash"></i>
                                                             </button>
@@ -528,9 +443,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     </div>
                                                 </td>
                                             </tr>
-
+                                            <?php
+                                                // Collect edit modal for this announcement (printed at end of body)
+                                                ob_start();
+                                            ?>
                                             <!-- Edit Announcement Modal -->
-                                            <div class="modal fade" id="editAnnouncementModal<?= $announcement['id'] ?>" tabindex="-1">
+                                            <div class="modal fade" id="editAnnouncementModal<?= $aid ?>" tabindex="-1" aria-hidden="true">
                                                 <div class="modal-dialog modal-lg">
                                                     <div class="modal-content">
                                                         <div class="modal-header">
@@ -539,49 +457,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                         </div>
                                                         <form method="POST" enctype="multipart/form-data">
                                                             <input type="hidden" name="edit_announcement" value="1">
-                                                            <input type="hidden" name="id" value="<?= $announcement['id'] ?>">
+                                                            <input type="hidden" name="id" value="<?= $aid ?>">
                                                             <div class="modal-body">
                                                                 <div class="row">
                                                                     <div class="col-md-8">
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Title</label>
                                                                             <input type="text" class="form-control" name="title" 
-                                                                                   value="<?= esc($announcement['title'] ?? '') ?>" required>
+                                                                                value="<?= $atitle ?>" required>
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Content</label>
-                                                                            <textarea class="form-control" name="content" rows="6"><?= esc($announcement['body'] ?? '') ?></textarea>
+                                                                            <textarea class="form-control" name="content" rows="6"><?= $abody ?></textarea>
                                                                         </div>
                                                                     </div>
                                                                     <div class="col-md-4">
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Category</label>
                                                                             <select class="form-control" name="category">
-                                                                                <option value="general" <?= ($announcement['category'] ?? '') === 'general' ? 'selected' : '' ?>>General</option>
-                                                                                <option value="academic" <?= ($announcement['category'] ?? '') === 'academic' ? 'selected' : '' ?>>Academic</option>
-                                                                                <option value="registration" <?= ($announcement['category'] ?? '') === 'registration' ? 'selected' : '' ?>>Registration</option>
-                                                                                <option value="deadline" <?= ($announcement['category'] ?? '') === 'deadline' ? 'selected' : '' ?>>Deadline</option>
-                                                                                <option value="holiday" <?= ($announcement['category'] ?? '') === 'holiday' ? 'selected' : '' ?>>Holiday</option>
-                                                                                <option value="emergency" <?= ($announcement['category'] ?? '') === 'emergency' ? 'selected' : '' ?>>Emergency</option>
+                                                                                <option value="general"      <?= (($announcement['category'] ?? '') === 'general') ? 'selected' : '' ?>>General</option>
+                                                                                <option value="academic"     <?= (($announcement['category'] ?? '') === 'academic') ? 'selected' : '' ?>>Academic</option>
+                                                                                <option value="registration" <?= (($announcement['category'] ?? '') === 'registration') ? 'selected' : '' ?>>Registration</option>
+                                                                                <option value="deadline"     <?= (($announcement['category'] ?? '') === 'deadline') ? 'selected' : '' ?>>Deadline</option>
+                                                                                <option value="holiday"      <?= (($announcement['category'] ?? '') === 'holiday') ? 'selected' : '' ?>>Holiday</option>
+                                                                                <option value="emergency"    <?= (($announcement['category'] ?? '') === 'emergency') ? 'selected' : '' ?>>Emergency</option>
                                                                             </select>
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Date</label>
-                                                                            <input type="date" class="form-control" name="date" 
-                                                                                   value="<?= $announcement['date'] ?? '' ?>">
+                                                                            <input type="date" class="form-control" name="date" value="<?= esc($announcement['date'] ?? '') ?>">
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Status</label>
                                                                             <select class="form-control" name="status">
-                                                                                <option value="draft" <?= ($announcement['status'] ?? '') === 'draft' ? 'selected' : '' ?>>Draft</option>
-                                                                                <option value="published" <?= ($announcement['status'] ?? '') === 'published' ? 'selected' : '' ?>>Published</option>
-                                                                                <option value="archived" <?= ($announcement['status'] ?? '') === 'archived' ? 'selected' : '' ?>>Archived</option>
+                                                                                <option value="draft"     <?= (($announcement['status'] ?? '') === 'draft') ? 'selected' : '' ?>>Draft</option>
+                                                                                <option value="published" <?= (($announcement['status'] ?? '') === 'published') ? 'selected' : '' ?>>Published</option>
+                                                                                <option value="archived"  <?= (($announcement['status'] ?? '') === 'archived') ? 'selected' : '' ?>>Archived</option>
                                                                             </select>
                                                                         </div>
                                                                         <div class="mb-3">
                                                                             <label class="form-label">Update Image</label>
                                                                             <input type="file" class="form-control" name="image" accept="image/*">
-                                                                            <?php if (!empty($announcement['image_url'] ?? '')): ?>
+                                                                            <?php if ($hasImg): ?>
                                                                                 <small class="text-muted">Current image will be replaced if new one is uploaded</small>
                                                                             <?php endif; ?>
                                                                         </div>
@@ -596,6 +513,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     </div>
                                                 </div>
                                             </div>
+                                            <?php
+                                                $__annCollectedModals .= ob_get_clean();
+                                            ?>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
@@ -606,6 +526,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </section>
         </main>
     </div>
+
+    <!-- =========================
+         ALL MODALS RENDER HERE
+         ========================= -->
+
+    <!-- Add Announcement Modal (moved here, unchanged) -->
+    <div class="modal fade" id="addAnnouncementModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="add_announcement" value="1">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add Announcement</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="title" class="form-label">Announcement Title</label>
+                                    <input type="text" class="form-control" id="title" name="title" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="content" class="form-label">Content</label>
+                                    <textarea class="form-control" id="content" name="content" rows="6"></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="category" class="form-label">Category</label>
+                                    <select class="form-control" id="category" name="category">
+                                        <option value="general">General</option>
+                                        <option value="academic">Academic</option>
+                                        <option value="registration">Registration</option>
+                                        <option value="deadline">Deadline</option>
+                                        <option value="holiday">Holiday</option>
+                                        <option value="emergency">Emergency</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="date" class="form-label">Date</label>
+                                    <input type="date" class="form-control" id="date" name="date" value="<?= date('Y-m-d') ?>">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-control" id="status" name="status">
+                                        <option value="draft">Draft</option>
+                                        <option value="published">Published</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="image" class="form-label">Announcement Image</label>
+                                    <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add Announcement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collected approve/reject/edit modals -->
+    <?= $__annCollectedModals ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
