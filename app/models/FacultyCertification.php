@@ -11,7 +11,7 @@ class FacultyCertification extends Model {
                 FROM faculty_certification_award fca
                 JOIN users u ON fca.faculty_id = u.id
                 JOIN certification c ON fca.certification_id = c.id
-                WHERE COALESCE(fca.is_archived, 0) = 0
+                WHERE COALESCE(fca.is_archived, 0) = 0 AND fca.status = "Active"
                 ORDER BY fca.year_earned DESC, c.issuer, c.cert_title, u.first_name, u.last_name';
         $stmt = $db->query($sql);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -99,27 +99,109 @@ class FacultyCertification extends Model {
             $this->ensureArchivedColumn();
             $pdo = $this->getConnection();
             
-            // Don't auto-archive expired/revoked - keep them visible with clear status
-            $status = $data['status'] ?? 'Active';
-            $isArchived = 0; // Only archive when explicitly moved to archive
+            error_log("FacultyCertification::create called with data: " . print_r($data, true));
             
-            $sql = "INSERT INTO faculty_certification_award (faculty_id, certification_id, year_earned, year_expiry, status, is_archived, created_at, updated_at) 
-                    VALUES (:faculty_id, :certification_id, :year_earned, :year_expiry, :status, :is_archived, NOW(), NOW())";
+            // Validate required fields
+            if (empty($data['faculty_id'])) {
+                throw new Exception("faculty_id is required");
+            }
+            if (empty($data['certification_id'])) {
+                throw new Exception("certification_id is required");
+            }
+            
+            // Verify faculty exists
+            $facultyCheck = $pdo->prepare("SELECT id FROM users WHERE id = ? LIMIT 1");
+            $facultyCheck->execute([$data['faculty_id']]);
+            if (!$facultyCheck->fetch()) {
+                throw new Exception("Faculty ID {$data['faculty_id']} does not exist");
+            }
+            
+            // Verify certification exists
+            $certCheck = $pdo->prepare("SELECT id FROM certification WHERE id = ? LIMIT 1");
+            $certCheck->execute([$data['certification_id']]);
+            if (!$certCheck->fetch()) {
+                throw new Exception("Certification ID {$data['certification_id']} does not exist");
+            }
+            
+            $status = $data['status'] ?? 'Active';
+            $isArchived = 0;
+            
+            // Check what columns exist in the table
+            $stmt = $pdo->query("DESCRIBE faculty_certification_award");
+            $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            
+            error_log("Available columns in faculty_certification_award: " . implode(', ', $columns));
+            
+            // Build SQL based on available columns
+            $insertColumns = [];
+            $insertValues = [];
+            $params = [];
+            
+            // Required fields
+            $insertColumns[] = 'faculty_id';
+            $insertValues[] = ':faculty_id';
+            $params['faculty_id'] = (int)$data['faculty_id'];
+            
+            $insertColumns[] = 'certification_id';
+            $insertValues[] = ':certification_id';
+            $params['certification_id'] = (int)$data['certification_id'];
+            
+            $insertColumns[] = 'status';
+            $insertValues[] = ':status';
+            $params['status'] = $status;
+            
+            // Optional fields that might exist
+            $optionalFields = [
+                'year_earned' => $data['year_earned'] ?? date('Y'),
+                'year_expiry' => $data['year_expiry'] ?? null,
+                'credential_id' => $data['credential_id'] ?? null,
+                'verification_url' => $data['verification_url'] ?? null,
+                'description' => $data['description'] ?? null,
+                'is_archived' => $isArchived
+            ];
+            
+            foreach ($optionalFields as $field => $value) {
+                if (in_array($field, $columns)) {
+                    $insertColumns[] = $field;
+                    $insertValues[] = ":$field";
+                    $params[$field] = $value;
+                }
+            }
+            
+            // Add timestamp columns if they exist
+            if (in_array('created_at', $columns)) {
+                $insertColumns[] = 'created_at';
+                $insertValues[] = 'NOW()';
+            }
+            
+            if (in_array('updated_at', $columns)) {
+                $insertColumns[] = 'updated_at';
+                $insertValues[] = 'NOW()';
+            }
+            
+            $sql = "INSERT INTO faculty_certification_award (" . implode(', ', $insertColumns) . ") 
+                    VALUES (" . implode(', ', $insertValues) . ")";
+            
+            error_log("SQL query: " . $sql);
+            error_log("Parameters: " . print_r($params, true));
             
             $stmt = $pdo->prepare($sql);
+            $result = $stmt->execute($params);
             
-            $result = $stmt->execute([
-                'faculty_id' => $data['faculty_id'],
-                'certification_id' => $data['certification_id'],
-                'year_earned' => $data['year_earned'] ?? null,
-                'year_expiry' => $data['year_expiry'] ?? null,
-                'status' => $status,
-                'is_archived' => $isArchived
-            ]);
-            
-            return $result ? $pdo->lastInsertId() : false;
+            if ($result) {
+                $insertId = $pdo->lastInsertId();
+                error_log("Successfully inserted certification award with ID: " . $insertId);
+                return $insertId;
+            } else {
+                error_log("Insert failed. Error info: " . print_r($stmt->errorInfo(), true));
+                return false;
+            }
             
         } catch (PDOException $e) {
+            error_log("FacultyCertification creation PDO error: " . $e->getMessage());
+            error_log("SQL State: " . $e->getCode());
+            return false;
+        } catch (Exception $e) {
             error_log("FacultyCertification creation error: " . $e->getMessage());
             return false;
         }
@@ -282,6 +364,9 @@ class FacultyCertification extends Model {
                     $sql .= " WHERE fca.status = :status AND COALESCE(fca.is_archived, 0) = 0";
                     $params['status'] = ucfirst($status);
                 }
+            } else {
+                // Only show active, non-archived by default
+                $sql .= " WHERE fca.status = 'Active' AND COALESCE(fca.is_archived, 0) = 0";
             }
             
             $sql .= " ORDER BY COALESCE(fca.created_at, fca.id) DESC";

@@ -4,7 +4,26 @@ require_once __DIR__ . '/../models/FacultyResearchPageSettings.php';
 require_once __DIR__ . '/../models/FacultyResearch.php';
 $settings = FacultyResearchPageSettings::getSettings();
 $research = FacultyResearch::getAll();
-$years = FacultyResearch::getYears();
+
+// Build years array from research data
+$years = [];
+foreach ($research as $r) {
+    if (!empty($r['year'])) {
+        $years[] = $r['year'];
+    }
+}
+$years = array_unique($years);
+sort($years, SORT_DESC);
+
+// Pagination setup
+$page = (int)($_GET['page_num'] ?? 1);
+$limit = 10; // Publications per page
+$offset = ($page - 1) * $limit;
+$totalResearch = count($research);
+$totalPages = ceil($totalResearch / $limit);
+
+// Apply pagination
+$paginatedResearch = array_slice($research, $offset, $limit);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -13,8 +32,9 @@ $years = FacultyResearch::getYears();
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Faculty Research | AdU-CCIT</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css"/>
+
 </head>
-<body>
+<body class="page-faculty-research">
 <main class="page-faculty">
   <!-- ============ SUB-HERO ============ -->
   <section class="subhero">
@@ -48,10 +68,6 @@ $years = FacultyResearch::getYears();
   <section class="nbar">
     <div class="container nbar__inner">
       <div class="nbar__left">
-        <div class="ncats" role="tablist" aria-label="Filter by department">
-          <button class="pill is-active" role="tab" aria-selected="true" data-dept="all">All</button>
-          <button class="pill" role="tab" data-dept="itis">IT&amp;IS</button>
-        </div>
         <form class="nyear" method="get" action="#" onsubmit="return false;">
           <select id="fYear" name="year">
             <option value="all">All Years</option>
@@ -70,52 +86,117 @@ $years = FacultyResearch::getYears();
   <!-- ============ RESEARCH GRID ============ -->
   <section class="rlist">
     <div class="container">
-      <div id="rCount" class="rcount">Showing <?= count($research) ?> publication<?= count($research) !== 1 ? 's' : '' ?></div>
+      <div id="rCount" class="rcount">Showing <?= count($paginatedResearch) ?> of <?= $totalResearch ?> publication<?= $totalResearch !== 1 ? 's' : '' ?></div>
       
-      <div id="rGrid" class="cards">
+      <div id="rGrid" class="research-publications">
         <?php if (empty($research)): ?>
           <!-- Fallback static content -->
-          <article class="r" data-dept="itis" data-type="journal" data-year="2024">
-            <a class="r__media" href="#" target="_blank" rel="noopener">
-              <img src="/adamson-ccit/public/assets/images/research-placeholder.jpg" alt="Research paper">
-              <span class="chip chip--blue">Journal</span>
-            </a>
-            <div class="r__body">
-              <h3 class="r__title">
+          <article class="research-item" data-dept="itis" data-type="journal" data-year="2024">
+            <div class="research-content">
+              <h3 class="research-title">
                 <a href="#" target="_blank" rel="noopener">Machine Learning Applications in Computer Science Education</a>
               </h3>
-              <p class="r__meta">Dr. Maria Santos • IEEE Transactions on Education • 2024</p>
-              <div class="r__actions">
-                <a class="btn btn--outline-blue" href="#" target="_blank" rel="noopener">Read Paper</a>
+              <div class="research-authors">Dr. Maria Santos</div>
+              <div class="research-meta">
+                <span class="research-venue">IEEE Transactions on Education</span>
+                <span class="research-year">2024</span>
+                <span class="research-type badge">Journal</span>
+              </div>
+              <div class="research-actions">
+                <a class="btn-link" href="#" target="_blank" rel="noopener">
+                  <i class="fas fa-external-link-alt"></i> View Publication
+                </a>
               </div>
             </div>
           </article>
         <?php else: ?>
-          <?php foreach ($research as $r): ?>
-          <article class="r" data-dept="<?= htmlspecialchars($r['dept']) ?>" data-type="<?= htmlspecialchars($r['type']) ?>" data-year="<?= htmlspecialchars($r['year']) ?>">
-            <a class="r__media" href="<?= !empty($r['view_url']) ? htmlspecialchars($r['view_url']) : '#' ?>" target="_blank" rel="noopener">
-              <img src="<?= htmlspecialchars($r['image_url'] ?: '/adamson-ccit/public/assets/images/placeholder-16x9.jpg') ?>" alt="Poster: <?= htmlspecialchars($r['title']) ?>">
-              <span class="chip chip--blue"><?= ucfirst(htmlspecialchars($r['type'])) ?></span>
-            </a>
-            <div class="r__body">
-              <h3 class="r__title">
-                <?php if (!empty($r['view_url'])): ?>
-                  <a href="<?= htmlspecialchars($r['view_url']) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($r['title']) ?></a>
+          <?php foreach ($paginatedResearch as $r): ?>
+          <?php
+            $title     = isset($r['title'])     ? $r['title']     : '';
+            $authors   = isset($r['authors'])   ? $r['authors']   : '';
+            $doi       = isset($r['doi'])       ? $r['doi']       : '';
+            $publisher = isset($r['publisher']) ? $r['publisher'] : '';
+            $conference= isset($r['conference'])? $r['conference']: '';
+            $year      = isset($r['year'])      ? $r['year']      : '';
+            $view_url  = isset($r['view_url'])  ? $r['view_url']  : '';
+            
+            // Determine publication venue (conference or publisher)
+            $venue = !empty($conference) ? $conference : $publisher;
+            $type = !empty($conference) ? 'Conference' : 'Journal';
+          ?>
+          <article class="research-item" data-dept="itis" data-type="<?= strtolower($type) ?>" data-year="<?= htmlspecialchars($year) ?>">
+            <div class="research-content">
+              <h3 class="research-title">
+                <?php if (!empty($view_url)): ?>
+                  <a href="<?= htmlspecialchars($view_url) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($title) ?></a>
                 <?php else: ?>
-                  <?= htmlspecialchars($r['title']) ?>
+                  <?= htmlspecialchars($title) ?>
                 <?php endif; ?>
               </h3>
-              <p class="r__meta"><?= htmlspecialchars($r['authors']) ?> • <strong><?= htmlspecialchars($r['venue']) ?></strong> • <?= htmlspecialchars($r['year']) ?></p>
-              <?php if (!empty($r['view_url'])): ?>
-              <div class="r__actions">
-                <a class="btn btn--outline-blue" href="<?= htmlspecialchars($r['view_url']) ?>" target="_blank" rel="noopener">Read</a>
+              <div class="research-authors"><?= htmlspecialchars($authors) ?></div>
+              <div class="research-meta">
+                <?php if (!empty($venue)): ?>
+                  <span class="research-venue"><?= htmlspecialchars($venue) ?></span>
+                <?php endif; ?>
+                <?php if (!empty($year)): ?>
+                  <span class="research-year"><?= htmlspecialchars($year) ?></span>
+                <?php endif; ?>
+                <span class="research-type badge"><?= $type ?></span>
               </div>
+              <?php if (!empty($doi)): ?>
+                <div class="research-doi">
+                  <span class="doi-label">DOI:</span>
+                  <a href="https://doi.org/<?= htmlspecialchars($doi) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($doi) ?></a>
+                </div>
               <?php endif; ?>
+              <div class="research-actions">
+                <?php if (!empty($view_url)): ?>
+                  <a class="btn-link" href="<?= htmlspecialchars($view_url) ?>" target="_blank" rel="noopener">
+                    <i class="fas fa-external-link-alt"></i> View Publication
+                  </a>
+                <?php endif; ?>
+                <?php if (!empty($doi)): ?>
+                  <a class="btn-link secondary" href="https://doi.org/<?= htmlspecialchars($doi) ?>" target="_blank" rel="noopener">
+                    <i class="fas fa-link"></i> DOI
+                  </a>
+                <?php endif; ?>
+              </div>
             </div>
           </article>
           <?php endforeach; ?>
         <?php endif; ?>
       </div>
+
+      <!-- Pagination -->
+      <?php if ($totalPages > 1): ?>
+        <div class="pagination-wrapper">
+          <nav aria-label="Research pagination">
+            <ul class="pagination">
+              <?php if ($page > 1): ?>
+                <li class="page-item">
+                  <a class="page-link" href="?page=faculty_research&page_num=<?= $page - 1 ?>" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                  </a>
+                </li>
+              <?php endif; ?>
+              
+              <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                <li class="page-item <?= $i === $page ? 'active' : '' ?>">
+                  <a class="page-link" href="?page=faculty_research&page_num=<?= $i ?>"><?= $i ?></a>
+                </li>
+              <?php endfor; ?>
+              
+              <?php if ($page < $totalPages): ?>
+                <li class="page-item">
+                  <a class="page-link" href="?page=faculty_research&page_num=<?= $page + 1 ?>" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                  </a>
+                </li>
+              <?php endif; ?>
+            </ul>
+          </nav>
+        </div>
+      <?php endif; ?>
 
       <div id="rEmpty" class="nempty"<?= count($research) ? ' hidden' : '' ?>>No faculty research entries are available yet.</div>
     </div>
@@ -123,42 +204,32 @@ $years = FacultyResearch::getYears();
 </main>
 <script>
 (function(){
-  const pills = Array.from(document.querySelectorAll('.ncats .pill'));
   const yearSel = document.getElementById('fYear');
   const qInput  = document.getElementById('fQuery');
   const form    = document.querySelector('.nsearch');
   const grid  = document.getElementById('rGrid');
-  const cards = Array.from(grid.querySelectorAll('.r'));
+  const cards = Array.from(grid.querySelectorAll('.research-item'));
   const count = document.getElementById('rCount');
   const empty = document.getElementById('rEmpty');
-  let activeDept = 'all';
+  
   function apply(){
     const q = (qInput.value || '').trim().toLowerCase();
     const y = yearSel.value;
     let visible = 0;
     cards.forEach(card => {
-      const dept = (card.getAttribute('data-dept') || '').toLowerCase();
-      const type = (card.getAttribute('data-type') || '').toLowerCase();
       const year = (card.getAttribute('data-year') || '').toLowerCase();
       const text = card.innerText.toLowerCase();
       let ok = true;
-      if (activeDept !== 'all' && dept !== activeDept) ok = false;
-      if (ok && y !== 'all' && year !== y) ok = false;
+      if (y !== 'all' && year !== y) ok = false;
       if (ok && q && !text.includes(q)) ok = false;
       card.style.display = ok ? '' : 'none';
       if (ok) visible++;
     });
-    const deptLabel = (activeDept === 'all') ? 'All departments' : activeDept.toUpperCase();
     const yearLabel = (y === 'all') ? 'all years' : y;
-    count.textContent = `Showing ${visible} publication${visible!==1?'s':''} • ${deptLabel} • ${yearLabel}`;
+    count.textContent = `Showing ${visible} publication${visible!==1?'s':''} • ${yearLabel}`;
     empty.hidden = visible !== 0;
   }
-  pills.forEach(p => p.addEventListener('click', () => {
-    pills.forEach(x => x.classList.remove('is-active'));
-    p.classList.add('is-active');
-    activeDept = p.dataset.dept;
-    apply();
-  }));
+  
   yearSel.addEventListener('change', apply);
   form.addEventListener('submit', e => { e.preventDefault(); apply(); });
   apply();

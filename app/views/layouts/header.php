@@ -73,7 +73,6 @@ if (!$menus) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Adamson University - College of Computing and Information Technology</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
   <style>
     /* CSS Reset & Base Styles */

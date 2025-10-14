@@ -52,16 +52,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       FacultyResearch::delete($id);
       DeanLogs::logDelete($user['id'] ?? null, 'faculty_research', $id, "Deleted research: {$researchTitle}");
       $notice = 'Research deleted successfully!';
+    } elseif (isset($_POST['delete_submission'], $_POST['submission_id'])) {
+      $submissionId = (int)$_POST['submission_id'];
+      $deleted = FacultySubmissions::delete($submissionId);
+      $notice = $deleted ? 'Research submission deleted successfully!' : 'Error: Failed to delete submission.';
+    } elseif (isset($_POST['edit_submission'], $_POST['submission_id'])) {
+      $submissionId = (int)$_POST['submission_id'];
+      $title      = trim($_POST['title'] ?? '');
+      $authors    = trim($_POST['authors'] ?? '');
+      $doi        = trim($_POST['doi'] ?? '');
+      $publisher  = trim($_POST['publisher'] ?? '');
+      $conference = trim($_POST['conference'] ?? '');
+      $year       = trim($_POST['year'] ?? '');
+      $view_url   = trim($_POST['view_url'] ?? '');
+
+      if ($title === '')   throw new Exception('Research title is required.');
+      if ($authors === '') throw new Exception('Authors are required.');
+      if ($year  === '')   throw new Exception('Year is required.');
+
+      $payload = [
+        'authors'    => $authors,
+        'doi'        => $doi,
+        'publisher'  => $publisher,
+        'conference' => $conference,
+        'year'       => $year,
+        'view_url'   => $view_url
+      ];
+
+      $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
+      $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+      $stmt = $pdo->prepare("UPDATE faculty_submissions SET title = ?, description = ?, category = ?, content = ? WHERE id = ?");
+      $result = $stmt->execute([
+        $title,
+        $title,
+        'publication',
+        json_encode($payload, JSON_UNESCAPED_SLASHES),
+        $submissionId
+      ]);
+
+      $notice = $result ? 'Research submission updated successfully!' : 'Error: Failed to update submission.';
     } elseif (isset($_POST['faculty_action'])) {
       $submissionId = (int)$_POST['submission_id'];
       $action = $_POST['faculty_action'];
       $reviewNotes = $_POST['review_notes'] ?? '';
 
       if ($action === 'approve') {
-        FacultyResearch::publish($submissionId, $user['id'] ?? null, $reviewNotes);
+        // Update status to approved in faculty_submissions
+        FacultySubmissions::updateStatus($submissionId, 'approved', $user['id'] ?? null, $reviewNotes);
+        
+        // Publish to faculty_research table
+        $submission = FacultySubmissions::getById($submissionId);
+        if ($submission && $submission['submission_type'] === 'research') {
+          $rd = json_decode($submission['content'] ?? '{}', true) ?: [];
+          $data = [
+            'title'      => $submission['title'] ?? '',
+            'authors'    => $rd['authors'] ?? '',
+            'doi'        => $rd['doi'] ?? '',
+            'publisher'  => $rd['publisher'] ?? '',
+            'conference' => $rd['conference'] ?? '',
+            'year'       => $rd['year'] ?? '',
+            'view_url'   => $rd['view_url'] ?? ''
+          ];
+          require_once __DIR__ . '/../../models/FacultyResearch.php';
+          FacultyResearch::create($data);
+        }
+        
         $notice = 'Research approved and published successfully!';
       } elseif ($action === 'reject') {
-        FacultyResearch::reject($submissionId, $user['id'] ?? null, $reviewNotes);
+        FacultySubmissions::updateStatus($submissionId, 'rejected', $user['id'] ?? null, $reviewNotes);
         $notice = 'Research rejected successfully!';
       }
     }
@@ -73,10 +131,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get current data
 try {
     $status = $_GET['status'] ?? 'all';
-    $research = FacultyResearch::list($status); // Now use list with proper filtering
-    $counts = FacultyResearch::statusCounts();
-    
-    // Get pending faculty research submissions
+
+    // Show published research from faculty_research table (approved by dean)
+    require_once __DIR__ . '/../../models/FacultyResearch.php';
+    $allResearch = FacultyResearch::getAll();
+    if ($status === 'all' || $status === 'published') {
+        $research = $allResearch;
+    } else {
+        $research = array_filter($allResearch, function($r) use ($status) {
+            return isset($r['status']) && $r['status'] === $status;
+        });
+    }
+
+    $counts = [
+        'all' => count($allResearch),
+        'published' => count($allResearch),
+        'draft' => 0,
+        'archived' => 0
+    ];
+
     $pendingResearchSubmissions = FacultySubmissions::getPendingByType('research');
 } catch (Exception $e) {
     $notice = 'Error loading data: ' . $e->getMessage();
@@ -276,19 +349,19 @@ if (!function_exists('esc')) {
                 </div>
                 <?php endif; ?>
 
-                <!-- Research List -->
+                <!-- Published Research (remove the Research Publications section) -->
                 <div class="card">
                     <div class="card-header">
                         <h5 class="card-title mb-0">
-                            <i class="fas fa-microscope me-2"></i>Research Publications (<?= count($research) ?>)
+                            <i class="fas fa-microscope me-2"></i>Published Research (<?= count($research) ?>)
                         </h5>
                     </div>
                     <div class="card-body">
                         <?php if (empty($research)): ?>
                             <div class="empty-state-card">
                                 <i class="fas fa-microscope fa-3x"></i>
-                                <h6>No Research Found</h6>
-                                <div class="text-muted">Start by adding research using the <strong>Add Research</strong> button above.</div>
+                                <h6>No Published Research Found</h6>
+                                <div class="text-muted">Research will appear here after dean approval.</div>
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
@@ -296,10 +369,12 @@ if (!function_exists('esc')) {
                                     <thead>
                                         <tr>
                                             <th>Title</th>
-                                            <th>Type</th>
-                                            <th>Department</th>
+                                            <th>Authors</th>
+                                            <th>DOI</th>
+                                            <th>Publisher</th>
+                                            <th>Conference</th>
                                             <th>Year</th>
-                                            <th>Status</th>
+                                            <th>View URL</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -308,45 +383,34 @@ if (!function_exists('esc')) {
                                             <?php
                                                 $rid    = (int)$r['id'];
                                                 $rtitle = esc($r['title'] ?? '');
-                                                $rtype  = esc(ucfirst($r['type'] ?? ''));
-                                                $rdept  = esc(strtoupper($r['dept'] ?? ''));
-                                                $ryear  = esc($r['year'] ?? '');
-                                                $rstatus= esc($r['status'] ?? 'published');
                                                 $rauth  = esc($r['authors'] ?? '');
-                                                $rvenue = esc($r['venue'] ?? '');
-                                                $pdf    = esc($r['pdf_url'] ?? '');
-                                                $view   = esc($r['view_url'] ?? '');
-                                                $imgurl = esc($r['image_url'] ?? '');
+                                                $rdoi   = esc($r['doi'] ?? '');
+                                                $rpub   = esc($r['publisher'] ?? '');
+                                                $rconf  = esc($r['conference'] ?? '');
+                                                $ryear  = esc($r['year'] ?? '');
+                                                $rview  = esc($r['view_url'] ?? '');
                                             ?>
                                             <tr>
-                                                <td>
-                                                    <strong><?= $rtitle ?></strong>
-                                                    <br><small class="text-muted">Authors: <?= esc(substr($rauth, 0, 50)) ?><?= strlen($rauth) > 50 ? '...' : '' ?></small>
-                                                </td>
-                                                <td><span class="badge badge--category"><?= $rtype ?></span></td>
-                                                <td><span class="badge badge--status badge--published"><?= $rdept ?></span></td>
+                                                <td><?= $rtitle ?></td>
+                                                <td><?= $rauth ?></td>
+                                                <td><?= $rdoi ?></td>
+                                                <td><?= $rpub ?></td>
+                                                <td><?= $rconf ?></td>
                                                 <td><?= $ryear ?></td>
                                                 <td>
-                                                    <span class="badge badge--status badge--<?= $rstatus ?>">
-                                                        <?= $rstatus ?>
-                                                    </span>
+                                                    <?php if (!empty($rview)): ?>
+                                                        <a href="<?= $rview ?>" target="_blank" rel="noopener">View</a>
+                                                    <?php else: ?>
+                                                        <span class="no-notes text-muted">No link</span>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <?php if (!empty($pdf)): ?>
-                                                            <a href="<?= $pdf ?>" target="_blank" class="btn btn-sm btn-outline-danger" title="View PDF">
-                                                                <i class="fas fa-file-pdf"></i>
-                                                            </a>
-                                                        <?php endif; ?>
-                                                        <?php if (!empty($view)): ?>
-                                                            <a href="<?= $view ?>" target="_blank" class="btn btn-sm btn-outline-primary" title="View Publication">
+                                                        <?php if (!empty($rview)): ?>
+                                                            <a href="<?= $rview ?>" target="_blank" class="btn btn-sm btn-outline-primary" title="View Publication">
                                                                 <i class="fas fa-external-link-alt"></i>
                                                             </a>
                                                         <?php endif; ?>
-                                                        <button type="button" class="btn btn-sm btn-warning" 
-                                                                data-bs-toggle="modal" data-bs-target="#editResearchModal<?= $rid ?>">
-                                                            <i class="fas fa-edit"></i>
-                                                        </button>
                                                         <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this research?');">
                                                             <input type="hidden" name="delete_research" value="1">
                                                             <input type="hidden" name="id" value="<?= $rid ?>">
@@ -357,104 +421,6 @@ if (!function_exists('esc')) {
                                                     </div>
                                                 </td>
                                             </tr>
-                                            <?php ob_start(); ?>
-                                            <!-- Edit Research Modal -->
-                                            <div class="modal fade" id="editResearchModal<?= $rid ?>" tabindex="-1" aria-hidden="true">
-                                                <div class="modal-dialog modal-lg">
-                                                    <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title">Edit Research</h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                        </div>
-                                                        <form method="POST">
-                                                            <input type="hidden" name="edit_research" value="1">
-                                                            <input type="hidden" name="id" value="<?= $rid ?>">
-                                                            <div class="modal-body">
-                                                                <div class="row">
-                                                                    <div class="col-md-6">
-                                                                        <div class="mb-3">
-                                                                            <label class="form-label">Title</label>
-                                                                            <input type="text" class="form-control" name="research[title]" value="<?= $rtitle ?>" required>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="col-md-6">
-                                                                        <div class="mb-3">
-                                                                            <label class="form-label">Department</label>
-                                                                            <select class="form-control" name="research[dept]" required>
-                                                                                <option value="itis" <?= ($r['dept'] ?? '') === 'itis' ? 'selected' : '' ?>>IT&amp;IS</option>
-                                                                                <option value="cs"   <?= ($r['dept'] ?? '') === 'cs'   ? 'selected' : '' ?>>CS</option>
-                                                                            </select>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-md-4">
-                                                                        <div class="mb-3">
-                                                                            <label class="form-label">Type</label>
-                                                                            <select class="form-control" name="research[type]" required>
-                                                                                <option value="journal"   <?= ($r['type'] ?? '') === 'journal'   ? 'selected' : '' ?>>Journal Article</option>
-                                                                                <option value="conference"<?= ($r['type'] ?? '') === 'conference'? 'selected' : '' ?>>Conference Paper</option>
-                                                                                <option value="chapter"   <?= ($r['type'] ?? '') === 'chapter'   ? 'selected' : '' ?>>Book Chapter</option>
-                                                                                <option value="patent"    <?= ($r['type'] ?? '') === 'patent'    ? 'selected' : '' ?>>Patent</option>
-                                                                                <option value="other"     <?= ($r['type'] ?? '') === 'other'     ? 'selected' : '' ?>>Other</option>
-                                                                            </select>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="col-md-4">
-                                                                        <div class="mb-3">
-                                                                            <label class="form-label">Year</label>
-                                                                            <input type="text" class="form-control" name="research[year]" value="<?= $ryear ?>" required>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="col-md-4">
-                                                                        <div class="mb-3">
-                                                                            <label class="form-label">Status</label>
-                                                                            <select class="form-control" name="research[status]">
-                                                                                <option value="draft"     <?= ($r['status'] ?? 'published') === 'draft'     ? 'selected' : '' ?>>Draft</option>
-                                                                                <option value="published" <?= ($r['status'] ?? 'published') === 'published' ? 'selected' : '' ?>>Published</option>
-                                                                                <option value="archived"  <?= ($r['status'] ?? 'published') === 'archived'  ? 'selected' : '' ?>>Archived</option>
-                                                                            </select>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <label class="form-label">Authors</label>
-                                                                    <textarea class="form-control" name="research[authors]" rows="2" required><?= $rauth ?></textarea>
-                                                                </div>
-                                                                <div class="mb-3">
-                                                                    <label class="form-label">Venue</label>
-                                                                    <input type="text" class="form-control" name="research[venue]" value="<?= $rvenue ?>" required>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-md-4">
-                                                                        <div class="mb-3">
-                                                                            <label class="form-label">PDF URL</label>
-                                                                            <input type="url" class="form-control" name="research[pdf_url]" value="<?= $pdf ?>">
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="col-md-4">
-                                                                        <div class="mb-3">
-                                                                            <label class="form-label">View URL</label>
-                                                                            <input type="url" class="form-control" name="research[view_url]" value="<?= $view ?>">
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="col-md-4">
-                                                                        <div class="mb-3">
-                                                                            <label class="form-label">Image URL</label>
-                                                                            <input type="url" class="form-control" name="research[image_url]" value="<?= $imgurl ?>">
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                <button type="submit" class="btn btn-primary">Update Research</button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <?php $__researchCollectedModals .= ob_get_clean(); ?>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>

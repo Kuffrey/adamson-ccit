@@ -171,6 +171,9 @@ class Router {
             case 'career_pathway_results':
                 include __DIR__ . '/../views/career_pathway_results.php'; break;
 
+            case 'compare_programs':
+                include __DIR__ . '/../views/compare_programs.php'; break;
+
             case 'virtual_tour':
                 include __DIR__ . '/../views/virtual_tour.php'; break;
 

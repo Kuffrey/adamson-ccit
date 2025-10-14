@@ -1,5 +1,5 @@
 /* =========================================================
-   CCIT Dean Styles – Single Clean Stylesheet (v5.5 Light Sidebar)
+  
    Palette: #003169 (navy), #0080c9 (blue), #00713D (green)
    ========================================================= */
 
@@ -1338,15 +1338,50 @@ body {
 .btn-edit:hover { background: #e0f2fe; color: #0369a1; }
 .btn-delete:hover { background: #fee2e2; color: #dc2626; }
 
-/* Remove any custom z-index and position rules for .modal and .modal-backdrop */
-.modal {
-  /* z-index: 1055 !important; */
-  /* padding-right: 0 !important; */
+/* --- Bootstrap modal must sit above the app chrome --- */
+.modal { z-index: 2000 !important; }
+.modal-backdrop { z-index: 1990 !important; }
+
+/* Tweak backdrop darkness so it isn't "too dim" */
+.modal-backdrop.show { opacity: .45; } /* default is .5; adjust to taste */
+
+/* While a modal is open, prevent the topbar/sidebar from catching clicks */
+.modal-open .admin-topbar,
+.modal-open .admin-sb {
+  pointer-events: none;
 }
 
-.modal-backdrop {
-  /* z-index: 1040 !important; */
-  /* position: fixed !important; */
+/* Optional: on some mobile WebKit builds, sticky headers can still be weird. 
+   Temporarily make the topbar non-sticky during modal open to remove any chance
+   of overlap or focus traps behind it. */
+@media (max-width: 1024px) {
+  .modal-open .admin-topbar {
+    position: static !important;
+  }
 }
+
+/* Widen the modal a bit and keep it comfortably centered */
+.modal-dialog {
+  max-width: 920px;                 /* wider than default */
+  width: min(92vw, 920px);          /* responsive clamp */
+  margin: 1.25rem auto;             /* ensure it clears edges */
+}
+.modal-lg { 
+  max-width: 1000px;                /* give .modal-lg extra room */
+  width: min(96vw, 1000px);
+}
+
+/* Ensure vertical centering works without fighting sticky bars */
+.modal-dialog-centered {
+  display: flex;
+  align-items: center;
+  min-height: calc(100vh - 2rem);
+}
+
+/* Safety: app layers stay below modal */
+.admin-main { z-index: 1; }
+.admin-topbar { z-index: 30; }
+.admin-sb { z-index: 50; }
+
 
 

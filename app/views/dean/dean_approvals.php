@@ -30,24 +30,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action']) && !empty(
         $submissionId = (int)$_POST['submission_id'];
         $action = $_POST['action'];
         $reviewNotes = trim($_POST['review_notes'] ?? '');
-        
+
+        // Fetch submission for content
+        $submission = FacultySubmissions::getById($submissionId);
+
         if ($action === 'approve') {
             FacultySubmissions::updateStatus($submissionId, 'approved', $user['id'] ?? null, $reviewNotes);
+
+            // --- Publish RESEARCH ---
+            if ($submission && $submission['submission_type'] === 'research') {
+                require_once __DIR__ . '/../../models/FacultyResearch.php';
+                $rd = json_decode($submission['content'] ?? '{}', true) ?: [];
+                $data = [
+                    'title'      => $submission['title'] ?? '',
+                    'authors'    => $rd['authors'] ?? '',
+                    'doi'        => $rd['doi'] ?? '',
+                    'publisher'  => $rd['publisher'] ?? '',
+                    'conference' => $rd['conference'] ?? '',
+                    'year'       => $rd['year'] ?? '',
+                    'view_url'   => $rd['view_url'] ?? ''
+                ];
+                FacultyResearch::create($data);
+            }
+
+            // --- Publish CERTIFICATION ---
+            if ($submission && $submission['submission_type'] === 'certification') {
+                require_once __DIR__ . '/../../models/FacultyCertification.php';
+                $cd = json_decode($submission['content'] ?? '{}', true) ?: [];
+
+                $certificationId = $cd['certification_id'] ?? null;
+                if (!$certificationId) {
+                    throw new Exception('Missing certification_id in submission content.');
+                }
+
+                $certModel = new FacultyCertification();
+                $certificationAwardData = [
+                    'faculty_id'       => (int)($submission['faculty_id'] ?? 0),
+                    'certification_id' => (int)$certificationId,
+                    'year_earned'      => $cd['year_earned'] ?? date('Y'),
+                    'year_expiry'      => $cd['year_expiry'] ?? null,
+                    'credential_id'    => $cd['credential_id'] ?? null,
+                    'verification_url' => $cd['verification_url'] ?? null,
+                    'description'      => $cd['description'] ?? null,
+                    'status'           => 'Active',
+                    'is_archived'      => 0,
+                ];
+
+                $newId = $certModel->create($certificationAwardData);
+                if (!$newId) {
+                    throw new Exception('Failed to publish certification to faculty_certification_award.');
+                }
+            }
+
             $notice = 'Submission approved successfully!';
-            
-            // Log the approval action (essential CRUD operation)
             DeanLogs::logApprove(
                 'faculty_submissions',
                 $submissionId,
                 $user['id'] ?? null,
                 'Submission approved' . ($reviewNotes ? ': ' . substr($reviewNotes, 0, 100) : '')
             );
-            
+
         } elseif ($action === 'reject') {
             FacultySubmissions::updateStatus($submissionId, 'rejected', $user['id'] ?? null, $reviewNotes);
             $notice = 'Submission rejected successfully!';
-            
-            // Log the rejection action (essential CRUD operation)  
             DeanLogs::logReject(
                 'faculty_submissions',
                 $submissionId,
@@ -204,80 +249,85 @@ try {
                 ?>
 
                 <?php if (in_array('research', $sectionsToShow)): ?>
-                <!-- Research Submissions -->
+                <!-- Research Publications Submissions -->
                 <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-microscope me-2"></i>Research Submissions (<?= count($groupedSubmissions['research']) ?>)
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <?php if (empty($groupedSubmissions['research'])): ?>
-                            <div class="empty-state-card">
-                                <i class="fas fa-microscope fa-3x"></i>
-                                <h6>No Pending Research Submissions</h6>
-                                <div class="text-muted">All research submissions have been processed.</div>
-                            </div>
-                        <?php else: ?>
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Faculty</th>
-                                            <th>Title</th>
-                                            <th>Category</th>
-                                            <th>Submitted</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($groupedSubmissions['research'] as $submission): ?>
-                                            <tr>
-                                                <td>
-                                                    <strong><?= esc($submission['faculty_name']) ?></strong>
-                                                    <br><small class="text-muted"><?= esc($submission['department_name']) ?></small>
-                                                </td>
-                                                <td>
-                                                    <strong><?= esc($submission['title']) ?></strong>
-                                                    <?php if (!empty($submission['description'])): ?>
-                                                        <br><small class="text-muted"><?= esc(substr($submission['description'], 0, 80)) ?>...</small>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <?php if ($submission['category']): ?>
-                                                        <span class="badge badge--category"><?= esc($submission['category']) ?></span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <small><?= $submission['submitted_at'] ? date('M j, Y', strtotime($submission['submitted_at'])) : '' ?></small>
-                                                </td>
-                                                <td>
-                                                    <span class="badge badge--status badge--draft"><?= esc($submission['status']) ?></span>
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group" role="group">
-                                                        <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                                data-bs-toggle="modal" data-bs-target="#viewModal<?= $submission['id'] ?>">
-                                                            <i class="fas fa-eye"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-success" 
-                                                                data-bs-toggle="modal" data-bs-target="#approveModal<?= $submission['id'] ?>">
-                                                            <i class="fas fa-check"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-danger" 
-                                                                data-bs-toggle="modal" data-bs-target="#rejectModal<?= $submission['id'] ?>">
-                                                            <i class="fas fa-times"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                  <div class="card-header">
+                    <h5 class="card-title mb-0">
+                      <i class="fas fa-microscope me-2"></i>Research Publications Submissions (<?= count($groupedSubmissions['research']) ?>)
+                    </h5>
+                  </div>
+                  <div class="card-body">
+                    <?php if (empty($groupedSubmissions['research'])): ?>
+                      <div class="empty-state-card">
+                        <i class="fas fa-microscope fa-3x"></i>
+                        <h6>No Pending Research Publications</h6>
+                        <div class="text-muted">All research publications have been processed.</div>
+                      </div>
+                    <?php else: ?>
+                      <div class="table-responsive">
+                        <table class="table table-hover">
+                          <thead>
+                            <tr>
+                              <th>Title</th>
+                              <th>Authors</th>
+                              <th>DOI</th>
+                              <th>Publisher</th>
+                              <th>Conference</th>
+                              <th>Year</th>
+                              <th>View URL</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <?php foreach ($groupedSubmissions['research'] as $submission): ?>
+                              <?php
+                                $id         = (int)$submission['id'];
+                                $title      = esc($submission['title'] ?? '');
+                                $content    = json_decode($submission['content'] ?? '{}', true) ?: [];
+                                $authors    = esc($content['authors'] ?? '');
+                                $doi        = esc($content['doi'] ?? '');
+                                $publisher  = esc($content['publisher'] ?? '');
+                                $conference = esc($content['conference'] ?? '');
+                                $year       = esc($content['year'] ?? '');
+                                $view_url   = esc($content['view_url'] ?? '');
+                              ?>
+                              <tr>
+                                <td><?= $title ?></td>
+                                <td><?= $authors ?></td>
+                                <td><?= $doi ?></td>
+                                <td><?= $publisher ?></td>
+                                <td><?= $conference ?></td>
+                                <td><?= $year ?></td>
+                                <td>
+                                  <?php if (!empty($view_url)): ?>
+                                    <a href="<?= $view_url ?>" target="_blank" rel="noopener">View</a>
+                                  <?php else: ?>
+                                    <span class="no-notes text-muted">No link</span>
+                                  <?php endif; ?>
+                                </td>
+                                <td>
+                                  <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="modal" data-bs-target="#viewModal<?= $id ?>">
+                                      <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-success"
+                                            data-bs-toggle="modal" data-bs-target="#approveModal<?= $id ?>">
+                                      <i class="fas fa-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger"
+                                            data-bs-toggle="modal" data-bs-target="#rejectModal<?= $id ?>">
+                                      <i class="fas fa-times"></i>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            <?php endforeach; ?>
+                          </tbody>
+                        </table>
+                      </div>
+                    <?php endif; ?>
+                  </div>
                 </div>
                 <?php endif; ?>
 
@@ -440,6 +490,119 @@ try {
     </div>
 
     <!-- Modals for each submission -->
+    <?php foreach ($groupedSubmissions['research'] as $submission): ?>
+      <?php
+        $id         = (int)$submission['id'];
+        $title      = esc($submission['title'] ?? '');
+        $content    = json_decode($submission['content'] ?? '{}', true) ?: [];
+        $authors    = esc($content['authors'] ?? '');
+        $doi        = esc($content['doi'] ?? '');
+        $publisher  = esc($content['publisher'] ?? '');
+        $conference = esc($content['conference'] ?? '');
+        $year       = esc($content['year'] ?? '');
+        $view_url   = esc($content['view_url'] ?? '');
+      ?>
+      <!-- View Modal -->
+      <div class="modal fade" id="viewModal<?= $id ?>" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">
+                <i class="fas fa-eye me-2"></i>View Publication
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3"><strong>Title:</strong> <?= $title ?></div>
+              <div class="mb-3"><strong>Authors:</strong> <?= $authors ?></div>
+              <div class="mb-3"><strong>DOI:</strong> <?= $doi ?></div>
+              <div class="mb-3"><strong>Publisher:</strong> <?= $publisher ?></div>
+              <div class="mb-3"><strong>Conference:</strong> <?= $conference ?></div>
+              <div class="mb-3"><strong>Year:</strong> <?= $year ?></div>
+              <div class="mb-3"><strong>View URL:</strong>
+                <?php if (!empty($view_url)): ?>
+                  <a href="<?= $view_url ?>" target="_blank" rel="noopener"><?= $view_url ?></a>
+                <?php else: ?>
+                  <span class="no-notes text-muted">No link</span>
+                <?php endif; ?>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Approve Modal -->
+      <div class="modal fade" id="approveModal<?= $id ?>" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">
+                <i class="fas fa-check me-2"></i>Approve Publication
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+              <input type="hidden" name="action" value="approve">
+              <input type="hidden" name="submission_id" value="<?= $id ?>">
+              <div class="modal-body">
+                <p>Are you sure you want to approve this research publication?</p>
+                <p><strong><?= $title ?></strong></p>
+                <p class="text-muted">This will publish the research immediately.</p>
+                <div class="mb-3">
+                  <label for="review_notes_<?= $id ?>" class="form-label">Review Notes (Optional)</label>
+                  <textarea class="form-control" id="review_notes_<?= $id ?>" name="review_notes" rows="3"
+                            placeholder="Add any notes about this approval..."></textarea>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-success">
+                  <i class="fas fa-check"></i> Approve & Publish
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reject Modal -->
+      <div class="modal fade" id="rejectModal<?= $id ?>" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">
+                <i class="fas fa-times me-2"></i>Reject Publication
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+              <input type="hidden" name="action" value="reject">
+              <input type="hidden" name="submission_id" value="<?= $id ?>">
+              <div class="modal-body">
+                <p>Are you sure you want to reject this research publication?</p>
+                <p><strong><?= $title ?></strong></p>
+                <div class="mb-3">
+                  <label for="reject_notes_<?= $id ?>" class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                  <textarea class="form-control" id="reject_notes_<?= $id ?>" name="review_notes" rows="3"
+                            placeholder="Please provide a reason for rejection..." required></textarea>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-times"></i> Reject
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    <?php endforeach; ?>
+
+    <!-- Modals for news and certification sections (unchanged) -->
     <?php foreach ($pendingSubmissions as $submission): ?>
         <!-- View Modal -->
         <div class="modal fade" id="viewModal<?= $submission['id'] ?>" tabindex="-1">

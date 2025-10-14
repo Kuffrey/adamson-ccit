@@ -10,6 +10,15 @@ $pdo = new PDO($dsn, DB_USER, DB_PASS, [
 $dean = DeanCorner::get($pdo);
 ?>
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dean's Corner | AdU-CCIT</title>
+  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css" />
+</head>
+<body>
 <main>
   <!-- ============ SUB-HERO ============ -->
   <section class="subhero">

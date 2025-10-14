@@ -89,40 +89,46 @@ final class News extends Model
 
     public static function all(): array { return self::list(null); }
 
-    public static function create(string $title, string $content, string $status='draft', ?string $category='news', ?string $imageUrl=null): int {
-        $db   = parent::db();
-        $bcol = self::bodyCol();
+    public static function create(string $title, string $content, string $status = 'draft', ?string $category = 'news', ?string $imageUrl = null): int {
+        try {
+            $db = parent::db();
+            $bcol = self::bodyCol();
 
-        $status   = in_array(strtolower($status), self::$allowedStatus, true) ? strtolower($status) : 'draft';
-        $category = in_array(strtolower((string)$category), self::$allowedCats, true) ? strtolower((string)$category) : 'news';
+            $status = in_array(strtolower($status), self::$allowedStatus, true) ? strtolower($status) : 'draft';
+            $category = in_array(strtolower((string)$category), self::$allowedCats, true) ? strtolower((string)$category) : 'news';
 
-        // base columns
-        $cols = [
-            'title'    => $title,
-            $bcol      => $content,
-            'status'   => $status,
-            'category' => $category,
-        ];
+            $cols = [
+                'title'    => $title,
+                $bcol      => $content,
+                'status'   => $status,
+                'category' => $category,
+            ];
 
-        if (self::has('image_url') && $imageUrl) {
-            $cols['image_url'] = $imageUrl;
+            if (self::has('image_url') && $imageUrl) {
+                $cols['image_url'] = $imageUrl;
+            }
+
+            if ($status === 'published') {
+                if (self::has('published_at')) $cols['published_at'] = date('Y-m-d H:i:s');
+                if (self::has('date')) $cols['date'] = date('Y-m-d H:i:s');
+            }
+
+            $fields = array_keys($cols);
+            $placeholders = array_map(fn($f) => ':' . $f, $fields);
+
+            $sql = "INSERT INTO news (" . implode(',', $fields) . ", created_at) VALUES (" . implode(',', $placeholders) . ", NOW())";
+            $stmt = $db->prepare($sql);
+
+            foreach ($cols as $field => $value) {
+                $stmt->bindValue(':' . $field, $value);
+            }
+
+            $stmt->execute();
+            return (int)$db->lastInsertId();
+        } catch (Throwable $e) {
+            error_log("News::create error: " . $e->getMessage());
+            return 0;
         }
-
-        // 👇 KEY FIX: if initially created as "published", stamp published_at and date (if present)
-        if ($status === 'published') {
-            if (self::has('published_at')) $cols['published_at'] = date('Y-m-d H:i:s');
-            if (self::has('date'))         $cols['date']         = date('Y-m-d H:i:s');
-        }
-
-        // build INSERT
-        $fields = array_keys($cols);
-        $ph     = array_map(fn($f)=>':'.$f, $fields);
-
-        $sql = "INSERT INTO news (".implode(',', $fields).", created_at) VALUES (".implode(',', $ph).", NOW())";
-        $st  = $db->prepare($sql);
-        foreach ($cols as $f=>$v) { $st->bindValue(':'.$f, $v); }
-        $st->execute();
-        return (int)$db->lastInsertId();
     }
 
     public static function updateStatus(int $id, string $status): bool {

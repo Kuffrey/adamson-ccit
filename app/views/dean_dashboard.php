@@ -200,20 +200,12 @@ $recent = $dashboard->getRecentSubmissions();
           <p>Research Submissions</p>
         </div>
         <div class="dashboard-stat-card">
-          <h3><?= esc($stats['upcoming_events']) ?></h3>
-          <p>Upcoming Events</p>
-        </div>
-        <div class="dashboard-stat-card">
           <h3><?= esc($stats['certification_requests']) ?></h3>
           <p>Certification Requests</p>
         </div>
         <div class="dashboard-stat-card">
           <h3><?= esc($stats['news_articles']) ?></h3>
           <p>News Articles</p>
-        </div>
-        <div class="dashboard-stat-card">
-          <h3><?= esc($stats['announcements']) ?></h3>
-          <p>Announcements</p>
         </div>
       </div>
 

@@ -267,7 +267,7 @@ li {margin:0;padding:0}
   .util-links{display:flex;gap:18px;flex-wrap:wrap}
 
   /* Sticky header */
-  .site-header{position:sticky;top:0;background:#fff;border-bottom:var(--edge);z-index:1100}
+  .site-header{position:sticky;top:0;background:#fff;border-bottom:2px solid #e6e9ef;z-index:1100}
   .site-header .header-inner{display:flex;align-items:center;gap:18px;padding:12px 0}
   .site-header, .site-header a, .site-header summary{
     font:600 14px/1.2 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Arial,sans-serif;
@@ -2901,3 +2901,308 @@ body.modal-open { overflow: hidden; }
 @media (prefers-reduced-motion:reduce){
   .auth__card{ box-shadow:none; }
 }
+
+    .page-faculty-research .research-publications {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .page-faculty-research .research-item {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .page-faculty-research .research-item:hover {
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+      border-color: #0080c9;
+      transform: translateY(-2px);
+    }
+
+    .page-faculty-research .research-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .page-faculty-research .research-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.4;
+      margin: 0;
+      color: #003169;
+    }
+
+    .page-faculty-research .research-title a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .page-faculty-research .research-title a:hover {
+      color: #0080c9;
+    }
+
+    .page-faculty-research .research-authors {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #374151;
+      margin: 0;
+    }
+
+    .page-faculty-research .research-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 0.95rem;
+      color: #6b7280;
+    }
+
+    .page-faculty-research .research-venue {
+      font-style: italic;
+      font-weight: 500;
+      color: #4b5563;
+    }
+
+    .page-faculty-research .research-year {
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .page-faculty-research .research-type.badge {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .page-faculty-research .research-doi {
+      font-size: 0.9rem;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .page-faculty-research .doi-label {
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .page-faculty-research .research-doi a {
+      color: #0080c9;
+      text-decoration: none;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+
+    .page-faculty-research .research-doi a:hover {
+      text-decoration: underline;
+    }
+
+    .page-faculty-research .research-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .page-faculty-research .btn-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: #0080c9;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .page-faculty-research .btn-link:hover {
+      background: #0369a1;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 128, 201, 0.3);
+      color: #ffffff;
+    }
+
+    .page-faculty-research .btn-link.secondary {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+
+    .page-faculty-research .btn-link.secondary:hover {
+      background: #e5e7eb;
+      color: #111827;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ============ FACULTY RESEARCH PAGINATION ============ */
+    .page-faculty-research .pagination-wrapper {
+      display: flex;
+      justify-content: center;
+      margin: 32px 0;
+    }
+
+    .page-faculty-research .pagination {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+    }
+
+    .page-faculty-research .page-item {
+      margin: 0;
+    }
+
+    .page-faculty-research .page-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 16px;
+      color: #374151;
+      text-decoration: none;
+      border: none;
+      background: #ffffff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      border-right: 1px solid #e5e7eb;
+      min-width: 44px;
+      height: 44px;
+    }
+
+    .page-faculty-research .page-item:last-child .page-link {
+      border-right: none;
+    }
+
+    .page-faculty-research .page-link:hover {
+      background: #f3f4f6;
+      color: #0080c9;
+    }
+
+    .page-faculty-research .page-item.active .page-link {
+      background: #0080c9;
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .page-faculty-research .page-item.active .page-link:hover {
+      background: #0369a1;
+      color: #ffffff;
+    }
+
+    /* ============ FACULTY RESEARCH EMPTY STATE ============ */
+    .page-faculty-research .nempty {
+      text-align: center;
+      padding: 48px 24px;
+      color: #6b7280;
+      font-size: 1.1rem;
+      background: #f9fafb;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      margin-top: 24px;
+    }
+
+    /* ============ FACULTY RESEARCH COUNT DISPLAY ============ */
+    .page-faculty-research .rcount {
+      font-size: 0.95rem;
+      color: #6b7280;
+      font-weight: 500;
+      margin-bottom: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    /* ============ FACULTY RESEARCH RESPONSIVE ============ */
+    @media (max-width: 768px) {
+      .page-faculty-research .research-item {
+        padding: 16px;
+      }
+      
+      .page-faculty-research .research-title {
+        font-size: 1.1rem;
+      }
+      
+      .page-faculty-research .research-meta {
+        gap: 12px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .page-faculty-research .research-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      
+      .page-faculty-research .btn-link {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .page-faculty-research .pagination-wrapper {
+        margin: 24px 0;
+      }
+      
+      .page-faculty-research .page-link {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        min-width: 38px;
+        height: 38px;
+      }
+      
+      .page-faculty-research .pagination {
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .page-faculty-research .research-publications {
+        gap: 16px;
+      }
+      
+      .page-faculty-research .research-item {
+        padding: 12px;
+      }
+      
+      .page-faculty-research .research-title {
+        font-size: 1rem;
+      }
+      
+      .page-faculty-research .research-authors {
+        font-size: 0.9rem;
+      }
+
+      .page-faculty-research .page-link {
+        padding: 8px 10px;
+        font-size: 0.8rem;
+        min-width: 34px;
+        height: 34px;
+      }
+      
+      /* Hide some page numbers on very small screens */
+      .page-faculty-research .pagination .page-item:not(.active):not(:first-child):not(:last-child):not(:nth-child(2)):not(:nth-last-child(2)) {
+        display: none;
+      }
+    }

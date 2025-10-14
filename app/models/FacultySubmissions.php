@@ -1,5 +1,8 @@
 <?php
 // app/models/FacultySubmissions.php
+
+require_once __DIR__ . '/News.php'; // Include the News class
+
 class FacultySubmissions {
     
     /**
@@ -387,26 +390,40 @@ class FacultySubmissions {
     /**
      * Update submission status
      */
-    public static function updateStatus($id, $status, $reviewerId = null, $reviewNotes = '') {
+    public static function updateStatus($submissionId, $status, $reviewerId = null, $reviewNotes = '') {
         try {
             $pdo = self::getConnection();
-            
+
             $sql = "UPDATE faculty_submissions 
                     SET status = :status, 
                         reviewed_by = :reviewer_id, 
                         reviewed_at = NOW(),
                         review_notes = :review_notes
                     WHERE id = :id";
-            
+
             $stmt = $pdo->prepare($sql);
-            
-            return $stmt->execute([
-                'id' => $id,
+            $stmt->execute([
+                'id' => $submissionId,
                 'status' => $status,
                 'reviewer_id' => $reviewerId,
                 'review_notes' => $reviewNotes
             ]);
-            
+
+            $submission = self::getById($submissionId);
+            if ($submission && $status === 'approved' && $submission['submission_type'] === 'news') {
+                $newsData = [
+                    'title'    => $submission['title'],
+                    'content'  => $submission['content'],
+                    'category' => $submission['category'] ?? 'news',
+                    'status'   => 'published',
+                ];
+
+                if (!News::create($newsData['title'], $newsData['content'], $newsData['status'], $newsData['category'])) {
+                    throw new Exception('Failed to save the news to the database.');
+                }
+            }
+
+            return true;
         } catch (PDOException $e) {
             error_log("FacultySubmissions updateStatus error: " . $e->getMessage());
             return false;

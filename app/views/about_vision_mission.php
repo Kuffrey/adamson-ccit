@@ -4,6 +4,15 @@ require_once __DIR__ . '/../models/AboutVisionMission.php';
 $about = (new AboutVisionMission())->get();
 ?>
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vission & Mission | AdU-CCIT</title>
+  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css" />
+</head>
+<body>
 <main>
 
   <!-- ============ SUB-HERO ============ -->

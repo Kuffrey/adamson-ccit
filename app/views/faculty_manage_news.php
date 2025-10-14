@@ -1,69 +1,71 @@
 <?php
+// app/views/faculty_manage_news.php — Faculty News Submission (dean layout)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'faculty') {
+
+if (!isset($_SESSION['user']) || ($_SESSION['user']['role'] ?? '') !== 'faculty') {
     header('Location: ?page=login');
     exit;
 }
 
-// Check if user is logged in and get faculty ID
-$faculty_id = $_SESSION['user']['id'] ?? null;
+$faculty_id       = $_SESSION['user']['id'] ?? null;
 $faculty_username = $_SESSION['user']['username'] ?? 'Faculty';
 if (!$faculty_id) {
     header('Location: ?page=login');
     exit;
 }
 
-// Get faculty's information from database
+/* ---------- Faculty profile (for header/avatar, if needed later) ---------- */
 try {
     $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
+
     $stmt = $pdo->prepare("SELECT first_name, last_name FROM users WHERE id = ? LIMIT 1");
     $stmt->execute([$faculty_id]);
     $faculty = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if ($faculty) {
         $firstName = $faculty['first_name'] ?? 'Faculty';
-        $lastName = $faculty['last_name'] ?? '';
-        $fullName = trim($firstName . ' ' . $lastName);
+        $lastName  = $faculty['last_name']  ?? '';
+        $fullName  = trim($firstName . ' ' . $lastName);
     } else {
         $firstName = "Faculty";
-        $lastName = "";
-        $fullName = $faculty_username;
+        $lastName  = "";
+        $fullName  = $faculty_username;
     }
 } catch (PDOException $e) {
     error_log("Error getting faculty info: " . $e->getMessage());
     $firstName = "Faculty";
-    $lastName = "";
-    $fullName = $faculty_username;
+    $lastName  = "";
+    $fullName  = $faculty_username;
 }
 
+/* ---------- Handle POST: Add/Edit/Delete submission ---------- */
 if (isset($_POST['add_news'])) {
     try {
-        $title = trim($_POST['title'] ?? '');
-        $content = trim($_POST['content'] ?? '');
+        $title    = trim($_POST['title'] ?? '');
+        $content  = trim($_POST['content'] ?? '');
         $category = $_POST['category'] ?? 'news';
-        
-        if ($title === '')   throw new Exception("Article title is required and cannot be empty");
-        if ($content === '') throw new Exception("Article content is required and cannot be empty");
-        if (empty($faculty_id)) throw new Exception("Faculty ID is missing from session");
-        
+
+        if ($title === '')        throw new Exception("Article title is required and cannot be empty");
+        if ($content === '')      throw new Exception("Article content is required and cannot be empty");
+        if (empty($faculty_id))   throw new Exception("Faculty ID is missing from session");
+
         require_once __DIR__ . '/../models/FacultySubmissions.php';
-        
+
         $submissionData = [
-            'faculty_id' => (int)$faculty_id,
+            'faculty_id'      => (int)$faculty_id,
             'submission_type' => 'news',
-            'title' => $title,
-            'description' => $content,
-            'content' => $content,
-            'category' => $category,
-            'status' => 'submitted'
+            'title'           => $title,
+            'description'     => $content,
+            'content'         => $content,
+            'category'        => $category,
+            'status'          => 'submitted'
         ];
-        
+
         $submissionId = FacultySubmissions::create($submissionData);
-        
+
         if ($submissionId && $submissionId > 0) {
             $success_message = "News submitted for dean approval successfully! (ID: $submissionId)";
         } else {
@@ -73,8 +75,8 @@ if (isset($_POST['add_news'])) {
         $error_message = "Submission failed: " . $e->getMessage();
         error_log("EXCEPTION in news submission: " . $e->getMessage());
     }
-    
-    // Redirect to prevent form resubmission
+
+    // PRG pattern
     $redirect_url = "?page=faculty_manage_news";
     if (isset($success_message)) {
         $redirect_url .= "&success=" . urlencode($success_message);
@@ -83,19 +85,66 @@ if (isset($_POST['add_news'])) {
     }
     header('Location: ' . $redirect_url);
     exit;
+} elseif (isset($_POST['edit_news'], $_POST['submission_id'])) {
+    try {
+        $submissionId = (int)$_POST['submission_id'];
+        require_once __DIR__ . '/../models/FacultySubmissions.php';
+        $submission = FacultySubmissions::getById($submissionId);
+
+        if ($submission && $submission['faculty_id'] == $faculty_id && in_array(strtolower($submission['status']), ['submitted', 'pending'])) {
+            $title    = trim($_POST['title'] ?? '');
+            $content  = trim($_POST['content'] ?? '');
+            $category = $_POST['category'] ?? 'news';
+
+            if ($title === '')   throw new Exception("Article title is required and cannot be empty");
+            if ($content === '') throw new Exception("Article content is required and cannot be empty");
+
+            $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $stmt = $pdo->prepare("UPDATE faculty_submissions SET title = ?, description = ?, content = ?, category = ? WHERE id = ?");
+            $result = $stmt->execute([
+                $title,
+                $content,
+                $content,
+                $category,
+                $submissionId
+            ]);
+            $success_message = $result ? "News submission updated successfully!" : "Error: Failed to update submission.";
+        } else {
+            $error_message = "Error: Cannot edit this news submission.";
+        }
+    } catch (Exception $e) {
+        $error_message = "Edit failed: " . $e->getMessage();
+        error_log("EXCEPTION in news edit: " . $e->getMessage());
+    }
+    header('Location: ?page=faculty_manage_news' . (isset($success_message) ? "&success=" . urlencode($success_message) : "&error=" . urlencode($error_message)));
+    exit;
+} elseif (isset($_POST['delete_news'], $_POST['submission_id'])) {
+    try {
+        $submissionId = (int)$_POST['submission_id'];
+        require_once __DIR__ . '/../models/FacultySubmissions.php';
+        $submission = FacultySubmissions::getById($submissionId);
+
+        if ($submission && $submission['faculty_id'] == $faculty_id && in_array(strtolower($submission['status']), ['submitted', 'pending'])) {
+            $deleted = FacultySubmissions::delete($submissionId);
+            $success_message = $deleted ? "News submission deleted successfully!" : "Error: Failed to delete submission.";
+        } else {
+            $error_message = "Error: Cannot delete this news submission.";
+        }
+    } catch (Exception $e) {
+        $error_message = "Delete failed: " . $e->getMessage();
+        error_log("EXCEPTION in news delete: " . $e->getMessage());
+    }
+    header('Location: ?page=faculty_manage_news' . (isset($success_message) ? "&success=" . urlencode($success_message) : "&error=" . urlencode($error_message)));
+    exit;
 }
 
-// Handle redirect messages
-if (isset($_GET['success'])) {
-    $success_message = $_GET['success'];
-}
-if (isset($_GET['error'])) {
-    $error_message = $_GET['error'];
-}
+/* ---------- Redirect messages ---------- */
+if (isset($_GET['success'])) $success_message = $_GET['success'];
+if (isset($_GET['error']))   $error_message   = $_GET['error'];
 
-// Get faculty's submitted news
+/* ---------- Load submissions for this faculty ---------- */
 try {
-    $submittedNews = [];
     require_once __DIR__ . '/../models/FacultySubmissions.php';
     $submittedNews = FacultySubmissions::getByFacultyAndType($faculty_id, 'news');
 } catch (Exception $e) {
@@ -103,236 +152,239 @@ try {
     error_log("Error fetching news submissions: " . $e->getMessage());
 }
 
+/* ---------- Partition by status (Pending vs. Reviewed) ---------- */
+$pendingNews  = [];
+$assessedNews = [];
+foreach ($submittedNews as $item) {
+    $status = strtolower($item['status'] ?? '');
+    if (in_array($status, ['submitted', 'pending'])) {
+        $pendingNews[] = $item;
+    } else {
+        $assessedNews[] = $item;
+    }
+}
+
 function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+
+/**
+ * Map faculty submission statuses to dean CSS badge variants.
+ * Dean CSS supports: published (green), draft (amber), archived (gray).
+ */
+function map_status_for_badge($statusRaw) {
+  $s = strtolower(trim((string)$statusRaw));
+  switch ($s) {
+    case 'approved':
+      return ['class' => 'published', 'label' => 'Approved'];
+    case 'rejected':
+      return ['class' => 'archived',  'label' => 'Rejected'];
+    case 'submitted':
+    case 'pending':
+    default:
+      return ['class' => 'draft',     'label' => ucfirst($s ?: 'Pending')];
+  }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>News Submission | Faculty Dashboard</title>
+  <title>Faculty News Submission | CCIT</title>
 
-  <!-- Vendor CSS (icons + modal behavior) -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <!-- Match dean layout assets -->
+  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/dean.css" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <style>
-    /* ===== Layout glue to align with inline-styled sidebar ===== */
-    html, body { height: 100%; margin: 0; }
-    body { background: #f5f7fb; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; }
-
-    /* Put sidebar and main next to each other */
-    .admin-cms-layout {
-      display: flex;
-      min-height: 100vh;
-      align-items: stretch;
-      width: 100%;
-    }
-
-    /* Main area fills remaining space */
-    .admin-main {
-      flex: 1 1 auto;
-      min-width: 0; /* prevent overflow when table is wide */
-      display: flex;
-      flex-direction: column;
-      background: #fafbfc;
-    }
-
-    /* Topbar that complements your sidebar palette */
-    .admin-topbar {
-      position: sticky;
-      top: 0;
-      z-index: 800;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.9rem 1.25rem;
-      background: #ffffff;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .admin-topbar__title { font-weight: 700; font-size: 1rem; color:#111827; }
-    .admin-topbar__spacer { flex: 1; }
-    .admin-topbar__user { display:flex; align-items:center; gap:.6rem; }
-    .admin-topbar__avatar {
-      width: 34px; height: 34px; border-radius: 50%;
-      background:#008040; color:#fff; display:flex; align-items:center; justify-content:center;
-      font-size:.9rem; font-weight:700;
-    }
-    .admin-topbar__name { font-weight:600; font-size:.95rem; color:#111827; }
-
-    /* ===== Content area (kept your existing look, just tightened) ===== */
-    .admin-cms-section { padding: 1.5rem; }
-
-    .page-header {
-      display:flex; align-items:center; justify-content:space-between;
-      margin-bottom:1.25rem; padding-bottom:0.75rem; border-bottom:1px solid #e5e7eb;
-    }
-    .page-title { margin:0; font-size:1.5rem; font-weight:700; color:#111827; display:flex; gap:.6rem; align-items:center; }
-
-    .btn-primary {
-      display:inline-flex; align-items:center; gap:.5rem; cursor:pointer;
-      background:#008040; color:#fff; border:0; border-radius:8px; padding:.65rem 1.1rem;
-      font-size:.9rem; font-weight:600; transition:.2s;
-    }
-    .btn-primary:hover { background:#006d37; transform: translateY(-1px); box-shadow:0 4px 12px rgba(0,128,64,.12); }
-
-    .btn-secondary {
-      display:inline-flex; align-items:center; gap:.5rem; cursor:pointer;
-      background:#f3f4f6; color:#374151; border:1px solid #d1d5db; border-radius:8px; padding:.6rem 1rem;
-      font-size:.9rem; font-weight:500; transition:.2s;
-    }
-    .btn-secondary:hover { background:#e5e7eb; }
-
-    .content-card {
-      background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;
-      box-shadow:0 1px 3px rgba(0,0,0,.05);
-    }
-    .card-header { padding:1rem 1.25rem; background:#f9fafb; border-bottom:1px solid #e5e7eb; }
-    .card-title { margin:0; display:flex; align-items:center; gap:.6rem; font-weight:700; color:#111827; font-size:1.05rem; }
-
-    .empty-state { text-align:center; padding:3rem 1rem; color:#6b7280; }
-    .empty-state i { font-size:2.25rem; color:#d1d5db; margin-bottom:.6rem; }
-    .empty-state h4 { margin:0 0 .25rem; font-size:1.05rem; font-weight:700; color:#374151; }
-
-    .table-container { overflow-x:auto; }
-    .data-table { width:100%; min-width: 1000px; border-collapse: collapse; }
-    .data-table th {
-      background:#f9fafb; padding:0.85rem 0.75rem; text-align:left;
-      font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
-      color:#374151; border-bottom:1px solid #e5e7eb; white-space:nowrap;
-    }
-    .data-table td { padding:0.9rem 0.75rem; border-bottom:1px solid #f3f4f6; vertical-align:top; }
-    .data-table tbody tr:hover { background:#f9fafb; }
-
-    .item-title { font-weight:700; color:#111827; margin-bottom:.2rem; }
-    .item-preview { font-size:.9rem; color:#6b7280; line-height:1.45; }
-    .category-tag {
-      display:inline-flex; align-items:center; padding:.25rem .6rem; background:#f3f4f6; color:#374151;
-      border-radius:999px; font-size:.75rem; font-weight:600;
-    }
-    .status-badge {
-      display:inline-flex; align-items:center; padding:.25rem .6rem; border-radius:999px;
-      font-size:.75rem; font-weight:700; text-transform:capitalize;
-    }
-    .status-draft { background:#f3f4f6; color:#6b7280; }
-    .status-submitted { background:#fef3c7; color:#b45309; }
-    .status-approved { background:#d1fae5; color:#059669; }
-    .status-rejected { background:#fee2e2; color:#dc2626; }
-
-    .date-text { font-size:.9rem; color:#374151; font-weight:600; }
-    .date-sub { font-size:.75rem; color:#6b7280; margin-top:2px; }
-
-    .review-notes-full { font-size:.9rem; color:#374151; line-height:1.45; max-height:60px; overflow:auto; word-wrap:break-word; }
-    .no-notes { font-size:.9rem; color:#9ca3af; font-style:italic; }
-
-    /* Modal polish */
-    .modal-content { border:none; border-radius:12px; box-shadow:0 20px 25px -5px rgba(0,0,0,.1); }
-    .modal-header { padding:1rem 1.25rem; background:#f9fafb; border-bottom:1px solid #e5e7eb; }
-    .modal-body { padding:1.25rem; }
-    .modal-footer { padding:1rem 1.25rem; background:#f9fafb; border-top:1px solid #e5e7eb; gap:.6rem; }
-
-    .form-grid { display:grid; gap:1rem; }
-    @media (min-width:640px){ .form-grid { grid-template-columns: repeat(2, 1fr); } .form-grid .form-group:first-child, .form-grid .form-group:nth-child(4){ grid-column: span 2; } }
-    .form-label { margin-bottom:.4rem; font-size:.9rem; font-weight:600; color:#374151; }
-    .optional { color:#9ca3af; font-weight:400; }
-    .form-control, .form-select {
-      padding:.75rem; border:1px solid #d1d5db; border-radius:8px; font-size:.9rem; background:#fff; transition:border-color .2s, box-shadow .2s;
-    }
-    .form-control:focus, .form-select:focus { outline:none; border-color:#008040; box-shadow: 0 0 0 3px rgba(0,128,64,.12); }
-
-    .submission-note {
-      display:flex; align-items:center; gap:.5rem; padding:0.8rem 0.9rem;
-      background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; font-size:.9rem; color:#1e40af;
-    }
-
-    .alert { border-radius:10px; padding: .9rem 1rem; }
-    .alert-success { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
-    .alert-danger  { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
-
-    /* Mobile spacing */
-    @media (max-width: 768px){
-      .admin-cms-section { padding: 1rem; }
-      .page-header { flex-direction:column; align-items:stretch; gap:.75rem; }
-    }
-  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
-<div class="admin-cms-layout">
+<div class="admin-layout">
   <?php include __DIR__ . '/faculty/_faculty_sidebar.php'; ?>
 
   <main class="admin-main">
     <header class="admin-topbar">
-      <span class="admin-topbar__title">News Submission</span>
-      <div class="admin-topbar__spacer"></div>
-      <div class="admin-topbar__user">
-        <span class="admin-topbar__avatar"><?= esc(strtoupper(($firstName[0] ?? 'F') . ($lastName[0] ?? ''))) ?></span>
-        <span class="admin-topbar__name"><?= esc($fullName) ?></span>
-      </div>
+      <button class="topbar__btn hide-desktop" type="button" aria-label="Open navigation menu" data-sb-open>
+        <i class="fas fa-bars"></i>
+      </button>
+      <span class="admin-topbar__title">Faculty News Submission</span>
+      <span class="admin-topbar__spacer"></span>
     </header>
 
-    <section class="admin-cms-section">
+    <section class="admin-section">
       <?php if (!empty($success_message)): ?>
-        <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= esc($success_message) ?></div>
+        <div class="alert alert-success alert-dismissible fade show modern-alert" role="alert">
+          <i class="fas fa-check-circle me-2"></i><?= esc($success_message) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
       <?php endif; ?>
       <?php if (!empty($error_message)): ?>
-        <div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> <?= esc($error_message) ?></div>
+        <div class="alert alert-danger alert-dismissible fade show modern-alert" role="alert">
+          <i class="fas fa-exclamation-circle me-2"></i><?= esc($error_message) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
       <?php endif; ?>
-      
-      <!-- Page Header with Add Button -->
-      <div class="page-header">
-        <h1 class="page-title">
-          <i class="fas fa-newspaper"></i>
-          <span>News Management</span>
-        </h1>
-        <button type="button" class="btn-primary" data-bs-toggle="modal" data-bs-target="#addNewsModal">
-          <i class="fas fa-plus"></i>
-          <span>Add News</span>
-        </button>
+
+      <!-- Info message at the top -->
+      <div class="alert alert-info py-2 mb-4 d-flex align-items-center" style="font-size:0.97rem;">
+        <i class="fas fa-info-circle me-2"></i>
+        Your article will be reviewed by the dean before publication.
       </div>
 
-      <!-- Submissions Table -->
-      <div class="content-card">
-        <div class="card-header">
-          <h3 class="card-title">
-            <i class="fas fa-list"></i>
-            <span>Your Submissions (<?= count($submittedNews) ?>)</span>
-          </h3>
-        </div>
-        
-        <?php if (empty($submittedNews)): ?>
-          <div class="empty-state">
-            <i class="fas fa-newspaper"></i>
-            <h4>No submissions yet</h4>
-            <p>Start by submitting your first news article</p>
+      <!-- Header Actions (match dean: card w/ body, left tabs placeholder, right action button) -->
+      <div class="card mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <h5 class="mb-0">
+              <i class="fas fa-newspaper me-2"></i>Your News Submissions
+            </h5>
           </div>
-        <?php else: ?>
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width:45%;">Title &amp; Content</th>
-                  <th style="width:8%;">Category</th>
-                  <th style="width:8%;">Status</th>
-                  <th style="width:12%;">Date</th>
-                  <th style="width:27%;">Review Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($submittedNews as $item): ?>
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addNewsModal">
+            <i class="fas fa-plus me-2"></i>Add News
+          </button>
+        </div>
+      </div>
+
+      <!-- Pending Review -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-clock me-2"></i>Pending Dean Review (<?= count($pendingNews) ?>)
+          </h5>
+        </div>
+        <div class="card-body">
+          <?php if (empty($pendingNews)): ?>
+            <div class="empty-state-card">
+              <i class="fas fa-hourglass-half fa-3x"></i>
+              <h6>No pending submissions</h6>
+              <div class="text-muted">All your news submissions have been reviewed.</div>
+            </div>
+          <?php else: ?>
+            <div class="table-responsive">
+              <!-- Pending Review Table -->
+              <table class="table table-hover dashboard-table align-middle">
+                <thead>
+                  <tr>
+                    <th style="width:40%;">Title &amp; Content</th>
+                    <th style="width:10%;">Category</th>
+                    <th style="width:10%;">Status</th>
+                    <th style="width:15%;">Date</th>
+                    <th style="width:5%;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($pendingNews as $item): ?>
+                  <?php $m = map_status_for_badge($item['status'] ?? 'pending'); ?>
                   <tr>
                     <td>
-                      <div class="item-title"><?= esc($item['title']) ?></div>
-                      <div class="item-preview"><?= esc(mb_substr($item['content'], 0, 150)) ?>...</div>
+                      <div class="item-title fw-semibold"><?= esc($item['title']) ?></div>
+                      <div class="item-preview text-muted">
+                        <?= esc(mb_substr((string)($item['content'] ?? ''), 0, 150)) ?><?= mb_strlen((string)($item['content'] ?? '')) > 150 ? '…' : '' ?>
+                      </div>
                     </td>
-                    <td><span class="category-tag"><?= esc($item['category'] ?? 'News') ?></span></td>
+                    <td><span class="badge badge--category"><?= esc($item['category'] ?? 'News') ?></span></td>
                     <td>
-                      <span class="status-badge status-<?= esc($item['status']) ?>">
-                        <?= esc(ucfirst($item['status'])) ?>
+                      <span class="badge badge--status badge--<?= esc($m['class']) ?>">
+                        <?= esc($m['label']) ?>
                       </span>
                     </td>
                     <td>
                       <div class="date-text">
-                        <?= $item['submitted_at'] ? date('M j, Y', strtotime($item['submitted_at'])) : '-' ?>
+                        <?= !empty($item['submitted_at']) ? date('M j, Y', strtotime($item['submitted_at'])) : '-' ?>
+                        <?php if (!empty($item['submitted_at'])): ?>
+                          <div class="date-sub"><?= date('g:i A', strtotime($item['submitted_at'])) ?></div>
+                        <?php endif; ?>
+                      </div>
+                    </td>
+                    <td class="actions-cell">
+                      <div class="btn-group btn-group-sm" role="group" aria-label="Submission actions">
+                        <button type="button"
+                                class="btn btn-info"
+                                title="View submission"
+                                data-bs-toggle="modal"
+                                data-bs-target="#viewNewsModal"
+                                data-title="<?= esc($item['title']) ?>"
+                                data-content="<?= esc($item['content']) ?>"
+                                data-category="<?= esc($item['category']) ?>"
+                                data-date="<?= !empty($item['submitted_at']) ? date('M j, Y g:i A', strtotime($item['submitted_at'])) : '-' ?>"
+                                data-status="<?= esc($m['label']) ?>"
+                                data-review="<?= esc($item['review_notes'] ?? '') ?>">
+                          <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button"
+                                class="btn btn-warning"
+                                title="Edit submission"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editNewsModal"
+                                data-id="<?= (int)$item['id'] ?>"
+                                data-title="<?= esc($item['title']) ?>"
+                                data-content="<?= esc($item['content']) ?>"
+                                data-category="<?= esc($item['category']) ?>">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <form method="post" class="d-inline" onsubmit="return confirm('Delete this news submission?')">
+                          <input type="hidden" name="delete_news" value="1">
+                          <input type="hidden" name="submission_id" value="<?= (int)$item['id'] ?>">
+                          <button type="submit" class="btn btn-danger" title="Delete submission">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+
+      <!-- Reviewed -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-check-circle me-2"></i>Reviewed by Dean (<?= count($assessedNews) ?>)
+          </h5>
+        </div>
+        <div class="card-body">
+          <?php if (empty($assessedNews)): ?>
+            <div class="empty-state-card">
+              <i class="fas fa-newspaper fa-3x"></i>
+              <h6>No reviewed submissions yet</h6>
+              <div class="text-muted">Once the dean reviews your news, they will appear here.</div>
+            </div>
+          <?php else: ?>
+            <div class="table-responsive">
+              <!-- Reviewed Table -->
+              <table class="table table-hover dashboard-table align-middle">
+                <thead>
+                  <tr>
+                    <th style="width:45%;">Title &amp; Content</th>
+                    <th style="width:10%;">Category</th>
+                    <th style="width:10%;">Status</th>
+                    <th style="width:15%;">Date</th>
+                    <th style="width:20%;">Review Notes</th>
+                    <th style="width:5%;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($assessedNews as $item): ?>
+                  <?php $m = map_status_for_badge($item['status'] ?? 'approved'); ?>
+                  <tr>
+                    <td>
+                      <div class="item-title fw-semibold"><?= esc($item['title']) ?></div>
+                      <div class="item-preview text-muted">
+                        <?= esc(mb_substr((string)($item['content'] ?? ''), 0, 150)) ?><?= mb_strlen((string)($item['content'] ?? '')) > 150 ? '…' : '' ?>
+                      </div>
+                    </td>
+                    <td><span class="badge badge--category"><?= esc($item['category'] ?? 'News') ?></span></td>
+                    <td>
+                      <span class="badge badge--status badge--<?= esc($m['class']) ?>">
+                        <?= esc($m['label']) ?>
+                      </span>
+                    </td>
+                    <td>
+                      <div class="date-text">
+                        <?= !empty($item['submitted_at']) ? date('M j, Y', strtotime($item['submitted_at'])) : '-' ?>
                         <?php if (!empty($item['submitted_at'])): ?>
                           <div class="date-sub"><?= date('g:i A', strtotime($item['submitted_at'])) ?></div>
                         <?php endif; ?>
@@ -342,77 +394,188 @@ function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                       <?php if (!empty($item['review_notes'])): ?>
                         <div class="review-notes-full"><?= esc($item['review_notes']) ?></div>
                       <?php else: ?>
-                        <span class="no-notes">No review notes yet</span>
+                        <span class="no-notes text-muted">No review notes</span>
                       <?php endif; ?>
+                    </td>
+                    <td class="actions-cell">
+                      <button type="button"
+                              class="btn btn-info btn-sm"
+                              title="View submission"
+                              data-bs-toggle="modal"
+                              data-bs-target="#viewNewsModal"
+                              data-title="<?= esc($item['title']) ?>"
+                              data-content="<?= esc($item['content']) ?>"
+                              data-category="<?= esc($item['category']) ?>"
+                              data-date="<?= !empty($item['submitted_at']) ? date('M j, Y g:i A', strtotime($item['submitted_at'])) : '-' ?>"
+                              data-status="<?= esc($m['label']) ?>"
+                              data-review="<?= esc($item['review_notes'] ?? '') ?>">
+                        <i class="fas fa-eye"></i>
+                      </button>
                     </td>
                   </tr>
                 <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-        <?php endif; ?>
-      </div>
-
-      <!-- Add News Modal -->
-      <div class="modal fade" id="addNewsModal" tabindex="-1" aria-labelledby="addNewsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="addNewsModalLabel">Submit News Article</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </tbody>
+              </table>
             </div>
-            <form method="POST" action="?page=faculty_manage_news" enctype="multipart/form-data">
-              <div class="modal-body">
-                <input type="hidden" name="add_news" value="1">
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label for="title" class="form-label">Article Title <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="title" name="title" required maxlength="255" placeholder="Enter article title">
-                    <small class="form-text text-muted">Maximum 255 characters</small>
-                  </div>
-                  
-                  <div class="form-group form-group-half">
-                    <label for="category" class="form-label">Category</label>
-                    <select class="form-select" id="category" name="category" required>
-                      <option value="news">General News</option>
-                      <option value="research">Research</option>
-                      <option value="achievement">Achievement</option>
-                      <option value="student">Student News</option>
-                    </select>
-                  </div>
-                  
-                  <div class="form-group form-group-half">
-                    <label for="image" class="form-label">Image <span class="optional">(optional)</span></label>
-                    <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                  </div>
-                  
-                  <div class="form-group">
-                    <label for="content" class="form-label">Article Content <span class="text-danger">*</span></label>
-                    <textarea class="form-control" id="content" name="content" rows="8" required minlength="10" placeholder="Write your article content here..."></textarea>
-                    <small class="form-text text-muted">Minimum 10 characters required</small>
-                  </div>
-                  
-                  <div class="submission-note">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Your article will be reviewed by the dean before publication</span>
-                  </div>
-                </div>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn-primary" id="submitBtn">
-                  <i class="fas fa-paper-plane"></i>
-                  <span>Submit Article</span>
-                </button>
-              </div>
-            </form>
-          </div>
+          <?php endif; ?>
         </div>
       </div>
+
     </section>
   </main>
 </div>
 
+<!-- Add News Modal (match dean modal sizing/structure) -->
+<div class="modal fade" id="addNewsModal" tabindex="-1" aria-labelledby="addNewsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="?page=faculty_manage_news" enctype="multipart/form-data">
+        <input type="hidden" name="add_news" value="1">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addNewsModalLabel">
+            <i class="fas fa-plus me-2"></i>Submit News Article
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-8">
+              <div class="mb-3">
+                <label for="title" class="form-label">Article Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="title" name="title" required maxlength="255" placeholder="Enter article title">
+                <small class="form-text text-muted">Maximum 255 characters</small>
+              </div>
+              <div class="mb-3">
+                <label for="content" class="form-label">Article Content <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="content" name="content" rows="7" required minlength="10" placeholder="Write your article content here..."></textarea>
+                <small class="form-text text-muted">Minimum 10 characters required</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="category" class="form-label">Category</label>
+                <select class="form-select" id="category" name="category" required>
+                  <option value="news">General News</option>
+                  <option value="research">Research</option>
+                  <option value="achievement">Achievement</option>
+                  <option value="student">Student News</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="image" class="form-label">Image <span class="text-muted">(optional)</span></label>
+                <input type="file" class="form-control" id="image" name="image" accept="image/*">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            <i class="fas fa-paper-plane me-2"></i>Submit Article
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit News Modal -->
+<div class="modal fade" id="editNewsModal" tabindex="-1" aria-labelledby="editNewsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="?page=faculty_manage_news" enctype="multipart/form-data">
+        <input type="hidden" name="edit_news" value="1">
+        <input type="hidden" name="submission_id" id="edit_news_submission_id" value="">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editNewsModalLabel">
+            <i class="fas fa-edit me-2"></i>Edit News Article
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-8">
+              <div class="mb-3">
+                <label for="edit_news_title" class="form-label">Article Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="edit_news_title" name="title" required maxlength="255" placeholder="Enter article title">
+                <small class="form-text text-muted">Maximum 255 characters</small>
+              </div>
+              <div class="mb-3">
+                <label for="edit_news_content" class="form-label">Article Content <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="edit_news_content" name="content" rows="7" required minlength="10" placeholder="Write your article content here..."></textarea>
+                <small class="form-text text-muted">Minimum 10 characters required</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="edit_news_category" class="form-label">Category</label>
+                <select class="form-select" id="edit_news_category" name="category" required>
+                  <option value="news">General News</option>
+                  <option value="research">Research</option>
+                  <option value="achievement">Achievement</option>
+                  <option value="student">Student News</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- View Submission Modal -->
+<div class="modal fade" id="viewNewsModal" tabindex="-1" aria-labelledby="viewNewsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="viewNewsModalLabel">
+          <i class="fas fa-eye me-2"></i>Submission Details
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" style="font-size:1.05rem; color:#222;">
+        <div class="mb-3">
+          <strong>Title:</strong>
+          <div id="view_news_title" class="fw-semibold" style="font-size:1.15rem; color:#003169; margin-top:2px;"></div>
+        </div>
+        <div class="mb-3">
+          <strong>Category:</strong>
+          <span id="view_news_category" style="font-weight:500; color:#0080c9; margin-left:4px;"></span>
+        </div>
+        <div class="mb-3">
+          <strong>Status:</strong>
+          <span id="view_news_status" style="font-weight:500; color:#00713D; margin-left:4px;"></span>
+        </div>
+        <div class="mb-3">
+          <strong>Date Submitted:</strong>
+          <span id="view_news_date" style="margin-left:4px;"></span>
+        </div>
+        <div class="mb-3">
+          <strong>Content:</strong>
+          <div id="view_news_content" style="white-space:pre-line; background:#f8fafc; border-radius:8px; padding:12px; margin-top:4px; color:#222;"></div>
+        </div>
+        <div class="mb-3" id="view_news_review_notes_wrap" style="display:none;">
+          <strong>Review Notes:</strong>
+          <div id="view_news_review_notes" style="background:#fffbe6; border-radius:8px; padding:10px; margin-top:4px; color:#92400e;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -420,28 +583,61 @@ document.addEventListener('DOMContentLoaded', function() {
   const titleInput = document.querySelector('#title');
   const contentInput = document.querySelector('#content');
   const submitBtn = document.querySelector('#submitBtn');
-  
+
   if (form && titleInput && contentInput && submitBtn) {
     form.addEventListener('submit', function(e) {
       const title = (titleInput.value || '').trim();
       const content = (contentInput.value || '').trim();
-      
+
       if (!title) {
         e.preventDefault();
         alert('Please enter an article title');
         titleInput.focus();
         return false;
       }
-      
+
       if (content.length < 10) {
         e.preventDefault();
         alert('Please enter article content (minimum 10 characters)');
         contentInput.focus();
         return false;
       }
-      
+
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+    });
+  }
+
+  // Edit modal population
+  var editModal = document.getElementById('editNewsModal');
+  if (editModal) {
+    editModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      document.getElementById('edit_news_submission_id').value = button.getAttribute('data-id') || '';
+      document.getElementById('edit_news_title').value = button.getAttribute('data-title') || '';
+      document.getElementById('edit_news_content').value = button.getAttribute('data-content') || '';
+      document.getElementById('edit_news_category').value = button.getAttribute('data-category') || 'news';
+    });
+  }
+
+  // View modal population
+  var viewModal = document.getElementById('viewNewsModal');
+  if (viewModal) {
+    viewModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      document.getElementById('view_news_title').textContent = button.getAttribute('data-title') || '';
+      document.getElementById('view_news_category').textContent = button.getAttribute('data-category') || '';
+      document.getElementById('view_news_status').textContent = button.getAttribute('data-status') || '';
+      document.getElementById('view_news_date').textContent = button.getAttribute('data-date') || '';
+      document.getElementById('view_news_content').textContent = button.getAttribute('data-content') || '';
+      var reviewNotes = button.getAttribute('data-review') || '';
+      if (reviewNotes) {
+        document.getElementById('view_news_review_notes').textContent = reviewNotes;
+        document.getElementById('view_news_review_notes_wrap').style.display = '';
+      } else {
+        document.getElementById('view_news_review_notes').textContent = '';
+        document.getElementById('view_news_review_notes_wrap').style.display = 'none';
+      }
     });
   }
 });

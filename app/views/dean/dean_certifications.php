@@ -7,6 +7,7 @@ if (empty($_SESSION['user']) || !in_array(($_SESSION['user']['role'] ?? ''), ['d
 
 require_once __DIR__ . '/../../models/FacultySubmissions.php';
 require_once __DIR__ . '/../../models/FacultyCertification.php';
+require_once __DIR__ . '/../../models/News.php';
 
 if (!function_exists('esc')) {
     function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
@@ -95,6 +96,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ];
                     
                     $facultyCertification->create($certificationData);
+                } elseif ($submission['submission_type'] === 'news') {
+                    // Handle news approval
+                    $newsData = [
+                        'title'    => $submission['title'],
+                        'content'  => $submission['content'],
+                        'category' => $submission['category'] ?? 'news',
+                        'status'   => 'published',
+                    ];
+                    
+                    if (News::create($newsData['title'], $newsData['content'], $newsData['status'], $newsData['category'])) {
+                        $notice = 'News approved and published successfully!';
+                    } else {
+                        throw new Exception('Failed to save the news to the database.');
+                    }
                 }
             }
             

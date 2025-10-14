@@ -96,7 +96,6 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
   <style>
     /* Modal sizing & stacking */
     .modal { z-index: 1055; }
-
     .btn { position: relative; z-index: 1; pointer-events: auto; }
 
     .resume-container {
@@ -113,13 +112,54 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
       margin-top:2rem; margin-bottom:0.7rem; letter-spacing:.01em;
       border-bottom:1px solid #e5e7eb; padding-bottom:.2rem;
     }
-    .resume-list { list-style:none; margin:0; padding:0; }
-    .resume-list-item { border-bottom:1px solid #f3f4f6; display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:.4rem 0; }
-    .resume-list-item:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
-    .resume-label { font-weight:600; color:#374151; margin-bottom:.2rem; font-size:1rem; min-width:180px; }
-    .resume-value { color:#111827; font-size:.98rem; margin-bottom:.1rem; flex:1; }
-    .resume-cert-status { display:inline-block; border-radius:8px; padding:.1rem .6rem; font-size:.85rem; font-weight:600; margin-left:.3rem; background:#dcfce7; color:#166534; }
-    .resume-cert-status.expired { background:#fef3c7; color:#92400e; }
+
+    /* ===== Classic table-like layout for short sections ===== */
+    :root{
+      --label-col-w: 240px;
+      --gap-x: 16px;
+      --gap-y: 8px;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+    }
+    .resume-list{ list-style:none; margin:0; padding:0; }
+    .resume-list-item{
+      display:grid;
+      grid-template-columns: var(--label-col-w) 1fr auto;
+      column-gap: var(--gap-x);
+      row-gap: var(--gap-y);
+      align-items:start;
+      padding: .6rem 0;
+      border-bottom:1px solid #f3f4f6;
+    }
+    .resume-list-item:last-child{ border-bottom:none; }
+    .resume-label{
+      grid-column:1;
+      font-weight:600;
+      color:#374151;
+      font-size:.98rem;
+      line-height:1.35;
+      margin:0;
+    }
+    .resume-value{
+      grid-column:2;
+      color:var(--text);
+      font-size:.97rem;
+      line-height:1.45;
+      margin:0;
+      word-break: break-word;
+    }
+    .resume-list-item > .d-flex,
+    .resume-list-item > .mt-2.d-flex,
+    .resume-list-item > .btn-group{
+      grid-column:3;
+      margin:0 !important;
+    }
+    .resume-value a{ color:#0b6bff; text-decoration:none; }
+    .resume-value a:hover{ text-decoration:underline; }
+    .resume-cert-status{ display:inline-block; border-radius:8px; padding:.1rem .5rem;
+      font-size:.85rem; font-weight:700; background:#dcfce7; color:#166534; }
+    .resume-cert-status.expired{ background:#fef3c7; color:#92400e; }
 
     .portfolio-folder-nav { display:flex; flex-wrap:wrap; gap:.5rem; margin: .5rem 0 1rem; }
     .portfolio-folder-btn { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .7rem; border:1px solid #e5e7eb; border-radius:8px; text-decoration:none; color:#1f2937; background:#fff; }
@@ -127,6 +167,78 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
 
     .btn-edit { background:#f8fafc; color:#6b7280; border:1px solid #e5e7eb; border-radius:6px; font-size:.9rem; padding:4px 10px; }
     .btn-edit:hover { background:#e0f2fe; color:#0369a1; }
+
+    /* ===== Responsive for classic layout ===== */
+    @media (max-width: 768px){
+      :root{ --label-col-w: 38vw; }
+      .resume-list-item{ grid-template-columns: 1fr; }
+      .resume-label,.resume-value,.resume-list-item > .d-flex,.resume-list-item > .mt-2.d-flex,.resume-list-item > .btn-group{
+        grid-column:1 !important;
+      }
+      .resume-list-item > .d-flex,.resume-list-item > .mt-2.d-flex,.resume-list-item > .btn-group{
+        margin-top:.25rem !important; justify-content:flex-start;
+      }
+    }
+    @media print{
+      .portfolio-folder-nav, .btn, .modal { display:none !important; }
+      .resume-list-item{ border-bottom:1px solid var(--border); padding:.4rem 0; }
+      a[href]:after{ content:""; }
+    }
+
+    /* ===== Compact grid for long, add-heavy sections ===== */
+    .compact-toolbar{
+      display:flex; align-items:center; gap:.5rem; margin:.5rem 0 1rem;
+    }
+    .compact-grid{
+      --cols: 3;
+      display:grid;
+      grid-template-columns: repeat(var(--cols), minmax(0,1fr));
+      gap:12px;
+      margin:0; padding:0; list-style:none;
+    }
+    @media (max-width: 1200px){ .compact-grid{ --cols: 2; } }
+    @media (max-width: 640px){ .compact-grid{ --cols: 1; } }
+
+    .compact-card{
+      border:1px solid #e5e7eb; border-radius:12px; background:#fff;
+      overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.03);
+    }
+    .compact-head{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      cursor:pointer; user-select:none;
+    }
+    .compact-title{
+      font-weight:650; color:#0f172a; line-height:1.2; flex:1; min-width:0;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .compact-meta{
+      font-size:.86rem; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .compact-actions{
+      display:flex; gap:6px; margin-left:auto;
+    }
+    .compact-actions .btn{
+      padding:4px 8px; border-radius:8px; font-size:.85rem;
+    }
+    .compact-body{
+      border-top:1px dashed #e5e7eb;
+      padding:10px 12px;
+    }
+    .compact-row{
+      display:grid; grid-template-columns: 160px 1fr; gap:10px; padding:6px 0;
+      border-bottom:1px solid #f3f4f6;
+    }
+    .compact-row:last-child{ border-bottom:none; }
+    .compact-row .label{ color:#475569; font-weight:600; }
+    .compact-row .value{ color:#0f172a; word-break:break-word; }
+
+    .chip{ display:inline-block; padding:.15rem .5rem; border-radius:999px; font-size:.74rem; font-weight:700; }
+    .chip.ok{ background:#dcfce7; color:#166534; }
+    .chip.warn{ background:#fef3c7; color:#92400e; }
+
+    .compact-head[data-bs-toggle="collapse"] .caret{ transition:transform .18s ease; }
+    .compact-head[aria-expanded="true"] .caret{ transform:rotate(180deg); }
   </style>
 </head>
 <body>
@@ -160,7 +272,6 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
             <div class="resume-name"><?= esc($profile['full_name'] ?? $fullName) ?></div>
             <div class="resume-meta"><?= esc($profile['position'] ?? 'Dean') ?>, <?= esc($profile['department'] ?? 'College of Computer and Information Technology') ?></div>
             <div class="resume-meta"><?= esc($profile['work_email'] ?? ($username . '@adamson.edu.ph')) ?></div>
-            <div class="resume-meta"><?= esc($profile['office_location'] ?? "Dean's Office, CCIT Bldg.") ?></div>
           </div>
         </div>
 
@@ -196,144 +307,156 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
           </div>
         <?php endif; ?>
 
-        <!-- CERTIFICATIONS -->
+        <!-- CERTIFICATIONS (Compact) -->
         <?php if ($activeFolder === 'certifications'): ?>
           <div class="resume-section-title"><i class="fas fa-certificate"></i> Licenses & Certifications</div>
-          <ul class="resume-list">
-            <?php if (empty($deanCertifications)): ?>
-              <li class="resume-list-item"><span class="resume-value text-muted">No certifications on file.</span></li>
-            <?php else: ?>
-              <?php foreach ($deanCertifications as $cert): ?>
-                <li class="resume-list-item">
-                  <div>
-                    <div class="resume-label">License / Certification Title</div>
-                    <div class="resume-value"><?= esc($cert['name']) ?></div>
 
-                    <div class="resume-label">Issuing Body / Organization</div>
-                    <div class="resume-value"><?= esc($cert['company_name']) ?></div>
-
-                    <div class="resume-label">Issue Year & Expiry Year</div>
-                    <div class="resume-value"><?= esc($cert['issue_year']) ?> - <?= $cert['expire_year'] ? esc($cert['expire_year']) : 'No Expiry' ?></div>
-
-                    <?php if (!empty($cert['credential_id']) || !empty($cert['credential_url'])): ?>
-                      <div class="resume-label">Credential ID / Verification Link</div>
-                      <div class="resume-value">
-                        <?php if (!empty($cert['credential_id'])): ?>
-                          <span>ID: <?= esc($cert['credential_id']) ?></span>
-                        <?php endif; ?>
-                        <?php if (!empty($cert['credential_url'])): ?>
-                          <span> | <a href="<?= esc($cert['credential_url']) ?>" target="_blank" class="text-primary">View</a></span>
-                        <?php endif; ?>
-                      </div>
-                    <?php endif; ?>
-
-                    <div class="resume-label">Status</div>
-                    <div class="resume-value">
-                      <?php $cStatus = strtolower($cert['status'] ?? 'active'); ?>
-                      <span class="resume-cert-status<?= $cStatus === 'expired' ? ' expired' : '' ?>">
-                        <?= esc(ucfirst($cStatus)) ?>
-                      </span>
-                    </div>
-
-                    <div class="resume-label">Visibility</div>
-                    <div class="resume-value"><?= esc(ucfirst($cert['visibility'] ?? 'public')) ?></div>
-                  </div>
-                  <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#editCertModal<?= $cert['id'] ?>">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteCertModal<?= $cert['id'] ?>">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </li>
-              <?php endforeach; ?>
-            <?php endif; ?>
-          </ul>
-          <div class="mt-4">
+          <div class="compact-toolbar">
+            <div class="text-muted">Click a row to view full details.</div>
+            <span class="ms-auto"></span>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCertModal">
               <i class="fas fa-plus"></i> Add Certification
             </button>
           </div>
-        <?php elseif ($activeFolder === 'experience'): ?>
-          <div class="resume-section-title"><i class="fas fa-briefcase"></i> Employment & Academic Record</div>
-          <ul class="resume-list">
-            <?php if (empty($deanExperience)): ?>
-              <li class="resume-list-item"><span class="resume-value text-muted">No experience records found.</span></li>
+
+          <ul class="compact-grid">
+            <?php if (empty($deanCertifications)): ?>
+              <li class="compact-card"><div class="compact-body text-muted">No certifications on file.</div></li>
             <?php else: ?>
-              <?php foreach ($deanExperience as $exp): ?>
-                <li class="resume-list-item">
-                  <div class="resume-label">Position</div>
-                  <div class="resume-value"><?= esc($exp['position']) ?>, <?= esc($exp['department']) ?> (<?= esc($exp['period']) ?>)</div>
-                  <div class="mt-2 d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editExpModal<?= $exp['id'] ?>">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteExpModal<?= $exp['id'] ?>">
-                      <i class="fas fa-trash"></i>
-                    </button>
+              <?php foreach ($deanCertifications as $cert):
+                $cid = 'certBody'.$cert['id'];
+                if (!empty($cert['expire_year'])) {
+                  $statusChip = ((int)$cert['expire_year'] >= (int)date('Y'))
+                    ? '<span class="chip ok">Active</span>' : '<span class="chip warn">Expired</span>';
+                } else {
+                  $statusChip = '<span class="chip ok">No Expiry</span>';
+                }
+              ?>
+                <li class="compact-card">
+                  <div class="compact-head" data-bs-toggle="collapse" data-bs-target="#<?= $cid ?>" aria-expanded="false">
+                    <div class="caret"><i class="fa fa-chevron-down"></i></div>
+                    <div class="compact-title" title="<?= esc($cert['name']) ?>"><?= esc($cert['name']) ?></div>
+                    <div class="compact-meta" title="<?= esc($cert['company_name']) ?>">
+                      <?= esc($cert['company_name']) ?> • <?= esc($cert['issue_year']) ?><?= $cert['expire_year'] ? '–'.esc($cert['expire_year']) : '' ?>
+                    </div>
+                    <?= $statusChip ?>
+                    <div class="compact-actions">
+                      <button type="button" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#editCertModal<?= $cert['id'] ?>"><i class="fas fa-edit"></i></button>
+                      <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteCertModal<?= $cert['id'] ?>"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </div>
+                  <div id="<?= $cid ?>" class="compact-body collapse">
+                    <div class="compact-row"><div class="label">Title</div><div class="value"><?= esc($cert['name']) ?></div></div>
+                    <div class="compact-row"><div class="label">Issuing Body</div><div class="value"><?= esc($cert['company_name']) ?></div></div>
+                    <div class="compact-row"><div class="label">Issued / Expiry</div><div class="value"><?= esc($cert['issue_year']) ?> – <?= $cert['expire_year'] ? esc($cert['expire_year']) : 'No Expiry' ?></div></div>
+                    <?php if (!empty($cert['credential_id']) || !empty($cert['credential_url'])): ?>
+                      <div class="compact-row">
+                        <div class="label">Credential</div>
+                        <div class="value">
+                          <?php if (!empty($cert['credential_id'])): ?>ID: <?= esc($cert['credential_id']) ?><?php endif; ?>
+                          <?php if (!empty($cert['credential_url'])): ?>
+                            <?= !empty($cert['credential_id']) ? ' • ' : '' ?>
+                            <a href="<?= esc($cert['credential_url']) ?>" target="_blank" class="link-cert">Verify</a>
+                          <?php endif; ?>
+                        </div>
+                      </div>
+                    <?php endif; ?>
+                    <div class="compact-row"><div class="label">Visibility</div><div class="value"><?= esc(ucfirst($cert['visibility'] ?? 'Public')) ?></div></div>
                   </div>
                 </li>
               <?php endforeach; ?>
             <?php endif; ?>
           </ul>
-          <div class="mt-4">
+        <?php endif; ?>
+
+        <!-- EXPERIENCE (Compact) -->
+        <?php if ($activeFolder === 'experience'): ?>
+          <div class="resume-section-title"><i class="fas fa-briefcase"></i> Employment & Academic Record</div>
+
+          <div class="compact-toolbar">
+            <div class="text-muted">Tap a card for details.</div>
+            <span class="ms-auto"></span>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addExpModal">
               <i class="fas fa-plus"></i> Add Experience
             </button>
           </div>
 
-        <?php elseif ($activeFolder === 'education'): ?>
-          <div class="resume-section-title"><i class="fas fa-graduation-cap"></i> Educational Background</div>
-          <ul class="resume-list">
-            <?php if (empty($education)): ?>
-              <li class="resume-list-item"><span class="resume-value text-muted">No education records found.</span></li>
+          <ul class="compact-grid">
+            <?php if (empty($deanExperience)): ?>
+              <li class="compact-card"><div class="compact-body text-muted">No experience records found.</div></li>
             <?php else: ?>
-              <?php foreach ($education as $edu): ?>
-                <li class="resume-list-item">
-                  <div class="resume-label">Degree</div>
-                  <div class="resume-value"><?= esc($edu['degree']) ?>, <?= esc($edu['institution']) ?> (<?= esc($edu['year']) ?>)</div>
-                  <div class="mt-2 d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editEduModal<?= $edu['id'] ?>">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteEduModal<?= $edu['id'] ?>">
-                      <i class="fas fa-trash"></i>
-                    </button>
+              <?php foreach ($deanExperience as $exp): $eid='expBody'.$exp['id']; ?>
+                <li class="compact-card">
+                  <div class="compact-head" data-bs-toggle="collapse" data-bs-target="#<?= $eid ?>" aria-expanded="false">
+                    <div class="caret"><i class="fa fa-chevron-down"></i></div>
+                    <div class="compact-title" title="<?= esc($exp['position']) ?>"><?= esc($exp['position']) ?></div>
+                    <div class="compact-meta"><?= esc($exp['department']) ?> • <?= esc($exp['period']) ?></div>
+                    <div class="compact-actions">
+                      <button type="button" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#editExpModal<?= $exp['id'] ?>"><i class="fas fa-edit"></i></button>
+                      <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteExpModal<?= $exp['id'] ?>"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </div>
+                  <div id="<?= $eid ?>" class="compact-body collapse">
+                    <div class="compact-row"><div class="label">Position</div><div class="value"><?= esc($exp['position']) ?></div></div>
+                    <div class="compact-row"><div class="label">Department</div><div class="value"><?= esc($exp['department']) ?></div></div>
+                    <div class="compact-row"><div class="label">Period</div><div class="value"><?= esc($exp['period']) ?></div></div>
                   </div>
                 </li>
               <?php endforeach; ?>
             <?php endif; ?>
           </ul>
-          <div class="mt-4">
+        <?php endif; ?>
+
+        <!-- EDUCATION (Compact) -->
+        <?php if ($activeFolder === 'education'): ?>
+          <div class="resume-section-title"><i class="fas fa-graduation-cap"></i> Educational Background</div>
+
+          <div class="compact-toolbar">
+            <div class="text-muted">Degrees at a glance.</div>
+            <span class="ms-auto"></span>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEduModal">
               <i class="fas fa-plus"></i> Add Education
             </button>
           </div>
 
-        <?php elseif ($activeFolder === 'personal'): ?>
+          <ul class="compact-grid">
+            <?php if (empty($education)): ?>
+              <li class="compact-card"><div class="compact-body text-muted">No education records found.</div></li>
+            <?php else: ?>
+              <?php foreach ($education as $edu): $bid='eduBody'.$edu['id']; ?>
+                <li class="compact-card">
+                  <div class="compact-head" data-bs-toggle="collapse" data-bs-target="#<?= $bid ?>" aria-expanded="false">
+                    <div class="caret"><i class="fa fa-chevron-down"></i></div>
+                    <div class="compact-title"><?= esc($edu['degree']) ?></div>
+                    <div class="compact-meta"><?= esc($edu['institution']) ?> • <?= esc($edu['year']) ?></div>
+                    <div class="compact-actions">
+                      <button type="button" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#editEduModal<?= $edu['id'] ?>"><i class="fas fa-edit"></i></button>
+                      <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteEduModal<?= $edu['id'] ?>"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </div>
+                  <div id="<?= $bid ?>" class="compact-body collapse">
+                    <div class="compact-row"><div class="label">Degree</div><div class="value"><?= esc($edu['degree']) ?></div></div>
+                    <div class="compact-row"><div class="label">Institution</div><div class="value"><?= esc($edu['institution']) ?></div></div>
+                    <div class="compact-row"><div class="label">Year</div><div class="value"><?= esc($edu['year']) ?></div></div>
+                  </div>
+                </li>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </ul>
+        <?php endif; ?>
+
+        <!-- PERSONAL (kept classic, no "Add" button) -->
+        <?php if ($activeFolder === 'personal'): ?>
           <div class="resume-section-title"><i class="fas fa-user"></i> Personal Information</div>
           <ul class="resume-list">
             <?php if (empty($personal)): ?>
               <li class="resume-list-item"><span class="resume-value text-muted">No personal information found.</span></li>
             <?php else: ?>
               <li class="resume-list-item"><div class="resume-label">Birthday</div><div class="resume-value"><?= esc($personal['birthday'] ?? '') ?></div></li>
-              <li class="resume-list-item">
-                <div class="resume-label">Gender</div>
-                <div class="resume-value"><?= title_case($personal['gender'] ?? '') ?></div>
-              </li>
-              <li class="resume-list-item">
-                <div class="resume-label">Marital Status</div>
-                <div class="resume-value"><?= title_case($personal['marital_status'] ?? '') ?></div>
-              </li>
-              <li class="resume-list-item">
-                <div class="resume-label">Nationality</div>
-                <div class="resume-value"><?= title_case($personal['nationality'] ?? '') ?></div>
-              </li>
-              <li class="resume-list-item">
-                <div class="resume-label">Address</div>
-                <div class="resume-value"><?= esc($personal['address'] ?? '') ?></div>
-              </li>
+              <li class="resume-list-item"><div class="resume-label">Gender</div><div class="resume-value"><?= title_case($personal['gender'] ?? '') ?></div></li>
+              <li class="resume-list-item"><div class="resume-label">Marital Status</div><div class="resume-value"><?= title_case($personal['marital_status'] ?? '') ?></div></li>
+              <li class="resume-list-item"><div class="resume-label">Nationality</div><div class="resume-value"><?= title_case($personal['nationality'] ?? '') ?></div></li>
+              <li class="resume-list-item"><div class="resume-label">Address</div><div class="resume-value"><?= esc($personal['address'] ?? '') ?></div></li>
               <li class="resume-list-item"><div class="resume-label">Contact Number</div><div class="resume-value"><?= esc($personal['contact_number'] ?? '') ?></div></li>
               <li class="resume-list-item"><div class="resume-label">Emergency Contact Name</div><div class="resume-value"><?= title_case($personal['emergency_contact_name'] ?? '') ?></div></li>
               <li class="resume-list-item"><div class="resume-label">Emergency Contact Number</div><div class="resume-value"><?= esc($personal['emergency_contact_number'] ?? '') ?></div></li>
@@ -344,151 +467,181 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
               <i class="fas fa-edit"></i> Edit Personal Info
             </button>
           </div>
+        <?php endif; ?>
 
-        <?php elseif ($activeFolder === 'research'): ?>
+        <!-- RESEARCH (Compact) -->
+        <?php if ($activeFolder === 'research'): ?>
           <div class="resume-section-title"><i class="fas fa-book"></i> Research & Publications</div>
-          <ul class="resume-list">
-            <?php if (empty($research)): ?>
-              <li class="resume-list-item"><span class="resume-value text-muted">No research records found.</span></li>
-            <?php else: ?>
-              <?php foreach ($research as $item): ?>
-                <li class="resume-list-item">
-                  <div class="resume-label">Title</div>
-                  <div class="resume-value"><?= esc($item['title']) ?>, <?= esc($item['journal']) ?> (<?= esc($item['year']) ?>)</div>
-                  <div class="resume-label">Type</div>
-                  <div class="resume-value"><?= title_case($item['type']) ?></div>
-                  <div class="resume-label">Authors</div>
-                  <div class="resume-value"><?= esc($item['authors']) ?></div>
-                  <?php if (!empty($item['doi_url'])): ?>
-                    <div class="resume-label">DOI / URL</div>
-                    <div class="resume-value"><a href="<?= esc($item['doi_url']) ?>" target="_blank" class="link-cert">View Link</a></div>
-                  <?php endif; ?>
-                  <div class="mt-2 d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editResearchModal<?= $item['id'] ?>">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteResearchModal<?= $item['id'] ?>">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </li>
-              <?php endforeach; ?>
-            <?php endif; ?>
-          </ul>
-          <div class="mt-4">
+
+          <div class="compact-toolbar">
+            <div class="text-muted">Publications at a glance.</div>
+            <span class="ms-auto"></span>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addResearchModal">
               <i class="fas fa-plus"></i> Add Research
             </button>
           </div>
 
-        <?php elseif ($activeFolder === 'trainings'): ?>
-          <div class="resume-section-title"><i class="fas fa-chalkboard-teacher"></i> Trainings & Seminars</div>
-          <ul class="resume-list">
-            <?php if (empty($trainings)): ?>
-              <li class="resume-list-item"><span class="resume-value text-muted">No trainings found.</span></li>
+          <ul class="compact-grid">
+            <?php if (empty($research)): ?>
+              <li class="compact-card"><div class="compact-body text-muted">No research records found.</div></li>
             <?php else: ?>
-              <?php foreach ($trainings as $training): ?>
-                <li class="resume-list-item">
-                  <div class="resume-label">Title</div>
-                  <div class="resume-value"><?= esc($training['title']) ?>, <?= esc($training['provider']) ?> (<?= esc($training['year']) ?>)</div>
-                  <?php if (!empty($training['certificate_url'])): ?>
-                    <div class="resume-label">Certificate</div>
-                    <div class="resume-value"><a href="<?= esc($training['certificate_url']) ?>" target="_blank" class="link-cert">View Certificate</a></div>
-                  <?php endif; ?>
-                  <div class="resume-label">Status</div>
-                  <div class="resume-value"><?= esc(ucfirst(strtolower($training['status']))) ?></div>
-                  <div class="mt-2 d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editTrainingModal<?= $training['id'] ?>">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteTrainingModal<?= $training['id'] ?>">
-                      <i class="fas fa-trash"></i>
-                    </button>
+              <?php foreach ($research as $item): $rid='resBody'.$item['id']; ?>
+                <li class="compact-card">
+                  <div class="compact-head" data-bs-toggle="collapse" data-bs-target="#<?= $rid ?>" aria-expanded="false">
+                    <div class="caret"><i class="fa fa-chevron-down"></i></div>
+                    <div class="compact-title"><?= esc($item['title']) ?></div>
+                    <div class="compact-meta"><?= esc($item['journal']) ?> • <?= esc($item['year']) ?></div>
+                    <div class="compact-actions">
+                      <button type="button" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#editResearchModal<?= $item['id'] ?>"><i class="fas fa-edit"></i></button>
+                      <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteResearchModal<?= $item['id'] ?>"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </div>
+                  <div id="<?= $rid ?>" class="compact-body collapse">
+                    <div class="compact-row"><div class="label">Title</div><div class="value"><?= esc($item['title']) ?></div></div>
+                    <div class="compact-row"><div class="label">Venue</div><div class="value"><?= esc($item['journal']) ?></div></div>
+                    <div class="compact-row"><div class="label">Year</div><div class="value"><?= esc($item['year']) ?></div></div>
+                    <div class="compact-row"><div class="label">Type</div><div class="value"><?= title_case($item['type']) ?></div></div>
+                    <div class="compact-row"><div class="label">Authors</div><div class="value"><?= esc($item['authors']) ?></div></div>
+                    <?php if (!empty($item['doi_url'])): ?>
+                      <div class="compact-row"><div class="label">DOI / URL</div><div class="value"><a href="<?= esc($item['doi_url']) ?>" target="_blank">Open</a></div></div>
+                    <?php endif; ?>
                   </div>
                 </li>
               <?php endforeach; ?>
             <?php endif; ?>
           </ul>
-          <div class="mt-4">
+        <?php endif; ?>
+
+        <!-- TRAININGS (Compact) -->
+        <?php if ($activeFolder === 'trainings'): ?>
+          <div class="resume-section-title"><i class="fas fa-chalkboard-teacher"></i> Trainings & Seminars</div>
+
+          <div class="compact-toolbar">
+            <div class="text-muted">Training history, condensed.</div>
+            <span class="ms-auto"></span>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTrainingModal">
               <i class="fas fa-plus"></i> Add Training
             </button>
           </div>
 
-        <?php elseif ($activeFolder === 'performance'): ?>
-          <div class="resume-section-title"><i class="fas fa-chart-line"></i> Performance Evaluations</div>
-          <ul class="resume-list">
-            <?php if (empty($performance)): ?>
-              <li class="resume-list-item"><span class="resume-value text-muted">No performance records found.</span></li>
+          <ul class="compact-grid">
+            <?php if (empty($trainings)): ?>
+              <li class="compact-card"><div class="compact-body text-muted">No trainings found.</div></li>
             <?php else: ?>
-              <?php foreach ($performance as $perf): ?>
-                <li class="resume-list-item">
-                  <div class="resume-label">Title</div>
-                  <div class="resume-value"><?= esc($perf['title']) ?> (<?= esc($perf['year']) ?>)</div>
-                  <div class="resume-label">Rating</div>
-                  <div class="resume-value"><?= esc($perf['rating']) ?></div>
-                  <div class="resume-label">Remarks</div>
-                  <div class="resume-value"><?= esc($perf['remarks']) ?></div>
-                  <div class="mt-2 d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editPerformanceModal<?= $perf['id'] ?>">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deletePerformanceModal<?= $perf['id'] ?>">
-                      <i class="fas fa-trash"></i>
-                    </button>
+              <?php foreach ($trainings as $training): $tid='trBody'.$training['id']; $chip = (strtolower($training['status'] ?? '')==='expired')?'<span class="chip warn">Expired</span>':'<span class="chip ok">Active</span>'; ?>
+                <li class="compact-card">
+                  <div class="compact-head" data-bs-toggle="collapse" data-bs-target="#<?= $tid ?>" aria-expanded="false">
+                    <div class="caret"><i class="fa fa-chevron-down"></i></div>
+                    <div class="compact-title"><?= esc($training['title']) ?></div>
+                    <div class="compact-meta"><?= esc($training['provider']) ?> • <?= esc($training['year']) ?></div>
+                    <?= $chip ?>
+                    <div class="compact-actions">
+                      <button type="button" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#editTrainingModal<?= $training['id'] ?>"><i class="fas fa-edit"></i></button>
+                      <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteTrainingModal<?= $training['id'] ?>"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </div>
+                  <div id="<?= $tid ?>" class="compact-body collapse">
+                    <div class="compact-row"><div class="label">Title</div><div class="value"><?= esc($training['title']) ?></div></div>
+                    <div class="compact-row"><div class="label">Provider</div><div class="value"><?= esc($training['provider']) ?></div></div>
+                    <div class="compact-row"><div class="label">Year</div><div class="value"><?= esc($training['year']) ?></div></div>
+                    <?php if (!empty($training['certificate_url'])): ?>
+                      <div class="compact-row"><div class="label">Certificate</div><div class="value"><a href="<?= esc($training['certificate_url']) ?>" target="_blank">View</a></div></div>
+                    <?php endif; ?>
+                    <div class="compact-row"><div class="label">Status</div><div class="value"><?= esc(ucfirst(strtolower($training['status']))) ?></div></div>
                   </div>
                 </li>
               <?php endforeach; ?>
             <?php endif; ?>
           </ul>
-          <div class="mt-4">
+        <?php endif; ?>
+
+        <!-- PERFORMANCE (Compact) -->
+        <?php if ($activeFolder === 'performance'): ?>
+          <div class="resume-section-title"><i class="fas fa-chart-line"></i> Performance Evaluations</div>
+
+          <div class="compact-toolbar">
+            <div class="text-muted">Performance snapshots.</div>
+            <span class="ms-auto"></span>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPerformanceModal">
               <i class="fas fa-plus"></i> Add Performance
             </button>
           </div>
 
-        <?php elseif ($activeFolder === 'awards'): ?>
-          <div class="resume-section-title"><i class="fas fa-trophy"></i> Awards & Recognitions</div>
-          <ul class="resume-list">
-            <?php if (empty($awards)): ?>
-              <li class="resume-list-item"><span class="resume-value text-muted">No awards found.</span></li>
+          <ul class="compact-grid">
+            <?php if (empty($performance)): ?>
+              <li class="compact-card"><div class="compact-body text-muted">No performance records found.</div></li>
             <?php else: ?>
-              <?php foreach ($awards as $award): ?>
-                <li class="resume-list-item">
-                  <div class="resume-label">Title</div>
-                  <div class="resume-value"><?= esc($award['title']) ?> (<?= esc($award['year']) ?>)</div>
-                  <div class="resume-label">Issuer</div>
-                  <div class="resume-value"><?= esc($award['issuer']) ?></div>
-                  <div class="resume-label">Description</div>
-                  <div class="resume-value"><?= esc($award['description']) ?></div>
-                  <?php if (!empty($award['certificate_url'])): ?>
-                    <div class="resume-label">Certificate</div>
-                    <div class="resume-value"><a href="<?= esc($award['certificate_url']) ?>" target="_blank" class="link-cert">View Certificate</a></div>
-                  <?php endif; ?>
-                  <div class="mt-2 d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editAwardModal<?= $award['id'] ?>">
-                      <i class="fas fa-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAwardModal<?= $award['id'] ?>">
-                      <i class="fas fa-trash"></i>
-                    </button>
+              <?php foreach ($performance as $perf): $pf='perfBody'.$perf['id']; ?>
+                <li class="compact-card">
+                  <div class="compact-head" data-bs-toggle="collapse" data-bs-target="#<?= $pf ?>" aria-expanded="false">
+                    <div class="caret"><i class="fa fa-chevron-down"></i></div>
+                    <div class="compact-title"><?= esc($perf['title']) ?></div>
+                    <div class="compact-meta"><?= esc($perf['year']) ?> • Rating: <?= esc($perf['rating']) ?></div>
+                    <div class="compact-actions">
+                      <button type="button" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#editPerformanceModal<?= $perf['id'] ?>"><i class="fas fa-edit"></i></button>
+                      <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deletePerformanceModal<?= $perf['id'] ?>"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </div>
+                  <div id="<?= $pf ?>" class="compact-body collapse">
+                    <div class="compact-row"><div class="label">Title</div><div class="value"><?= esc($perf['title']) ?></div></div>
+                    <div class="compact-row"><div class="label">Year</div><div class="value"><?= esc($perf['year']) ?></div></div>
+                    <div class="compact-row"><div class="label">Rating</div><div class="value"><?= esc($perf['rating']) ?></div></div>
+                    <div class="compact-row"><div class="label">Remarks</div><div class="value"><?= esc($perf['remarks']) ?></div></div>
                   </div>
                 </li>
               <?php endforeach; ?>
             <?php endif; ?>
           </ul>
-          <div class="mt-4">
+        <?php endif; ?>
+
+        <!-- AWARDS (Compact) -->
+        <?php if ($activeFolder === 'awards'): ?>
+          <div class="resume-section-title"><i class="fas fa-trophy"></i> Awards & Recognitions</div>
+
+          <div class="compact-toolbar">
+            <div class="text-muted">Awards overview.</div>
+            <span class="ms-auto"></span>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAwardModal">
               <i class="fas fa-plus"></i> Add Award
             </button>
           </div>
+
+          <ul class="compact-grid">
+            <?php if (empty($awards)): ?>
+              <li class="compact-card"><div class="compact-body text-muted">No awards found.</div></li>
+            <?php else: ?>
+              <?php foreach ($awards as $award): $aw='awBody'.$award['id']; ?>
+                <li class="compact-card">
+                  <div class="compact-head" data-bs-toggle="collapse" data-bs-target="#<?= $aw ?>" aria-expanded="false">
+                    <div class="caret"><i class="fa fa-chevron-down"></i></div>
+                    <div class="compact-title"><?= esc($award['title']) ?></div>
+                    <div class="compact-meta"><?= esc($award['issuer']) ?> • <?= esc($award['year']) ?></div>
+                    <div class="compact-actions">
+                      <button type="button" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#editAwardModal<?= $award['id'] ?>"><i class="fas fa-edit"></i></button>
+                      <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAwardModal<?= $award['id'] ?>"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </div>
+                  <div id="<?= $aw ?>" class="compact-body collapse">
+                    <div class="compact-row"><div class="label">Title</div><div class="value"><?= esc($award['title']) ?></div></div>
+                    <div class="compact-row"><div class="label">Issuer</div><div class="value"><?= esc($award['issuer']) ?></div></div>
+                    <div class="compact-row"><div class="label">Year</div><div class="value"><?= esc($award['year']) ?></div></div>
+                    <div class="compact-row"><div class="label">Description</div><div class="value"><?= esc($award['description']) ?></div></div>
+                    <?php if (!empty($award['certificate_url'])): ?>
+                      <div class="compact-row"><div class="label">Certificate</div><div class="value"><a href="<?= esc($award['certificate_url']) ?>" target="_blank">View</a></div></div>
+                    <?php endif; ?>
+                  </div>
+                </li>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </ul>
         <?php endif; ?>
+
       </div>
     </section>
   </main>
 </div>
 
-<!-- MODALS (unchanged functionality, just display tweaks where helpful) -->
+<!-- ============================ MODALS (unchanged backend) ============================ -->
 
 <!-- Add Certification Modal -->
 <div class="modal fade" id="addCertModal" tabindex="-1" aria-labelledby="addCertModalLabel" aria-hidden="true">
