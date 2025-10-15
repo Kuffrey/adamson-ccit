@@ -4,8 +4,8 @@ if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'faculty') {
   header('Location: ?page=login'); exit;
 }
 
-require_once __DIR__ . '/../models/FacultySubmissions.php';
-require_once __DIR__ . '/../models/FacultyCertification.php';
+require_once __DIR__ . '/../../models/FacultySubmissions.php';
+require_once __DIR__ . '/../../models/FacultyCertification.php';
 
 $faculty_id = $_SESSION['user']['id'] ?? null;
 $faculty_username = $_SESSION['user']['username'] ?? 'Faculty';
@@ -163,7 +163,7 @@ foreach ($mySubmissions as $item) {
 </head>
 <body>
 <div class="admin-layout">
-  <?php include __DIR__ . '/faculty/_faculty_sidebar.php'; ?>
+  <?php include __DIR__ . '/_faculty_sidebar.php'; ?>
 
   <main class="admin-main">
     <header class="admin-topbar">
@@ -367,70 +367,58 @@ foreach ($mySubmissions as $item) {
       <!-- Published Certifications -->
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">
-            <i class="fas fa-certificate"></i>
-            <span>My Published Certifications (<?= count($myCertifications) ?>)</span>
-          </h3>
+          <h5 class="card-title mb-0">
+            <i class="fas fa-certificate me-2"></i>My Published Certifications
+          </h5>
         </div>
-        <?php if (empty($myCertifications)): ?>
-          <div class="empty-state-card">
-            <i class="fas fa-certificate fa-3x"></i>
-            <h6>No published certifications yet</h6>
-            <div class="text-muted">Submit certifications for dean approval to have them published</div>
-          </div>
-        <?php else: ?>
-          <div style="overflow-x:auto;">
-            <table class="dashboard-table">
-              <thead>
-                <tr>
-                  <th style="width:35%;">Certification & Issuer</th>
-                  <th style="width:12%;">Year Earned</th>
-                  <th style="width:12%;">Year Expiry</th>
-                  <th style="width:10%;">Status</th>
-                  <th style="width:20%;">Credential Info</th>
-                  <th style="width:11%;">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-              <?php foreach ($myCertifications as $cert): ?>
-                <tr>
-                  <td>
-                    <div class="item-title"><?= esc($cert['cert_title'] ?? 'Unknown') ?></div>
-                    <div class="item-subtitle"><?= esc($cert['issuer'] ?? 'Unknown') ?></div>
-                  </td>
-                  <td><div class="date-text"><?= esc($cert['year_earned'] ?? '') ?></div></td>
-                  <td><div class="date-text"><?= esc($cert['year_expiry'] ?? 'N/A') ?></div></td>
-                  <td>
-                    <span class="badge--status badge--<?= esc(strtolower($cert['status'] ?? 'active')) ?>">
-                      <?= esc($cert['status'] ?? 'Active') ?>
-                    </span>
-                  </td>
-                  <td>
-                    <?php if (!empty($cert['credential_id'])): ?>
-                      <div class="item-subtitle">ID: <?= esc($cert['credential_id']) ?></div>
-                    <?php endif; ?>
-                    <?php if (!empty($cert['verification_url'])): ?>
-                      <a href="<?= esc($cert['verification_url']) ?>" target="_blank" class="item-subtitle" style="text-decoration:none;">
-                        View Certificate →
-                      </a>
-                    <?php endif; ?>
-                  </td>
-                  <td>
-                    <form method="post" class="d-inline"
-                          onsubmit="return confirm('Are you sure you want to delete this certification? This will remove it from public view and cannot be undone.')">
-                      <input type="hidden" name="action" value="delete_certification">
-                      <input type="hidden" name="id" value="<?= (int)($cert['id'] ?? 0) ?>">
-                      <button type="submit" class="btn btn-danger btn-sm" title="Delete Certification">
-                        <i class="fas fa-trash-alt me-1"></i> Delete
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-        <?php endif; ?>
+        <div class="card-body">
+          <?php if (empty($myCertifications)): ?>
+            <div class="empty-state-card">
+              <i class="fas fa-certificate fa-3x"></i>
+              <h6>No published certifications yet</h6>
+              <div class="text-muted">Submit certifications for dean approval to have them published.</div>
+            </div>
+          <?php else: ?>
+            <div class="table-responsive">
+              <table class="table table-hover dashboard-table align-middle">
+                <thead>
+                  <tr>
+                    <th>Certification</th>
+                    <th>Issuer</th>
+                    <th>Year Earned</th>
+                    <th>Year Expiry</th>
+                    <th>Credential ID</th>
+                    <th>Verification URL</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($myCertifications as $cert): ?>
+                    <tr>
+                      <td><?= esc($cert['cert_title'] ?? 'Unknown') ?></td>
+                      <td><?= esc($cert['issuer'] ?? 'Unknown') ?></td>
+                      <td><?= esc($cert['year_earned'] ?? '') ?></td>
+                      <td><?= esc($cert['year_expiry'] ?? 'N/A') ?></td>
+                      <td><?= esc($cert['credential_id'] ?? '') ?></td>
+                      <td>
+                        <?php if (!empty($cert['verification_url'])): ?>
+                          <a href="<?= esc($cert['verification_url']) ?>" target="_blank" rel="noopener">View</a>
+                        <?php else: ?>
+                          <span class="no-notes text-muted">No link</span>
+                        <?php endif; ?>
+                      </td>
+                      <td>
+                        <span class="badge badge--status badge--<?= strtolower($cert['status'] ?? 'active') ?>">
+                          <?= esc(ucfirst($cert['status'] ?? 'Active')) ?>
+                        </span>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          <?php endif; ?>
+        </div>
       </div>
 
     </section>

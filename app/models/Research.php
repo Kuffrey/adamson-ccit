@@ -97,4 +97,14 @@ final class Research extends Model {
         $st = $db->prepare("DELETE FROM research WHERE id = :id");
         return $st->execute([':id' => $id]);
     }
+    
+    public static function getAll() {
+        $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $stmt = $pdo->query("SELECT id, title, authors, doi, publisher, conference, year, view_url, 
+                             COALESCE(status, 'draft') AS status 
+                             FROM faculty_research");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

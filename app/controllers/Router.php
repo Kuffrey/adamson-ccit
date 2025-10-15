@@ -31,8 +31,7 @@ class Router {
                 break;
                 
             case 'faculty_dashboard':
-                Auth::requireRole(['faculty'], $base . 'login');
-                include __DIR__ . '/../views/faculty_dashboard.php';
+                include __DIR__ . '/../views/faculty/faculty_dashboard.php';
                 break;
                 
             case 'dean_dashboard':
@@ -164,6 +163,10 @@ class Router {
             case 'faculty_certifications':
                 include __DIR__ . '/../views/faculty_certifications.php'; break;
 
+            case 'faculty_portfolio':
+                include __DIR__ . '/../views/faculty/faculty_portfolio.php';
+                break;
+
             /* -------------------- PUBLIC TOOL -------------------- */
             case 'career_pathway_generator':
                 include __DIR__ . '/../views/career_pathway_generator.php'; break;
@@ -214,8 +217,8 @@ class Router {
                 echo (new FacultyController())->manageCertifications(); break;
 
             case 'faculty_manage_news':
-                Auth::requireRole(['faculty'], $base . 'login');
-                require_once __DIR__ . '/../views/faculty_manage_news.php'; break;
+                require_once __DIR__ . '/../views/faculty/faculty_manage_news.php';
+                break;
 
             case 'faculty_manage_events':
                 Auth::requireRole(['faculty'], $base . 'login');

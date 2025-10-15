@@ -121,9 +121,6 @@ $extAttr = function ($flag) { return !empty($flag) ? ' target="_blank" rel="noop
                     <a class="ext" href="<?= e($c['cur_url']) ?>"<?= $extAttr($c['cur_ext']) ?>>Curriculum</a>
                   <?php endif; ?>
                 </div>
-                <?php if (!empty($c['apply'])): ?>
-                  <a class="btn btn--solid" href="<?= e($c['apply']) ?>">Apply</a>
-                <?php endif; ?>
               </div>
             </article>
           <?php endforeach; ?>

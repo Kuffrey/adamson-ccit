@@ -52,7 +52,7 @@ if (isset($_POST['add_news'])) {
         if ($content === '')      throw new Exception("Article content is required and cannot be empty");
         if (empty($faculty_id))   throw new Exception("Faculty ID is missing from session");
 
-        require_once __DIR__ . '/../models/FacultySubmissions.php';
+        require_once __DIR__ . '/../../models/FacultySubmissions.php';
 
         $submissionData = [
             'faculty_id'      => (int)$faculty_id,
@@ -88,7 +88,7 @@ if (isset($_POST['add_news'])) {
 } elseif (isset($_POST['edit_news'], $_POST['submission_id'])) {
     try {
         $submissionId = (int)$_POST['submission_id'];
-        require_once __DIR__ . '/../models/FacultySubmissions.php';
+        require_once __DIR__ . '/../../models/FacultySubmissions.php';
         $submission = FacultySubmissions::getById($submissionId);
 
         if ($submission && $submission['faculty_id'] == $faculty_id && in_array(strtolower($submission['status']), ['submitted', 'pending'])) {
@@ -122,7 +122,7 @@ if (isset($_POST['add_news'])) {
 } elseif (isset($_POST['delete_news'], $_POST['submission_id'])) {
     try {
         $submissionId = (int)$_POST['submission_id'];
-        require_once __DIR__ . '/../models/FacultySubmissions.php';
+        require_once __DIR__ . '/../../models/FacultySubmissions.php';
         $submission = FacultySubmissions::getById($submissionId);
 
         if ($submission && $submission['faculty_id'] == $faculty_id && in_array(strtolower($submission['status']), ['submitted', 'pending'])) {
@@ -145,7 +145,7 @@ if (isset($_GET['error']))   $error_message   = $_GET['error'];
 
 /* ---------- Load submissions for this faculty ---------- */
 try {
-    require_once __DIR__ . '/../models/FacultySubmissions.php';
+    require_once __DIR__ . '/../../models/FacultySubmissions.php';
     $submittedNews = FacultySubmissions::getByFacultyAndType($faculty_id, 'news');
 } catch (Exception $e) {
     $submittedNews = [];
@@ -198,7 +198,7 @@ function map_status_for_badge($statusRaw) {
 </head>
 <body>
 <div class="admin-layout">
-  <?php include __DIR__ . '/faculty/_faculty_sidebar.php'; ?>
+  <?php include __DIR__ . '/_faculty_sidebar.php'; ?>
 
   <main class="admin-main">
     <header class="admin-topbar">

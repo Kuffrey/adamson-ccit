@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action']) && !empty(
         if ($action === 'approve') {
             FacultySubmissions::updateStatus($submissionId, 'approved', $user['id'] ?? null, $reviewNotes);
 
-            // --- Publish RESEARCH ---
+            // Publish research to faculty_research table
             if ($submission && $submission['submission_type'] === 'research') {
                 require_once __DIR__ . '/../../models/FacultyResearch.php';
                 $rd = json_decode($submission['content'] ?? '{}', true) ?: [];
@@ -48,38 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action']) && !empty(
                     'publisher'  => $rd['publisher'] ?? '',
                     'conference' => $rd['conference'] ?? '',
                     'year'       => $rd['year'] ?? '',
-                    'view_url'   => $rd['view_url'] ?? ''
+                    'view_url'   => $rd['view_url'] ?? '',
+                    'status'     => 'published' // Ensure status is set to 'published'
                 ];
-                FacultyResearch::create($data);
-            }
-
-            // --- Publish CERTIFICATION ---
-            if ($submission && $submission['submission_type'] === 'certification') {
-                require_once __DIR__ . '/../../models/FacultyCertification.php';
-                $cd = json_decode($submission['content'] ?? '{}', true) ?: [];
-
-                $certificationId = $cd['certification_id'] ?? null;
-                if (!$certificationId) {
-                    throw new Exception('Missing certification_id in submission content.');
-                }
-
-                $certModel = new FacultyCertification();
-                $certificationAwardData = [
-                    'faculty_id'       => (int)($submission['faculty_id'] ?? 0),
-                    'certification_id' => (int)$certificationId,
-                    'year_earned'      => $cd['year_earned'] ?? date('Y'),
-                    'year_expiry'      => $cd['year_expiry'] ?? null,
-                    'credential_id'    => $cd['credential_id'] ?? null,
-                    'verification_url' => $cd['verification_url'] ?? null,
-                    'description'      => $cd['description'] ?? null,
-                    'status'           => 'Active',
-                    'is_archived'      => 0,
-                ];
-
-                $newId = $certModel->create($certificationAwardData);
-                if (!$newId) {
-                    throw new Exception('Failed to publish certification to faculty_certification_award.');
-                }
+                FacultyResearch::create($data); // Insert into faculty_research table
             }
 
             $notice = 'Submission approved successfully!';

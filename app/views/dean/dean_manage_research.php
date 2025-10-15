@@ -32,11 +32,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       FacultyResearchPageSettings::updateSettings($_POST['settings']);
       $notice = 'Page settings saved successfully!';
     } elseif (isset($_POST['add_research'])) {
-      $researchId = FacultyResearch::create($_POST['research'] ?? []);
-      if ($researchId) {
-        DeanLogs::logCreate('faculty_research', $researchId, $user['id'] ?? null, "Created research: " . ($_POST['research']['title'] ?? 'Unknown'));
+      $researchData = [
+        'title'      => trim($_POST['research']['title'] ?? ''),
+        'authors'    => trim($_POST['research']['authors'] ?? ''),
+        'doi'        => trim($_POST['research']['doi'] ?? ''),
+        'publisher'  => trim($_POST['research']['publisher'] ?? ''),
+        'conference' => trim($_POST['research']['conference'] ?? ''),
+        'year'       => trim($_POST['research']['year'] ?? ''),
+        'view_url'   => trim($_POST['research']['view_url'] ?? ''),
+        'status'     => trim($_POST['research']['status'] ?? 'draft')
+      ];
+
+      // Validate required fields
+      if (empty($researchData['title'])) {
+        throw new Exception('Research title is required.');
       }
-      $notice = 'Research added successfully!';
+      if (empty($researchData['authors'])) {
+        throw new Exception('Authors are required.');
+      }
+      if (empty($researchData['year'])) {
+        throw new Exception('Year is required.');
+      }
+
+      // Insert research into the database
+      $researchId = FacultyResearch::create($researchData);
+      if ($researchId) {
+        DeanLogs::logCreate('faculty_research', $researchId, $user['id'] ?? null, "Created research: " . $researchData['title']);
+        $notice = 'Research added successfully!';
+      } else {
+        throw new Exception('Failed to add research.');
+      }
     } elseif (isset($_POST['edit_research'])) {
       $id = (int)$_POST['id'];
       FacultyResearch::update($id, $_POST['research'] ?? []);
@@ -99,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       if ($action === 'approve') {
         // Update status to approved in faculty_submissions
         FacultySubmissions::updateStatus($submissionId, 'approved', $user['id'] ?? null, $reviewNotes);
-        
+
         // Publish to faculty_research table
         $submission = FacultySubmissions::getById($submissionId);
         if ($submission && $submission['submission_type'] === 'research') {
@@ -111,12 +136,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'publisher'  => $rd['publisher'] ?? '',
             'conference' => $rd['conference'] ?? '',
             'year'       => $rd['year'] ?? '',
-            'view_url'   => $rd['view_url'] ?? ''
+            'view_url'   => $rd['view_url'] ?? '',
+            'status'     => 'published' // Ensure status is set to 'published'
           ];
-          require_once __DIR__ . '/../../models/FacultyResearch.php';
-          FacultyResearch::create($data);
+          FacultyResearch::create($data); // Insert into faculty_research table
         }
-        
+
         $notice = 'Research approved and published successfully!';
       } elseif ($action === 'reject') {
         FacultySubmissions::updateStatus($submissionId, 'rejected', $user['id'] ?? null, $reviewNotes);
@@ -145,10 +170,17 @@ try {
 
     $counts = [
         'all' => count($allResearch),
-        'published' => count($allResearch),
-        'draft' => 0,
-        'archived' => 0
+        'published' => count(array_filter($allResearch, fn($r) => isset($r['status']) && $r['status'] === 'published')),
+        'draft' => count(array_filter($allResearch, fn($r) => isset($r['status']) && $r['status'] === 'draft')),
+        'archived' => count(array_filter($allResearch, fn($r) => isset($r['status']) && $r['status'] === 'archived'))
     ];
+
+    // Ensure each research entry has a 'status' key to avoid undefined array key errors
+    foreach ($allResearch as &$r) {
+        if (!isset($r['status'])) {
+            $r['status'] = 'draft'; // Default to 'draft' if 'status' is not set
+        }
+    }
 
     $pendingResearchSubmissions = FacultySubmissions::getPendingByType('research');
 } catch (Exception $e) {
@@ -349,19 +381,19 @@ if (!function_exists('esc')) {
                 </div>
                 <?php endif; ?>
 
-                <!-- Published Research (remove the Research Publications section) -->
+                <!-- Published Research -->
                 <div class="card">
                     <div class="card-header">
                         <h5 class="card-title mb-0">
-                            <i class="fas fa-microscope me-2"></i>Published Research (<?= count($research) ?>)
+                            <i class="fas fa-microscope me-2"></i>Research (<?= count($research) ?>)
                         </h5>
                     </div>
                     <div class="card-body">
                         <?php if (empty($research)): ?>
                             <div class="empty-state-card">
                                 <i class="fas fa-microscope fa-3x"></i>
-                                <h6>No Published Research Found</h6>
-                                <div class="text-muted">Research will appear here after dean approval.</div>
+                                <h6>No Research Found</h6>
+                                <div class="text-muted">Research will appear here based on the selected status.</div>
                             </div>
                         <?php else: ?>
                             <div class="table-responsive">
@@ -374,7 +406,7 @@ if (!function_exists('esc')) {
                                             <th>Publisher</th>
                                             <th>Conference</th>
                                             <th>Year</th>
-                                            <th>View URL</th>
+                                            <th>Status</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -388,6 +420,7 @@ if (!function_exists('esc')) {
                                                 $rpub   = esc($r['publisher'] ?? '');
                                                 $rconf  = esc($r['conference'] ?? '');
                                                 $ryear  = esc($r['year'] ?? '');
+                                                $rstatus = esc($r['status'] ?? 'draft');
                                                 $rview  = esc($r['view_url'] ?? '');
                                             ?>
                                             <tr>
@@ -398,19 +431,16 @@ if (!function_exists('esc')) {
                                                 <td><?= $rconf ?></td>
                                                 <td><?= $ryear ?></td>
                                                 <td>
-                                                    <?php if (!empty($rview)): ?>
-                                                        <a href="<?= $rview ?>" target="_blank" rel="noopener">View</a>
-                                                    <?php else: ?>
-                                                        <span class="no-notes text-muted">No link</span>
-                                                    <?php endif; ?>
+                                                    <span class="badge badge--status badge--<?= strtolower($rstatus) ?>">
+                                                        <?= ucfirst($rstatus) ?>
+                                                    </span>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <?php if (!empty($rview)): ?>
-                                                            <a href="<?= $rview ?>" target="_blank" class="btn btn-sm btn-outline-primary" title="View Publication">
-                                                                <i class="fas fa-external-link-alt"></i>
-                                                            </a>
-                                                        <?php endif; ?>
+                                                        <button type="button" class="btn btn-sm btn-warning" 
+                                                                data-bs-toggle="modal" data-bs-target="#editResearchModal<?= $rid ?>">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
                                                         <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this research?');">
                                                             <input type="hidden" name="delete_research" value="1">
                                                             <input type="hidden" name="id" value="<?= $rid ?>">
@@ -453,69 +483,32 @@ if (!function_exists('esc')) {
                                     <label class="form-label">Title</label>
                                     <input type="text" class="form-control" name="research[title]" required>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Department</label>
-                                    <select class="form-control" name="research[dept]" required>
-                                        <option value="">Select Department</option>
-                                        <option value="itis">IT&amp;IS</option>
-                                        <option value="cs">CS</option>
-                                    </select>
+                                    <label class="form-label">Authors</label>
+                                    <textarea class="form-control" name="research[authors]" rows="2" required></textarea>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Type</label>
-                                    <select class="form-control" name="research[type]" required>
-                                        <option value="">Select Type</option>
-                                        <option value="journal">Journal Article</option>
-                                        <option value="conference">Conference Paper</option>
-                                        <option value="chapter">Book Chapter</option>
-                                        <option value="patent">Patent</option>
-                                        <option value="other">Other</option>
-                                    </select>
+                                    <label class="form-label">DOI</label>
+                                    <input type="text" class="form-control" name="research[doi]">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Publisher</label>
+                                    <input type="text" class="form-control" name="research[publisher]">
                                 </div>
                             </div>
                             <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Conference</label>
+                                    <input type="text" class="form-control" name="research[conference]">
+                                </div>
                                 <div class="mb-3">
                                     <label class="form-label">Year</label>
-                                    <input type="text" class="form-control" name="research[year]" required placeholder="e.g., 2024">
+                                    <input type="text" class="form-control" name="research[year]" required>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Authors</label>
-                            <textarea class="form-control" name="research[authors]" rows="2" required placeholder="e.g., John Doe, Jane Smith"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Venue</label>
-                            <input type="text" class="form-control" name="research[venue]" placeholder="e.g., IEEE Transactions on Computers" required>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">PDF URL</label>
-                                    <input type="url" class="form-control" name="research[pdf_url]" placeholder="Link to PDF">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">View URL</label>
-                                    <input type="url" class="form-control" name="research[view_url]" placeholder="Link to publication">
+                                    <input type="url" class="form-control" name="research[view_url]">
                                 </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Image URL</label>
-                                    <input type="url" class="form-control" name="research[image_url]" placeholder="Link to research poster/image">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Status</label>
                                     <select class="form-control" name="research[status]">
@@ -536,6 +529,71 @@ if (!function_exists('esc')) {
             </div>
         </div>
     </div>
+
+    <!-- Edit Research Modals -->
+    <?php foreach ($research as $r): ?>
+    <div class="modal fade" id="editResearchModal<?= $r['id'] ?>" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="POST">
+                    <input type="hidden" name="edit_research" value="1">
+                    <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Research</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Title</label>
+                                    <input type="text" class="form-control" name="research[title]" value="<?= esc($r['title']) ?>" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Authors</label>
+                                    <textarea class="form-control" name="research[authors]" rows="2" required><?= esc($r['authors']) ?></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">DOI</label>
+                                    <input type="text" class="form-control" name="research[doi]" value="<?= esc($r['doi']) ?>">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Publisher</label>
+                                    <input type="text" class="form-control" name="research[publisher]" value="<?= esc($r['publisher']) ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Conference</label>
+                                    <input type="text" class="form-control" name="research[conference]" value="<?= esc($r['conference']) ?>">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Year</label>
+                                    <input type="text" class="form-control" name="research[year]" value="<?= esc($r['year']) ?>" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">View URL</label>
+                                    <input type="url" class="form-control" name="research[view_url]" value="<?= esc($r['view_url']) ?>">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-control" name="research[status]">
+                                        <option value="draft" <?= $r['status'] === 'draft' ? 'selected' : '' ?>>Draft</option>
+                                        <option value="published" <?= $r['status'] === 'published' ? 'selected' : '' ?>>Published</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
 
     <!-- Collected Approve/Reject/Edit modals -->
     <?= $__researchCollectedModals ?>

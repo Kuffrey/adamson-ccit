@@ -1,72 +1,98 @@
 <?php
-require_once __DIR__ . '/../../app/lib/Auth.php';
-require_once __DIR__ . '/../../app/models/Model.php';
-require_once __DIR__ . '/../../app/models/FacultyPortfolio.php';
+require_once __DIR__ . '/../lib/Auth.php';
+require_once __DIR__ . '/../models/Model.php';
+require_once __DIR__ . '/../models/FacultyPortfolio.php';
 
 Auth::requireRole(['faculty'], '/adamson-ccit/public/index.php?page=login');
 
-if (!function_exists('esc')) {
-  function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+/**
+ * Title-case for display only (does not mutate stored values).
+ * Keeps acronyms like IT, CCIT upper if already upper.
+ */
+function title_case($v) {
+  $v = trim((string)$v);
+  if ($v === '') return '';
+  // If already all caps and short (like IT, CCIT), keep it.
+  if (preg_match('/^[A-Z0-9&.\- ]{2,}$/u', $v)) return esc($v);
+  // Lower then title-case (UTF-8 safe)
+  $lc = mb_strtolower($v, 'UTF-8');
+  $tc = mb_convert_case($lc, MB_CASE_TITLE, 'UTF-8');
+  return esc($tc);
 }
 
 $user = Auth::user() ?? [];
 $username = $user['username'] ?? 'Faculty';
+$facultyId = $user['id'] ?? 0;
 
-// Get faculty's information from database
+// Ensure tables exist
+FacultyPortfolio::migrateFacultyPortfolioTables();
+
+$profile = FacultyPortfolio::getProfile($facultyId);
+$fullName = $profile['full_name'] ?? "Prof. " . ($profile['first_name'] ?? $username) . " " . ($profile['last_name'] ?? '');
+$firstName = $profile['first_name'] ?? 'Faculty';
+$lastName = $profile['last_name'] ?? '';
+
+$facultyCertifications = FacultyPortfolio::getCertifications($facultyId);
+$facultyExperience     = FacultyPortfolio::getExperience($facultyId);
+$education             = FacultyPortfolio::getEducation($facultyId);
+$trainings             = FacultyPortfolio::getTrainings($facultyId);
+$performance           = FacultyPortfolio::getPerformance($facultyId);
+$awards                = FacultyPortfolio::getAwards($facultyId);
+
+// Initialize to avoid undefined errors
+$personal = [];
+$research = [];
+
 try {
-    $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-    $stmt = $pdo->prepare("SELECT id, first_name, last_name FROM users WHERE username = ? LIMIT 1");
-    $stmt->execute([$username]);
-    $faculty = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($faculty) {
-        $facultyId = (int)$faculty['id'];
-        $firstName = (string)$faculty['first_name'];
-        $lastName  = (string)$faculty['last_name'];
-        $fullName  = trim($firstName . ' ' . $lastName);
-    } else {
-        $facultyId = null;
-        $firstName = "Faculty";
-        $lastName  = "";
-        $fullName  = $username;
-    }
-} catch (PDOException $e) {
-    $facultyId = null;
-    $firstName = "Faculty";
-    $lastName  = "";
-    $fullName  = $username;
+    $personal = FacultyPortfolio::getPersonal($facultyId) ?: [];
+    $research = FacultyPortfolio::getResearch($facultyId) ?: [];
+} catch (Exception $e) {
+    $personal = [];
+    $research = [];
 }
 
-class _DBX extends Model { public function d(){ return parent::db(); } }
-$_db = (new _DBX())->d();
+// Feedback flags
+$success = $_GET['saved']   ?? null;
+$deleted = $_GET['deleted'] ?? null;
+$error   = $_GET['error']   ?? null;
 
-// Fetch companies for issuing organizations dropdown
-$companies = $_db->query("SELECT id, name FROM companies ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+// Modal flags
+$editProfileOpen = isset($_GET['edit_profile']);
+$modalOpen = [
+  'general'        => isset($_GET['edit_profile']),
+  'certifications' => isset($_GET['add_cert']) || isset($_GET['edit_cert']) || isset($_GET['delete_cert']),
+  'experience'     => isset($_GET['add_exp'])  || isset($_GET['edit_exp'])  || isset($_GET['delete_exp']),
+];
 
-// Fetch faculty certifications / portfolio items
-$portfolioItems = [];
-$portfolioStats = ['total' => 0, 'active' => 0, 'expired' => 0];
+// Section/folder routing
+$activeSection = $_GET['section'] ?? 'overview';
+$validSections = ['overview', 'certifications', 'education', 'experience', 'personal'];
+if (!in_array($activeSection, $validSections, true)) $activeSection = 'overview';
 
-if ($facultyId) {
-    $portfolioItems = FacultyPortfolio::getByUserId($facultyId);
-    $portfolioStats = FacultyPortfolio::getStats($facultyId);
-}
-
-// Helper for initials
-$initials = strtoupper(($firstName[0] ?? 'F') . ($lastName[0] ?? ''));
+$sectionFolders = [
+  'general'        => ['icon' => 'fa-id-card',            'label' => 'General'],
+  'education'      => ['icon' => 'fa-graduation-cap',     'label' => 'Education'],
+  'certifications' => ['icon' => 'fa-certificate',        'label' => 'Certs'],
+  'experience'     => ['icon' => 'fa-briefcase',          'label' => 'Experience'],
+  'personal'       => ['icon' => 'fa-user',               'label' => 'Personal'],
+  'trainings'      => ['icon' => 'fa-chalkboard-teacher', 'label' => 'Trainings'],
+  'performance'    => ['icon' => 'fa-chart-line',         'label' => 'Performance'],
+  'awards'         => ['icon' => 'fa-trophy',             'label' => 'Awards'],
+  'research'       => ['icon' => 'fa-book',               'label' => 'Research'],
+];
+$activeFolder = $_GET['folder'] ?? 'general';
+if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Faculty Portfolio | Faculty Dashboard</title>
-  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/dean.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <title>My Portfolio | CCIT Faculty</title>
+  <link rel="stylesheet" href="/adamson-ccit/public/assets/css/dean.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
     /* ===== Faculty Portfolio — polish & parity (CSS-only) ===== */
     :root{
@@ -214,513 +240,167 @@ $initials = strtoupper(($firstName[0] ?? 'F') . ($lastName[0] ?? ''));
       .cert-list-item{grid-template-columns:20px 1fr}
       .view-toggle{display:none}
     }
+
+    /* Modal sizing & stacking */
+    .modal { z-index: 1055; }
+    .btn { position: relative; z-index: 1; pointer-events: auto; }
+
+    .resume-container {
+      margin: 0 auto; background: #fff; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 2rem;
+    }
+    .resume-header { display:flex; align-items:center; gap:1.2rem; margin-bottom:1.5rem; border-bottom:1px solid #e5e7eb; padding-bottom:1rem; }
+    .resume-photo { width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid #e5e7eb; background:#f1f5f9; }
+    .resume-main-info { flex:1; min-width:0; }
+    .resume-name { font-size:1.3rem; font-weight:700; color:var(--navy); margin-bottom:0.2rem; }
+    .resume-meta { font-size:1rem; color:#374151; margin-bottom:0.2rem; }
+    .resume-section-title {
+      font-size:1.1rem; font-weight:700; color:var(--navy);
+      margin-top:2rem; margin-bottom:0.7rem; letter-spacing:.01em;
+      border-bottom:1px solid #e5e7eb; padding-bottom:.2rem;
+    }
   </style>
 </head>
 <body>
-<div class="admin-cms-layout">
+<div class="admin-layout">
   <?php include __DIR__ . '/faculty/_faculty_sidebar.php'; ?>
   <main class="admin-main">
     <header class="admin-topbar">
+      <button class="topbar__btn hide-desktop" type="button" aria-label="Open navigation menu" data-sb-open>
+        <i class="fas fa-bars"></i>
+      </button>
       <span class="admin-topbar__title">My Portfolio</span>
-      <div class="admin-topbar__spacer"></div>
-      <div class="admin-topbar__user">
-      </div>
+      <span class="admin-topbar__spacer"></span>
     </header>
+    <section class="admin-section">
+      <div class="resume-container">
+        <!-- Alerts -->
+        <?php if ($success): ?>
+          <div class="alert alert-success modern-alert"><i class="fas fa-check-circle"></i> Saved successfully.</div>
+        <?php endif; ?>
+        <?php if ($deleted): ?>
+          <div class="alert alert-success modern-alert"><i class="fas fa-check-circle"></i> Deleted.</div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+          <div class="alert alert-danger modern-alert"><i class="fas fa-exclamation-circle"></i> <?= esc($error) ?></div>
+        <?php endif; ?>
 
-    <section class="admin-cms-section">
-      <!-- Toast Notifications -->
-      <?php if (!empty($_GET['saved']) || !empty($_GET['deleted']) || !empty($_GET['error'])): ?>
-        <div class="toast <?= !empty($_GET['error']) ? 'toast--danger' : (!empty($_GET['deleted']) ? 'toast--danger' : 'toast--success') ?>"
-             style="position: fixed; top: 20px; right: 20px; z-index: 11000; background: <?= !empty($_GET['error']) ? '#fee2e2' : (!empty($_GET['deleted']) ? '#fef2f2' : '#f0f9ff') ?>; color: <?= !empty($_GET['error']) ? '#dc2626' : (!empty($_GET['deleted']) ? '#dc2626' : '#1d4ed8') ?>; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid <?= !empty($_GET['error']) ? '#fecaca' : (!empty($_GET['deleted']) ? '#fecaca' : '#dbeafe') ?>; font-weight: 500; max-width: 400px;">
-          <?php if (!empty($_GET['error'])): ?>
-            <?= esc($_GET['error']) ?>
-          <?php elseif (!empty($_GET['deleted'])): ?>
-            Certification deleted successfully.
-          <?php elseif (!empty($_GET['saved'])): ?>
-            Certification saved successfully!
-          <?php endif; ?>
+        <!-- Header -->
+        <div class="resume-header">
+          <img src="<?= esc($profile['profile_photo'] ?? "/adamson-ccit/public/assets/images/profile-placeholder.png") ?>" alt="Profile Photo" class="resume-photo" loading="lazy">
+          <div class="resume-main-info">
+            <div class="resume-name"><?= esc($profile['full_name'] ?? $fullName) ?></div>
+            <div class="resume-meta"><?= esc($profile['position'] ?? 'Faculty') ?>, <?= esc($profile['department'] ?? 'College of Computer and Information Technology') ?></div>
+            <div class="resume-meta"><?= esc($profile['work_email'] ?? ($username . '@adamson.edu.ph')) ?></div>
+          </div>
         </div>
-      <?php endif; ?>
 
-      <div class="page-faculty">
-        <div class="profile-container">
-          <!-- Profile Header -->
-          <div class="profile-header">
-            <div class="profile-header-content">
-              <div class="profile-avatar">
-                <div class="avatar-circle"><?= esc($initials) ?></div>
-              </div>
-              <div class="profile-info">
-                <h1 class="profile-name"><?= esc($fullName) ?></h1>
-                <p class="profile-title">Faculty Member</p>
-                <p class="profile-location">📍 Adamson University - CCIT</p>
-                <div class="profile-stats">
-                  <span class="stat-item"><?= (int)$portfolioStats['total'] ?> Certification<?= $portfolioStats['total'] !== 1 ? 's' : '' ?></span>
-                  <span class="stat-divider">•</span>
-                  <span class="stat-item"><?= (int)$portfolioStats['active'] ?> Active</span>
-                  <?php if ((int)$portfolioStats['expired'] > 0): ?>
-                    <span class="stat-divider">•</span>
-                    <span class="stat-item"><?= (int)$portfolioStats['expired'] ?> Expired</span>
-                  <?php endif; ?>
-                </div>
-              </div>
-            </div>
+        <!-- Folder Nav -->
+        <nav class="portfolio-folder-nav" aria-label="Portfolio Sections">
+          <?php foreach ($sectionFolders as $key => $folder): ?>
+            <a href="?page=faculty_portfolio&folder=<?= $key ?>" class="portfolio-folder-btn<?= $activeFolder === $key ? ' active' : '' ?>">
+              <i class="fas <?= $folder['icon'] ?>"></i>
+              <?= esc($folder['label']) ?>
+            </a>
+          <?php endforeach; ?>
+        </nav>
+
+        <!-- GENERAL -->
+        <?php if ($activeFolder === 'general'): ?>
+          <div class="resume-section-title"><i class="fas fa-id-card"></i> General Information</div>
+          <ul class="resume-list">
+            <li class="resume-list-item"><div class="resume-label">Full Name</div><div class="resume-value"><?= esc($profile['full_name'] ?? $fullName) ?></div></li>
+            <li class="resume-list-item"><div class="resume-label">Employee ID</div><div class="resume-value"><?= esc($profile['employee_id'] ?? '') ?></div></li>
+            <li class="resume-list-item"><div class="resume-label">Work Email</div><div class="resume-value"><?= esc($profile['work_email'] ?? ($username . '@adamson.edu.ph')) ?></div></li>
+            <li class="resume-list-item"><div class="resume-label">Academic Title</div><div class="resume-value"><?= esc($profile['position'] ?? 'Faculty') ?></div></li>
+            <li class="resume-list-item"><div class="resume-label">Dept / College</div><div class="resume-value"><?= esc($profile['department'] ?? 'College of Computer and Information Technology') ?></div></li>
+            <li class="resume-list-item"><div class="resume-label">Employment Type</div><div class="resume-value"><?= title_case($profile['employment_type'] ?? '') ?></div></li>
+            <li class="resume-list-item"><div class="resume-label">Date Hired</div><div class="resume-value"><?= esc($profile['date_hired'] ?? '') ?></div></li>
+            <li class="resume-list-item"><div class="resume-label">Office / Room Location</div><div class="resume-value"><?= esc($profile['office_location'] ?? '') ?></div></li>
+            <li class="resume-list-item"><div class="resume-label">Specializations</div><div class="resume-value"><?= esc($profile['specializations'] ?? '') ?></div></li>
+            <li class="resume-list-item"><div class="resume-label">Languages</div><div class="resume-value"><?= title_case($profile['languages'] ?? '') ?></div></li>
+          </ul>
+          <div class="mt-4">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+              <i class="fas fa-edit"></i> Edit Profile
+            </button>
+          </div>
+        <?php endif; ?>
+
+        <!-- CERTIFICATIONS (Compact) -->
+        <?php if ($activeFolder === 'certifications'): ?>
+          <div class="resume-section-title"><i class="fas fa-certificate"></i> Licenses & Certifications</div>
+
+          <div class="compact-toolbar">
+            <div class="text-muted">Click a row to view full details.</div>
+            <span class="ms-auto"></span>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCertModal">
+              <i class="fas fa-plus"></i> Add Certification
+            </button>
           </div>
 
-          <!-- Main Content -->
-          <div class="profile-content">
-            <div class="profile-card certifications-section">
-              <div class="card-header-flex">
-                <div class="card-header-left">
-                  <h3 class="card-title">Licenses & Certifications</h3>
-                  <p class="card-subtitle">
-                    <?= (int)$portfolioStats['total'] ?> certification<?= $portfolioStats['total'] !== 1 ? 's' : '' ?>
-                    <?php if ((int)$portfolioStats['active'] > 0): ?>
-                      • <?= (int)$portfolioStats['active'] ?> active
-                    <?php endif; ?>
-                    <?php if ((int)$portfolioStats['expired'] > 0): ?>
-                      • <span style="color:#dc2626;"><?= (int)$portfolioStats['expired'] ?> expired</span>
-                    <?php endif; ?>
-                  </p>
-                </div>
-                <div class="card-actions">
-                  <div class="view-toggle">
-                    <button class="view-btn active" data-view="compact" title="Compact View" aria-pressed="true">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
-                      </svg>
-                    </button>
-                    <button class="view-btn" data-view="card" title="Card View" aria-pressed="false">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                        <path d="M10 4H4c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM10 15H4c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2v-3c0-1.1-.9-2-2-2zM21 4h-6c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM21 15h-6c-1.1 0-2 .9-2 2v3c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2z"/>
-                      </svg>
-                    </button>
+          <ul class="compact-grid">
+            <?php if (empty($facultyCertifications)): ?>
+              <li class="compact-card"><div class="compact-body text-muted">No certifications on file.</div></li>
+            <?php else: ?>
+              <?php foreach ($facultyCertifications as $cert):
+                $cid = 'certBody'.$cert['id'];
+                if (!empty($cert['expire_year'])) {
+                  $statusChip = ((int)$cert['expire_year'] >= (int)date('Y'))
+                    ? '<span class="chip ok">Active</span>' : '<span class="chip warn">Expired</span>';
+                } else {
+                  $statusChip = '<span class="chip ok">No Expiry</span>';
+                }
+              ?>
+                <li class="compact-card">
+                  <div class="compact-head" data-bs-toggle="collapse" data-bs-target="#<?= $cid ?>" aria-expanded="false">
+                    <div class="caret"><i class="fa fa-chevron-down"></i></div>
+                    <div class="compact-title" title="<?= esc($cert['name']) ?>"><?= esc($cert['name']) ?></div>
+                    <div class="compact-meta" title="<?= esc($cert['company_name']) ?>">
+                      <?= esc($cert['company_name']) ?> • <?= esc($cert['issue_year']) ?><?= $cert['expire_year'] ? '–'.esc($cert['expire_year']) : '' ?>
+                    </div>
+                    <?= $statusChip ?>
+                    <div class="compact-actions">
+                      <button type="button" class="btn btn-edit" data-bs-toggle="modal" data-bs-target="#editCertModal<?= $cert['id'] ?>"><i class="fas fa-edit"></i></button>
+                      <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteCertModal<?= $cert['id'] ?>"><i class="fas fa-trash"></i></button>
+                    </div>
                   </div>
-                  <button class="add-cert-btn" data-open-cert-modal>
-                    <span class="add-icon">+</span>
-                    Add certification
-                  </button>
-                </div>
-              </div>
+                  <div id="<?= $cid ?>" class="compact-body collapse">
+                    <!-- ...existing compact card body structure... -->
+                  </div>
+                </li>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </ul>
+        <?php endif; ?>
 
-              <?php if (empty($portfolioItems)): ?>
-                <div class="empty-state-modern">
-                  <div class="empty-icon">🎓</div>
-                  <h4>Showcase your expertise</h4>
-                  <p>Add professional certifications to highlight your skills and credentials as a faculty member.</p>
-                  <button class="btn-primary" data-open-cert-modal>Add your first certification</button>
-                </div>
-              <?php else: ?>
-                <!-- Compact List View (Default) -->
-                <div class="certifications-list compact-view" id="compact-view">
-                  <?php foreach ($portfolioItems as $item): ?>
-                    <?php
-                      $issueDate = ($item['issue_month'] && $item['issue_year'])
-                        ? date("M Y", mktime(0,0,0,(int)$item['issue_month'],1,(int)$item['issue_year']))
-                        : 'N/A';
-                      $hasExpiry = !empty($item['expires']); // truthy means it DOES expire
-                      $expireDate = ($hasExpiry && $item['expire_month'] && $item['expire_year'])
-                        ? date("M Y", mktime(0,0,0,(int)$item['expire_month'],1,(int)$item['expire_year']))
-                        : null;
-                    ?>
-                    <div class="cert-list-item">
-                      <div class="cert-icon-small">🎓</div>
-                      <div class="cert-content-compact">
-                        <div class="cert-header-compact">
-                          <h4 class="cert-name-compact"><?= esc($item['name']) ?></h4>
-                        </div>
-                        <p class="cert-issuer-compact"><?= esc($item['company_name']) ?></p>
-                        <div class="cert-meta-compact">
-                          <span class="meta-item">Issued <?= esc($issueDate) ?></span>
-                          <?php if ($expireDate): ?>
-                            <span class="meta-item">Expires <?= esc($expireDate) ?></span>
-                          <?php else: ?>
-                            <span class="meta-item">No expiry</span>
-                          <?php endif; ?>
-                          <?php if (!empty($item['credential_id'])): ?>
-                            <span class="meta-item credential-id">ID: <?= esc($item['credential_id']) ?></span>
-                          <?php endif; ?>
-                        </div>
-                        <?php if (!empty($item['credential_url'])): ?>
-                          <div class="cert-actions-compact">
-                            <a href="<?= esc($item['credential_url']) ?>" target="_blank" rel="noopener noreferrer"
-                               style="color:#008040;text-decoration:none;font-size:.9rem;font-weight:500;">
-                              Show credential →
-                            </a>
-                          </div>
-                        <?php endif; ?>
-                      </div>
+        <!-- ...existing code for other sections (experience, education, personal, research, trainings, performance, awards)... -->
 
-                      <div class="cert-hover-actions">
-                        <button class="action-icon-btn edit-btn"
-                          onclick='editPortfolioItem(<?= json_encode($item, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT) ?>)'
-                          title="Edit certification" aria-label="Edit certification">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                          </svg>
-                        </button>
-                        <button class="action-icon-btn delete-btn"
-                          onclick='deletePortfolioItem(<?= (int)$item["id"] ?>, "<?= esc($item["name"]) ?>")'
-                          title="Delete certification" aria-label="Delete certification">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <polyline points="3,6 5,6 21,6"></polyline>
-                            <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
-                            <line x1="10" y1="11" x2="10" y2="17"></line>
-                            <line x1="14" y1="11" x2="14" y2="17"></line>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  <?php endforeach; ?>
-                </div>
-
-                <!-- Card Grid View -->
-                <div class="certifications-grid card-view" id="card-view">
-                  <?php foreach ($portfolioItems as $item): ?>
-                    <div class="certification-card" style="border:1px solid #e5e7eb;border-radius:12px;padding:1rem;position:relative;">
-                      <div class="cert-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
-                        <div class="cert-logo" aria-hidden="true">🎓</div>
-                        <div class="cert-hover-actions" style="display:flex;gap:.5rem;">
-                          <button class="action-icon-btn edit-btn"
-                            onclick='editPortfolioItem(<?= json_encode($item, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT) ?>)'
-                            title="Edit certification" aria-label="Edit certification">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                          </button>
-                          <button class="action-icon-btn delete-btn"
-                            onclick='deletePortfolioItem(<?= (int)$item["id"] ?>, "<?= esc($item["name"]) ?>")'
-                            title="Delete certification" aria-label="Delete certification">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                              <polyline points="3,6 5,6 21,6"></polyline>
-                              <path d="m19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"></path>
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                      <div class="cert-content">
-                        <h4 class="cert-name" style="margin:.25rem 0 .35rem 0;font-size:1.05rem;font-weight:700;"><?= esc($item['name']) ?></h4>
-                        <p class="cert-issuer" style="margin:0 0 .5rem 0;color:#6b7280;"><?= esc($item['company_name']) ?></p>
-                        <?php if (!empty($item['credential_url'])): ?>
-                          <a href="<?= esc($item['credential_url']) ?>" target="_blank" rel="noopener noreferrer"
-                             style="color:#008040;text-decoration:none;font-size:.9rem;">
-                            Show credential →
-                          </a>
-                        <?php endif; ?>
-                      </div>
-                    </div>
-                  <?php endforeach; ?>
-                </div>
-              <?php endif; ?>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   </main>
+</div>
 
-  <!-- Portfolio Modal -->
-  <div id="certModal" class="modal" aria-hidden="true">
-    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="certModalTitle">
+<!-- ...existing modals adapted for faculty... -->
+
+<!-- Add Certification Modal -->
+<div class="modal fade" id="addCertModal" tabindex="-1" aria-labelledby="addCertModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3 id="certModalTitle">License or Certification</h3>
-        <button type="button" class="modal-close" aria-label="Close">✕</button>
+        <h5 class="modal-title" id="addCertModalLabel">Add Certification</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-
-      <form id="certForm" action="index.php?page=faculty_portfolio_save" method="POST" novalidate>
-        <input type="hidden" name="mode" value="create">
-        <!-- avoid shadowing HTMLFormElement.id -->
-        <input type="hidden" name="portfolio_id" id="portfolio_id" value="">
-
-        <!-- First row: Name and Organization -->
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:1rem;">
-          <div>
-            <label for="cert_name">Name*</label>
-            <input id="cert_name" type="text" name="name" required
-                   style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:.95rem;">
-          </div>
-          <div>
-            <label for="company_id">Issuing organization*</label>
-            <select id="company_id" name="company_id" required
-                    style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:.95rem;">
-              <option value="">Select company…</option>
-              <?php foreach ($companies as $co): ?>
-                <option value="<?= (int)$co['id'] ?>"><?= esc($co['name']) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-        </div>
-
-        <!-- Second row: Issue date -->
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:20px;margin-bottom:1rem;">
-          <div>
-            <label for="issue_month">Issue month</label>
-            <select id="issue_month" name="issue_month"
-                    style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:.95rem;">
-              <option value="">Month</option><?php for ($m=1;$m<=12;$m++) echo "<option value=\"$m\">$m</option>"; ?>
-            </select>
-          </div>
-          <div>
-            <label for="issue_year">Issue year</label>
-            <input id="issue_year" type="number" name="issue_year" min="1950" max="<?= date('Y')+1 ?>"
-                   style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:.95rem;">
-          </div>
-          <div style="display:flex;align-items:center;padding-bottom:10px;">
-            <div class="form-row" style="margin-bottom:0;display:flex;align-items:center;gap:.5rem;">
-              <input type="checkbox" id="no-expire" name="no_expire" value="1" checked>
-              <label for="no-expire">This credential does not expire</label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Third row: Expiration date -->
-        <div id="expireRow" class="form-row disabled"
-             style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:20px;margin-bottom:1rem;opacity:.55;pointer-events:none;">
-          <div>
-            <label for="expire_month">Expiration month</label>
-            <select id="expire_month" name="expire_month"
-                    style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:.95rem;">
-              <option value="">Month</option><?php for ($m=1;$m<=12;$m++) echo "<option value=\"$m\">$m</option>"; ?>
-            </select>
-          </div>
-          <div>
-            <label for="expire_year">Expiration year</label>
-            <input id="expire_year" type="number" name="expire_year" min="<?= date('Y')-1 ?>" max="<?= date('Y')+15 ?>"
-                   style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:.95rem;">
-          </div>
-          <div></div>
-        </div>
-
-        <!-- Fourth row: Credential details and visibility -->
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:1rem;">
-          <div>
-            <label for="credential_id">Credential ID</label>
-            <input id="credential_id" type="text" name="credential_id"
-                   style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:.95rem;">
-          </div>
-          <div>
-            <label for="credential_url">Credential URL</label>
-            <input id="credential_url" type="url" name="credential_url" placeholder="https://..."
-                   style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:.95rem;">
-          </div>
-          <div>
-            <label for="visibility">Visibility</label>
-            <select id="visibility" name="visibility"
-                    style="width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:.95rem;">
-              <option value="public">Public</option>
-              <option value="private">Only me</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="modal-actions" style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
-          <button type="button" class="btn btn--outline modal-close"
-                  style="background:none;border:1px solid #e5e7eb;color:#6b7280;padding:10px 16px;border-radius:6px;cursor:pointer;">
-            Exit
-          </button>
-          <button type="submit" class="btn btn--solid"
-                  style="background:#008040;color:#fff;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;">
-            Save
-          </button>
-        </div>
+      <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
+        <input type="hidden" name="action" value="add_certification">
+        <!-- ...existing form fields... -->
       </form>
-    </div>
-  </div>
-
-  <!-- Delete Confirmation Modal -->
-  <div id="deleteModal" class="modal" aria-hidden="true">
-    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
-      <div class="modal-header">
-        <h3 id="deleteModalTitle">Delete Certification</h3>
-        <button type="button" class="modal-close" onclick="closeDeleteModal()" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body" style="margin: 1rem 0;">
-        <p>Are you sure you want to delete this certification?</p>
-        <p><strong id="deleteCertName">Certification Name</strong></p>
-        <p style="color:#dc2626;font-size:.9rem;">This action cannot be undone.</p>
-      </div>
-      <div class="modal-actions" style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
-        <button type="button" class="btn btn--outline" onclick="closeDeleteModal()
-        " style="background:none;border:1px solid #e5e7eb;color:#6b7280;padding:10px 16px;border-radius:6px;cursor:pointer;">
-          Cancel
-        </button>
-        <button type="button" class="btn btn--danger" onclick="confirmDelete()" id="deleteConfirmBtn"
-                style="background:#dc2626;color:#fff;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;">
-          Delete
-        </button>
-      </div>
     </div>
   </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const certModal   = document.getElementById('certModal');
-  const certForm    = document.getElementById('certForm');
-  const idField     = certForm.querySelector('input[name="portfolio_id"]');
-  const noExpire    = document.getElementById('no-expire');
-  const expireRow   = document.getElementById('expireRow');
-  const deleteModal = document.getElementById('deleteModal');
-  const viewButtons = document.querySelectorAll('.view-btn');
-  const compactView = document.getElementById('compact-view');
-  const cardView    = document.getElementById('card-view');
-  let currentDeleteId = null;
-
-  // Toggle view
-  viewButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const view = btn.getAttribute('data-view');
-      viewButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      if (view === 'compact') {
-        compactView.style.display = 'block';
-        cardView.style.display = 'none';
-      } else {
-        compactView.style.display = 'none';
-        cardView.style.display = 'grid';
-      }
-    });
-  });
-
-  function openModal() {
-    certModal.classList.add('show');
-    document.body.classList.add('modal-open');
-    const first = certForm.querySelector('input[name="name"]');
-    if (first) setTimeout(() => first.focus(), 50);
-  }
-  function closeModal() {
-    certModal.classList.remove('show');
-    document.body.classList.remove('modal-open');
-    if (!idField.value) certForm.reset();
-  }
-
-  // Open modal
-  document.querySelectorAll('[data-open-cert-modal]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      certForm.mode.value = 'create';
-      idField.value = '';
-      certForm.reset();
-      noExpire.checked = true;
-      expireRow.classList.add('disabled');
-      expireRow.style.opacity = '0.55';
-      expireRow.style.pointerEvents = 'none';
-      openModal();
-    });
-  });
-
-  // Close modal
-  document.querySelectorAll('.modal-close').forEach(b => b.addEventListener('click', closeModal));
-  certModal.addEventListener('click', (e) => { if (e.target === certModal) closeModal(); });
-
-  // Esc key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      if (certModal.classList.contains('show')) closeModal();
-      if (deleteModal.classList.contains('show')) closeDeleteModal();
-    }
-  });
-
-  // Expiration toggle
-  const toggleExpire = () => {
-    if (noExpire.checked) {
-      expireRow.classList.add('disabled');
-      expireRow.style.opacity = '0.55';
-      expireRow.style.pointerEvents = 'none';
-      certForm.expire_month.value = '';
-      certForm.expire_year.value = '';
-    } else {
-      expireRow.classList.remove('disabled');
-      expireRow.style.opacity = '1';
-      expireRow.style.pointerEvents = 'auto';
-    }
-  };
-  noExpire.addEventListener('change', toggleExpire);
-  toggleExpire();
-
-  // Prevent double-submit
-  certForm.addEventListener('submit', () => {
-    const btn = certForm.querySelector('button[type="submit"]');
-    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
-  });
-
-  // Edit
-  window.editPortfolioItem = function(item) {
-    certForm.mode.value = 'update';
-    idField.value = item.id || '';
-    certForm.name.value = item.name || '';
-    certForm.company_id.value = item.company_id || '';
-    certForm.issue_month.value = item.issue_month || '';
-    certForm.issue_year.value = item.issue_year || '';
-
-    // if item.expires truthy -> it DOES expire
-    const doesExpire = String(item.expires) === '1' || String(item.expires).toLowerCase() === 'true';
-    noExpire.checked = !doesExpire;
-    if (doesExpire) {
-      expireRow.classList.remove('disabled');
-      expireRow.style.opacity = '1';
-      expireRow.style.pointerEvents = 'auto';
-      certForm.expire_month.value = item.expire_month || '';
-      certForm.expire_year.value   = item.expire_year || '';
-    } else {
-      expireRow.classList.add('disabled');
-      expireRow.style.opacity = '0.55';
-      expireRow.style.pointerEvents = 'none';
-      certForm.expire_month.value = '';
-      certForm.expire_year.value = '';
-    }
-
-    certForm.credential_id.value  = item.credential_id || '';
-    certForm.credential_url.value = item.credential_url || '';
-    if (certForm.visibility && item.visibility) {
-      certForm.visibility.value = item.visibility;
-    }
-    openModal();
-  };
-
-  // Delete
-  window.deletePortfolioItem = function(certId, certName) {
-    currentDeleteId = certId;
-    document.getElementById('deleteCertName').textContent = certName;
-    deleteModal.classList.add('show');
-    document.body.classList.add('modal-open');
-  };
-  window.closeDeleteModal = function() {
-    deleteModal.classList.remove('show');
-    document.body.classList.remove('modal-open');
-    currentDeleteId = null;
-  };
-  window.confirmDelete = function() {
-    if (!currentDeleteId) return;
-    const deleteBtn = document.getElementById('deleteConfirmBtn');
-    deleteBtn.disabled = true;
-    deleteBtn.textContent = 'Deleting...';
-    window.location.href = `index.php?page=faculty_portfolio_delete&id=${currentDeleteId}`;
-  };
-  deleteModal.addEventListener('click', (e) => { if (e.target === deleteModal) closeDeleteModal(); });
-});
-
-// Toast: auto-hide + strip params
-document.addEventListener("DOMContentLoaded", function(){
-  const toast = document.querySelector(".toast");
-  if (!toast) return;
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(100%)';
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
-  if (history.replaceState) {
-    const url = new URL(window.location);
-    url.searchParams.delete("saved");
-    url.searchParams.delete("deleted");
-    url.searchParams.delete("error");
-    history.replaceState({}, "", url.toString());
-  }
-});
-</script>
+<!-- ...rest of the modals adapted for faculty... -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
 </html>

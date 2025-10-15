@@ -899,41 +899,100 @@ a{color:inherit;text-decoration:none}
   border-color: #93c5fd;
 }
 
-.badge--status.badge--published {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #bbf7d0;
+/* Status badge styling */
+.badge--status {
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+  display: inline-block;
 }
 
-.badge--status.badge--draft {
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #fde68a;
-}
-
-.badge--status.badge--archived {
-  background: #fef2f2;
-  color: #dc2626;
-  border-color: #fecaca;
-}
-
-/* Certification status badges */
 .badge--status.badge--active {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #bbf7d0;
+  background-color: #dcfce7; /* Light green */
+  color: #166534; /* Dark green */
 }
 
 .badge--status.badge--expired {
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #fde68a;
+  background-color: #fef3c7; /* Light yellow */
+  color: #92400e; /* Dark yellow */
 }
 
 .badge--status.badge--revoked {
-  background: #fef2f2;
-  color: #dc2626;
-  border-color: #fecaca;
+  background-color: #fef2f2; /* Light red */
+  color: #dc2626; /* Dark red */
+}
+
+.badge--status.badge--submitted {
+  background-color: #e0f2fe; /* Light blue */
+  color: #0369a1; /* Dark blue */
+}
+
+.badge--status.badge--pending {
+  background-color: #fef9c3; /* Light gold */
+  color: #854d0e; /* Dark gold */
+}
+
+.badge--status.badge--approved {
+  background-color: #d1fae5; /* Light green */
+  color: #065f46; /* Dark green */
+}
+
+.badge--status.badge--rejected {
+  background-color: #fee2e2; /* Light red */
+  color: #b91c1c; /* Dark red */
+}
+
+/* Consistent table styling for certifications */
+.dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 0.95rem;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  border: 1px solid #e5e7eb;
+  margin-bottom: 0;
+}
+
+.dashboard-table thead th {
+  background: #f1f5f9;
+  color: var(--navy);
+  font-weight: 700;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 16px 20px;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+.dashboard-table tbody td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  color: var(--ink);
+  vertical-align: middle;
+  font-weight: 500;
+}
+
+.dashboard-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.dashboard-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Responsive improvements for tables */
+@media (max-width: 768px) {
+  .dashboard-table thead th,
+  .dashboard-table tbody td {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+  }
 }
 
 /* Responsive improvements */

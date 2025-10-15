@@ -1,166 +1,164 @@
 <?php
-// app/views/faculty_manage_research.php — Faculty Research Submission (dean layout)
+// app/views/faculty_manage_research.php — Faculty Research Submission
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 if (!isset($_SESSION['user']) || ($_SESSION['user']['role'] ?? '') !== 'faculty') {
-  header('Location: ?page=login'); exit;
+    header('Location: ?page=login');
+    exit;
 }
 
-require_once __DIR__ . '/../models/FacultySubmissions.php';
+require_once __DIR__ . '/../../models/FacultySubmissions.php';
 
-$faculty_id       = $_SESSION['user']['id'] ?? null;
+$faculty_id = $_SESSION['user']['id'] ?? null;
 $faculty_username = $_SESSION['user']['username'] ?? 'Faculty';
-if (!$faculty_id) { header('Location: ?page=login'); exit; }
+if (!$faculty_id) {
+    header('Location: ?page=login');
+    exit;
+}
 
-/* ---------- Helpers ---------- */
-function esc($v)   { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+// Helper functions
+function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 function eattr($v) { return htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 
-/** Map submission statuses to dean.css badge variants */
 function map_status_for_badge($statusRaw) {
-  $s = strtolower(trim((string)$statusRaw));
-  switch ($s) {
-    case 'approved': return ['class' => 'published', 'label' => 'Approved']; // green
-    case 'rejected': return ['class' => 'archived',  'label' => 'Rejected']; // gray
-    case 'submitted':
-    case 'pending':
-    default:         return ['class' => 'draft',     'label' => ucfirst($s ?: 'Pending')]; // amber
-  }
-}
-
-/* ---------- Faculty identity (avatar/name) ---------- */
-try {
-  $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
-  $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-  $stmt = $pdo->prepare("SELECT first_name, last_name FROM users WHERE username = ? LIMIT 1");
-  $stmt->execute([$faculty_username]);
-  $faculty = $stmt->fetch(PDO::FETCH_ASSOC);
-
-  if ($faculty) {
-    $firstName = $faculty['first_name'] ?? 'Faculty';
-    $lastName  = $faculty['last_name']  ?? '';
-    $fullName  = trim($firstName . ' ' . $lastName);
-  } else {
-    $firstName = "Faculty"; $lastName = ""; $fullName = $faculty_username;
-  }
-} catch (PDOException $e) {
-  $firstName = "Faculty"; $lastName = ""; $fullName = $faculty_username;
-}
-
-/* ---------- Handle POST ---------- */
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  try {
-    if (isset($_POST['add_research'])) {
-      $title      = trim($_POST['title'] ?? '');
-      $authors    = trim($_POST['authors'] ?? '');
-      $doi        = trim($_POST['doi'] ?? '');
-      $publisher  = trim($_POST['publisher'] ?? '');
-      $conference = trim($_POST['conference'] ?? '');
-      $year       = trim($_POST['year'] ?? '');
-      $view_url   = trim($_POST['view_url'] ?? '');
-
-      if ($title === '')   throw new Exception('Research title is required.');
-      if ($authors === '') throw new Exception('Authors are required.');
-      if ($year  === '')   throw new Exception('Year is required.');
-
-      // Save as submission for dean approval (not published yet)
-      $payload = [
-        'authors'    => $authors,
-        'doi'        => $doi,
-        'publisher'  => $publisher,
-        'conference' => $conference,
-        'year'       => $year,
-        'view_url'   => $view_url
-      ];
-      $submissionData = [
-        'faculty_id'      => $faculty_id,
-        'submission_type' => 'research',
-        'title'           => $title,
-        'description'     => $title,
-        'category'        => 'publication',
-        'content'         => json_encode($payload, JSON_UNESCAPED_SLASHES),
-        'status'          => 'submitted'
-      ];
-      $submissionId = FacultySubmissions::create($submissionData);
-
-      if ($submissionId) {
-        $success_message = 'Research submitted for dean approval successfully!';
-      } else {
-        $error_message = 'Failed to submit research for approval.';
-      }
-
-    } elseif (isset($_POST['delete_submission'], $_POST['submission_id'])) {
-      $submissionId = (int)$_POST['submission_id'];
-      $submission   = FacultySubmissions::getById($submissionId);
-
-      if ($submission && $submission['faculty_id'] == $faculty_id && !in_array(strtolower($submission['status']), ['approved', 'published'], true)) {
-        $deleted = FacultySubmissions::delete($submissionId);
-        $success_message = $deleted ? 'Research submission deleted successfully!' : 'Error: Failed to delete submission.';
-      } else {
-        $error_message = 'Error: Cannot delete this research submission.';
-      }
-
-    } elseif (isset($_POST['edit_submission'], $_POST['submission_id'])) {
-      $submissionId = (int)$_POST['submission_id'];
-      $submission   = FacultySubmissions::getById($submissionId);
-
-      if ($submission && $submission['faculty_id'] == $faculty_id && in_array(strtolower($submission['status']), ['submitted', 'pending'], true)) {
-        $title      = trim($_POST['title'] ?? '');
-        $authors    = trim($_POST['authors'] ?? '');
-        $doi        = trim($_POST['doi'] ?? '');
-        $publisher  = trim($_POST['publisher'] ?? '');
-        $conference = trim($_POST['conference'] ?? '');
-        $year       = trim($_POST['year'] ?? '');
-        $view_url   = trim($_POST['view_url'] ?? '');
-
-        if ($title === '')   throw new Exception('Research title is required.');
-        if ($authors === '') throw new Exception('Authors are required.');
-        if ($year  === '')   throw new Exception('Year is required.');
-
-        $payload = [
-          'authors'    => $authors,
-          'doi'        => $doi,
-          'publisher'  => $publisher,
-          'conference' => $conference,
-          'year'       => $year,
-          'view_url'   => $view_url
-        ];
-
-        $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $stmt = $pdo->prepare("UPDATE faculty_submissions SET title = ?, description = ?, category = ?, content = ? WHERE id = ?");
-        $result = $stmt->execute([
-          $title,
-          $title,
-          'publication',
-          json_encode($payload, JSON_UNESCAPED_SLASHES),
-          $submissionId
-        ]);
-
-        $success_message = $result ? 'Research submission updated successfully!' : 'Error: Failed to update submission.';
-      } else {
-        $error_message = 'Error: Cannot edit this research submission.';
-      }
+    $s = strtolower(trim((string)$statusRaw));
+    switch ($s) {
+        case 'approved': return ['class' => 'published', 'label' => 'Approved'];
+        case 'rejected': return ['class' => 'archived', 'label' => 'Rejected'];
+        case 'submitted':
+        case 'pending':
+        default: return ['class' => 'draft', 'label' => ucfirst($s ?: 'Pending')];
     }
-  } catch (Exception $e) {
-    $error_message = 'Error: ' . $e->getMessage();
-    error_log("Research submission error: " . $e->getMessage());
-  }
 }
 
-/* ---------- Load data ---------- */
+// Fetch faculty information
+try {
+    $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $stmt = $pdo->prepare("SELECT first_name, last_name FROM users WHERE username = ? LIMIT 1");
+    $stmt->execute([$faculty_username]);
+    $faculty = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $firstName = $faculty['first_name'] ?? 'Faculty';
+    $lastName = $faculty['last_name'] ?? '';
+    $fullName = trim($firstName . ' ' . $lastName);
+} catch (PDOException $e) {
+    $firstName = "Faculty";
+    $lastName = "";
+    $fullName = $faculty_username;
+}
+
+// Handle POST requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        if (isset($_POST['add_research'])) {
+            $title = trim($_POST['title'] ?? '');
+            $authors = trim($_POST['authors'] ?? '');
+            $doi = trim($_POST['doi'] ?? '');
+            $publisher = trim($_POST['publisher'] ?? '');
+            $conference = trim($_POST['conference'] ?? '');
+            $year = trim($_POST['year'] ?? '');
+            $view_url = trim($_POST['view_url'] ?? '');
+
+            if (empty($title)) throw new Exception('Research title is required.');
+            if (empty($authors)) throw new Exception('Authors are required.');
+            if (empty($year)) throw new Exception('Year is required.');
+
+            $payload = [
+                'authors' => $authors,
+                'doi' => $doi,
+                'publisher' => $publisher,
+                'conference' => $conference,
+                'year' => $year,
+                'view_url' => $view_url
+            ];
+            $submissionData = [
+                'faculty_id' => $faculty_id,
+                'submission_type' => 'research',
+                'title' => $title,
+                'description' => $title,
+                'category' => 'publication',
+                'content' => json_encode($payload, JSON_UNESCAPED_SLASHES),
+                'status' => 'submitted' // Ensure status is set to 'submitted'
+            ];
+            $submissionId = FacultySubmissions::create($submissionData);
+
+            if ($submissionId) {
+                $success_message = 'Research submitted for dean approval successfully!';
+            } else {
+                $error_message = 'Failed to submit research for approval.';
+            }
+        } elseif (isset($_POST['delete_submission'], $_POST['submission_id'])) {
+            $submissionId = (int)$_POST['submission_id'];
+            $submission = FacultySubmissions::getById($submissionId);
+
+            if ($submission && $submission['faculty_id'] == $faculty_id && !in_array(strtolower($submission['status']), ['approved', 'published'], true)) {
+                $deleted = FacultySubmissions::delete($submissionId);
+                $success_message = $deleted ? 'Research submission deleted successfully!' : 'Error: Failed to delete submission.';
+            } else {
+                $error_message = 'Error: Cannot delete this research submission.';
+            }
+        } elseif (isset($_POST['edit_submission'], $_POST['submission_id'])) {
+            $submissionId = (int)$_POST['submission_id'];
+            $submission = FacultySubmissions::getById($submissionId);
+
+            if ($submission && $submission['faculty_id'] == $faculty_id && in_array(strtolower($submission['status']), ['submitted', 'pending'], true)) {
+                $title = trim($_POST['title'] ?? '');
+                $authors = trim($_POST['authors'] ?? '');
+                $doi = trim($_POST['doi'] ?? '');
+                $publisher = trim($_POST['publisher'] ?? '');
+                $conference = trim($_POST['conference'] ?? '');
+                $year = trim($_POST['year'] ?? '');
+                $view_url = trim($_POST['view_url'] ?? '');
+
+                if (empty($title)) throw new Exception('Research title is required.');
+                if (empty($authors)) throw new Exception('Authors are required.');
+                if (empty($year)) throw new Exception('Year is required.');
+
+                $payload = [
+                    'authors' => $authors,
+                    'doi' => $doi,
+                    'publisher' => $publisher,
+                    'conference' => $conference,
+                    'year' => $year,
+                    'view_url' => $view_url
+                ];
+
+                $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
+                $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $stmt = $pdo->prepare("UPDATE faculty_submissions SET title = ?, description = ?, category = ?, content = ? WHERE id = ?");
+                $result = $stmt->execute([
+                    $title,
+                    $title,
+                    'publication',
+                    json_encode($payload, JSON_UNESCAPED_SLASHES),
+                    $submissionId
+                ]);
+
+                $success_message = $result ? 'Research submission updated successfully!' : 'Error: Failed to update submission.';
+            } else {
+                $error_message = 'Error: Cannot edit this research submission.';
+            }
+        }
+    } catch (Exception $e) {
+        $error_message = 'Error: ' . $e->getMessage();
+        error_log("Research submission error: " . $e->getMessage());
+    }
+}
+
+// Load research data
 $research = FacultySubmissions::getByFacultyAndType($faculty_id, 'research');
 
 // Partition by status
-$pendingResearch  = [];
+$pendingResearch = [];
 $reviewedResearch = [];
 foreach ($research as $item) {
-  $status = strtolower($item['status'] ?? '');
-  if (in_array($status, ['submitted', 'pending'])) {
-    $pendingResearch[]  = $item;
-  } else {
-    $reviewedResearch[] = $item;
-  }
+    $status = strtolower($item['status'] ?? '');
+    if (in_array($status, ['submitted', 'pending'])) {
+        $pendingResearch[] = $item;
+    } else {
+        $reviewedResearch[] = $item;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -183,7 +181,7 @@ foreach ($research as $item) {
 </head>
 <body>
 <div class="admin-layout">
-  <?php include __DIR__ . '/faculty/_faculty_sidebar.php'; ?>
+  <?php include __DIR__ . '/_faculty_sidebar.php'; ?>
 
   <main class="admin-main">
     <header class="admin-topbar">

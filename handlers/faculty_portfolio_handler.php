@@ -1,12 +1,10 @@
 <?php
 require_once __DIR__ . '/../app/lib/Auth.php';
 require_once __DIR__ . '/../app/models/Model.php';
+require_once __DIR__ . '/../app/models/FacultyPortfolio.php';
 
 // Ensure user is authenticated as faculty
 Auth::requireRole(['faculty'], '/adamson-ccit/public/index.php?page=login');
-
-class _DBX extends Model { public function d(){ return parent::db(); } }
-$_db = (new _DBX())->d();
 
 $user = Auth::user() ?? [];
 $facultyId = $user['id'] ?? null;
@@ -16,133 +14,215 @@ if (!$facultyId) {
     exit;
 }
 
-// Handle portfolio save - check for POST data
-if ($_POST && isset($_POST['mode'])) {
-    $mode = $_POST['mode']; // 'create' or 'update'
-    $id = (int)($_POST['id'] ?? 0);
-    
-    // Validate required fields
-    $errors = [];
-    $name = trim($_POST['name'] ?? '');
-    $companyId = (int)($_POST['company_id'] ?? 0);
-    
-    if (empty($name)) {
-        $errors[] = 'Certification name is required';
-    }
-    if (empty($companyId)) {
-        $errors[] = 'Issuing organization is required';
-    }
-
-    if (empty($errors)) {
-        try {
-            // Prepare data
-            $data = [
-                'user_id' => $facultyId,
-                'name' => $name,
-                'company_id' => $companyId,
-                'issue_month' => !empty($_POST['issue_month']) ? (int)$_POST['issue_month'] : null,
-                'issue_year' => !empty($_POST['issue_year']) ? (int)$_POST['issue_year'] : null,
-                'expires' => isset($_POST['no_expire']) ? 0 : 1, // 0 = no expiry, 1 = has expiry
-                'expire_month' => !empty($_POST['expire_month']) ? (int)$_POST['expire_month'] : null,
-                'expire_year' => !empty($_POST['expire_year']) ? (int)$_POST['expire_year'] : null,
-                'credential_id' => trim($_POST['credential_id'] ?? ''),
-                'credential_url' => trim($_POST['credential_url'] ?? ''),
-                'visibility' => trim($_POST['visibility'] ?? 'public')
-            ];
-
-            // Clear expiry data if no_expire is checked
-            if (!$data['expires']) {
-                $data['expire_month'] = null;
-                $data['expire_year'] = null;
-            }
-
-            $_db->beginTransaction();
-            
-            if ($mode === 'create') {
-                // Insert new certification
-                $insertSQL = "INSERT INTO faculty_portfolio 
-                    (user_id, name, company_id, issue_month, issue_year, expires, expire_month, expire_year, credential_id, credential_url, visibility, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
-                $stmt = $_db->prepare($insertSQL);
-                $stmt->execute([
-                    $data['user_id'], $data['name'], $data['company_id'], 
-                    $data['issue_month'], $data['issue_year'], $data['expires'], 
-                    $data['expire_month'], $data['expire_year'], $data['credential_id'], 
-                    $data['credential_url'], $data['visibility']
-                ]);
-            } else {
-                // Update existing certification - ensure it belongs to this faculty
-                $checkStmt = $_db->prepare("SELECT id FROM faculty_portfolio WHERE id = ? AND user_id = ?");
-                $checkStmt->execute([$id, $facultyId]);
-                
-                if (!$checkStmt->fetch()) {
-                    throw new Exception('Certification not found or access denied');
-                }
-                
-                $updateSQL = "UPDATE faculty_portfolio SET 
-                    name = ?, company_id = ?, issue_month = ?, issue_year = ?, expires = ?, 
-                    expire_month = ?, expire_year = ?, credential_id = ?, credential_url = ?, 
-                    visibility = ?, updated_at = CURRENT_TIMESTAMP 
-                    WHERE id = ? AND user_id = ?";
-                $stmt = $_db->prepare($updateSQL);
-                $stmt->execute([
-                    $data['name'], $data['company_id'], $data['issue_month'], $data['issue_year'], 
-                    $data['expires'], $data['expire_month'], $data['expire_year'], $data['credential_id'], 
-                    $data['credential_url'], $data['visibility'], $id, $facultyId
-                ]);
-            }
-            
-            $_db->commit();
-            
-            // Redirect back to portfolio with success message
-            header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&saved=1');
-            exit;
-            
-        } catch (Exception $e) {
-            if (isset($_db)) {
-                $_db->rollback();
-            }
-            error_log("Faculty portfolio save error: " . $e->getMessage());
-            $error = 'Failed to save certification. Please try again.';
-        }
-    } else {
-        $error = implode(', ', $errors);
-    }
-    
-    // If we get here, there was an error
-    header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&error=' . urlencode($error));
-    exit;
+// Sanitize input function
+function sanitizeInput($data) {
+    return htmlspecialchars(trim($data), ENT_QUOTES, 'UTF-8');
 }
 
-// Handle delete request
-if ($_GET && isset($_GET['id']) && isset($_GET['page']) && $_GET['page'] === 'faculty_portfolio_delete') {
-    $id = (int)$_GET['id'];
-    
+// Validate file upload
+function validateFileUpload($file, $allowedExtensions) {
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowedExtensions)) {
+        throw new Exception("Invalid file type. Allowed types: " . implode(', ', $allowedExtensions));
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        throw new Exception("File upload error: " . $file['error']);
+    }
+    return $ext;
+}
+
+// Handle all portfolio actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $_db->beginTransaction();
-        
-        // Delete certification - ensure it belongs to this faculty
-        $deleteStmt = $_db->prepare("DELETE FROM faculty_portfolio WHERE id = ? AND user_id = ?");
-        $result = $deleteStmt->execute([$id, $facultyId]);
-        
-        if ($deleteStmt->rowCount() === 0) {
-            throw new Exception('Certification not found or access denied');
+        $action = sanitizeInput($_POST['action'] ?? '');
+
+        switch ($action) {
+            case 'edit_profile':
+                $userId = intval($_POST['user_id'] ?? 0);
+                $data = [
+                    'full_name' => sanitizeInput($_POST['full_name'] ?? ''),
+                    'employee_id' => sanitizeInput($_POST['employee_id'] ?? ''),
+                    'work_email' => sanitizeInput($_POST['work_email'] ?? ''),
+                    'position' => sanitizeInput($_POST['position'] ?? ''),
+                    'department' => sanitizeInput($_POST['department'] ?? ''),
+                    'employment_type' => sanitizeInput($_POST['employment_type'] ?? ''),
+                    'date_hired' => sanitizeInput($_POST['date_hired'] ?? null),
+                    'office_location' => sanitizeInput($_POST['office_location'] ?? ''),
+                    'status' => sanitizeInput($_POST['status'] ?? ''),
+                    'bio' => sanitizeInput($_POST['bio'] ?? ''),
+                    'specializations' => sanitizeInput($_POST['specializations'] ?? ''),
+                    'languages' => sanitizeInput($_POST['languages'] ?? '')
+                ];
+
+                // Handle profile photo upload
+                if (!empty($_FILES['profile_photo']['name'])) {
+                    $uploadDir = __DIR__ . '/../uploads/profile_photos/';
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+
+                    $fileName = 'profile_' . $userId . '_' . time() . '.' . pathinfo($_FILES['profile_photo']['name'], PATHINFO_EXTENSION);
+                    $targetFile = $uploadDir . $fileName;
+
+                    if (move_uploaded_file($_FILES['profile_photo']['tmp_name'], $targetFile)) {
+                        $data['profile_photo'] = '/adamson-ccit/uploads/profile_photos/' . $fileName;
+                    }
+                } else {
+                    // Keep existing photo if not uploading new one
+                    $profile = FacultyPortfolio::getProfile($userId);
+                    $data['profile_photo'] = $profile['profile_photo'] ?? null;
+                }
+
+                $result = FacultyPortfolio::updateProfile($userId, $data);
+                if ($result) {
+                    header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&saved=1&folder=general');
+                } else {
+                    throw new Exception("Unable to save profile.");
+                }
+                exit;
+
+            case 'remove_profile_photo':
+                $userId = intval($_POST['user_id'] ?? 0);
+
+                // Get the current profile to retrieve the photo path
+                $profile = FacultyPortfolio::getProfile($userId);
+
+                if (!empty($profile['profile_photo'])) {
+                    $filePath = __DIR__ . '/../..' . $profile['profile_photo']; // Adjust path to match your directory structure
+
+                    // Check if the file exists and delete it
+                    if (file_exists($filePath)) {
+                        if (!unlink($filePath)) {
+                            header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&error=Failed to delete image');
+                            exit;
+                        }
+                    }
+                }
+
+                // Remove the profile photo reference from the database
+                FacultyPortfolio::updateProfile($userId, ['profile_photo' => null]);
+
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&saved=1');
+                exit;
+
+            case 'add_certification':
+                $result = FacultyPortfolio::createCertification($facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=certifications&saved=1');
+                exit;
+
+            case 'edit_certification':
+                $certId = intval($_POST['cert_id'] ?? 0);
+                $result = FacultyPortfolio::updateCertification($certId, $facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=certifications&saved=1');
+                exit;
+
+            case 'delete_certification':
+                $certId = intval($_POST['cert_id'] ?? 0);
+                $result = FacultyPortfolio::deleteCertification($certId, $facultyId);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=certifications&deleted=1');
+                exit;
+
+            case 'add_experience':
+                $result = FacultyPortfolio::createExperience($facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=experience&saved=1');
+                exit;
+                
+            case 'edit_experience':
+                $result = FacultyPortfolio::updateExperience($_POST['exp_id'], $facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=experience&saved=1');
+                exit;
+                
+            case 'delete_experience':
+                $result = FacultyPortfolio::deleteExperience($_POST['exp_id'], $facultyId);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=experience&deleted=1');
+                exit;
+                
+            case 'add_education':
+                $result = FacultyPortfolio::createEducation($facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=education&saved=1');
+                exit;
+                
+            case 'edit_education':
+                $result = FacultyPortfolio::updateEducation($_POST['edu_id'], $facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=education&saved=1');
+                exit;
+                
+            case 'delete_education':
+                $result = FacultyPortfolio::deleteEducation($_POST['edu_id'], $facultyId);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=education&deleted=1');
+                exit;
+                
+            case 'edit_personal':
+                $result = FacultyPortfolio::updatePersonal($facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=personal&saved=1');
+                exit;
+                
+            case 'add_research':
+                $result = FacultyPortfolio::createResearch($facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=research&saved=1');
+                exit;
+                
+            case 'edit_research':
+                $result = FacultyPortfolio::updateResearch($_POST['research_id'], $facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=research&saved=1');
+                exit;
+                
+            case 'delete_research':
+                $result = FacultyPortfolio::deleteResearch($_POST['research_id'], $facultyId);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=research&deleted=1');
+                exit;
+                
+            case 'add_training':
+                $result = FacultyPortfolio::createTraining($facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=trainings&saved=1');
+                exit;
+            case 'edit_training':
+                $result = FacultyPortfolio::updateTraining($_POST['training_id'], $facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=trainings&saved=1');
+                exit;
+            case 'delete_training':
+                $result = FacultyPortfolio::deleteTraining($_POST['training_id'], $facultyId);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=trainings&deleted=1');
+                exit;
+
+            case 'add_performance':
+                $result = FacultyPortfolio::createPerformance($facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=performance&saved=1');
+                exit;
+            case 'edit_performance':
+                $result = FacultyPortfolio::updatePerformance($_POST['performance_id'], $facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=performance&saved=1');
+                exit;
+            case 'delete_performance':
+                $result = FacultyPortfolio::deletePerformance($_POST['performance_id'], $facultyId);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=performance&deleted=1');
+                exit;
+
+            case 'add_award':
+                $result = FacultyPortfolio::createAward($facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=awards&saved=1');
+                exit;
+            case 'edit_award':
+                $result = FacultyPortfolio::updateAward($_POST['award_id'], $facultyId, $_POST);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=awards&saved=1');
+                exit;
+            case 'delete_award':
+                $result = FacultyPortfolio::deleteAward($_POST['award_id'], $facultyId);
+                header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&folder=awards&deleted=1');
+                exit;
+                
+            default:
+                throw new Exception('Invalid action: ' . $action);
         }
-        
-        $_db->commit();
-        
-        // Redirect back with success message
-        header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&deleted=1');
-        exit;
-        
     } catch (Exception $e) {
-        if (isset($_db)) {
-            $_db->rollback();
-        }
-        error_log("Faculty portfolio delete error: " . $e->getMessage());
-        $error = 'Failed to delete certification. Please try again.';
+        error_log("Faculty portfolio handler error: " . $e->getMessage());
+        $error = 'Failed to process request: ' . $e->getMessage();
         header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio&error=' . urlencode($error));
         exit;
     }
 }
+
+// If no valid POST action, redirect to portfolio
+header('Location: /adamson-ccit/public/index.php?page=faculty_portfolio');
+exit;
 ?>

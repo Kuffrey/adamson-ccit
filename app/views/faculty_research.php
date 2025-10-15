@@ -3,9 +3,14 @@
 require_once __DIR__ . '/../models/FacultyResearchPageSettings.php';
 require_once __DIR__ . '/../models/FacultyResearch.php';
 $settings = FacultyResearchPageSettings::getSettings();
-$research = FacultyResearch::getAll();
+$research = FacultyResearch::getAll(); // Fetch all published research dynamically
 
-// Build years array from research data
+// Filter out research with "Draft" or other non-published statuses
+$research = array_filter($research, function ($r) {
+    return isset($r['status']) && strtolower($r['status']) === 'published'; // Ensure only 'published' entries are displayed
+});
+
+// Build years array from filtered research data
 $years = [];
 foreach ($research as $r) {
     if (!empty($r['year'])) {
@@ -32,9 +37,8 @@ $paginatedResearch = array_slice($research, $offset, $limit);
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Faculty Research | AdU-CCIT</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css"/>
-
 </head>
-<body class="page-faculty-research">
+<body>
 <main class="page-faculty">
   <!-- ============ SUB-HERO ============ -->
   <section class="subhero">
@@ -86,119 +90,95 @@ $paginatedResearch = array_slice($research, $offset, $limit);
   <!-- ============ RESEARCH GRID ============ -->
   <section class="rlist">
     <div class="container">
-      <div id="rCount" class="rcount">Showing <?= count($paginatedResearch) ?> of <?= $totalResearch ?> publication<?= $totalResearch !== 1 ? 's' : '' ?></div>
-      
-      <div id="rGrid" class="research-publications">
-        <?php if (empty($research)): ?>
-          <!-- Fallback static content -->
-          <article class="research-item" data-dept="itis" data-type="journal" data-year="2024">
-            <div class="research-content">
-              <h3 class="research-title">
-                <a href="#" target="_blank" rel="noopener">Machine Learning Applications in Computer Science Education</a>
-              </h3>
-              <div class="research-authors">Dr. Maria Santos</div>
-              <div class="research-meta">
-                <span class="research-venue">IEEE Transactions on Education</span>
-                <span class="research-year">2024</span>
-                <span class="research-type badge">Journal</span>
-              </div>
-              <div class="research-actions">
-                <a class="btn-link" href="#" target="_blank" rel="noopener">
-                  <i class="fas fa-external-link-alt"></i> View Publication
-                </a>
-              </div>
-            </div>
-          </article>
-        <?php else: ?>
-          <?php foreach ($paginatedResearch as $r): ?>
-          <?php
-            $title     = isset($r['title'])     ? $r['title']     : '';
-            $authors   = isset($r['authors'])   ? $r['authors']   : '';
-            $doi       = isset($r['doi'])       ? $r['doi']       : '';
-            $publisher = isset($r['publisher']) ? $r['publisher'] : '';
-            $conference= isset($r['conference'])? $r['conference']: '';
-            $year      = isset($r['year'])      ? $r['year']      : '';
-            $view_url  = isset($r['view_url'])  ? $r['view_url']  : '';
-            
-            // Determine publication venue (conference or publisher)
-            $venue = !empty($conference) ? $conference : $publisher;
-            $type = !empty($conference) ? 'Conference' : 'Journal';
-          ?>
-          <article class="research-item" data-dept="itis" data-type="<?= strtolower($type) ?>" data-year="<?= htmlspecialchars($year) ?>">
-            <div class="research-content">
-              <h3 class="research-title">
-                <?php if (!empty($view_url)): ?>
-                  <a href="<?= htmlspecialchars($view_url) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($title) ?></a>
-                <?php else: ?>
-                  <?= htmlspecialchars($title) ?>
-                <?php endif; ?>
-              </h3>
-              <div class="research-authors"><?= htmlspecialchars($authors) ?></div>
-              <div class="research-meta">
-                <?php if (!empty($venue)): ?>
-                  <span class="research-venue"><?= htmlspecialchars($venue) ?></span>
-                <?php endif; ?>
-                <?php if (!empty($year)): ?>
-                  <span class="research-year"><?= htmlspecialchars($year) ?></span>
-                <?php endif; ?>
-                <span class="research-type badge"><?= $type ?></span>
-              </div>
-              <?php if (!empty($doi)): ?>
-                <div class="research-doi">
-                  <span class="doi-label">DOI:</span>
-                  <a href="https://doi.org/<?= htmlspecialchars($doi) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($doi) ?></a>
-                </div>
-              <?php endif; ?>
-              <div class="research-actions">
-                <?php if (!empty($view_url)): ?>
-                  <a class="btn-link" href="<?= htmlspecialchars($view_url) ?>" target="_blank" rel="noopener">
-                    <i class="fas fa-external-link-alt"></i> View Publication
-                  </a>
-                <?php endif; ?>
-                <?php if (!empty($doi)): ?>
-                  <a class="btn-link secondary" href="https://doi.org/<?= htmlspecialchars($doi) ?>" target="_blank" rel="noopener">
-                    <i class="fas fa-link"></i> DOI
-                  </a>
-                <?php endif; ?>
-              </div>
-            </div>
-          </article>
-          <?php endforeach; ?>
-        <?php endif; ?>
-      </div>
-
-      <!-- Pagination -->
-      <?php if ($totalPages > 1): ?>
-        <div class="pagination-wrapper">
-          <nav aria-label="Research pagination">
-            <ul class="pagination">
-              <?php if ($page > 1): ?>
-                <li class="page-item">
-                  <a class="page-link" href="?page=faculty_research&page_num=<?= $page - 1 ?>" aria-label="Previous">
-                    <span aria-hidden="true">&laquo;</span>
-                  </a>
-                </li>
-              <?php endif; ?>
-              
-              <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                <li class="page-item <?= $i === $page ? 'active' : '' ?>">
-                  <a class="page-link" href="?page=faculty_research&page_num=<?= $i ?>"><?= $i ?></a>
-                </li>
-              <?php endfor; ?>
-              
-              <?php if ($page < $totalPages): ?>
-                <li class="page-item">
-                  <a class="page-link" href="?page=faculty_research&page_num=<?= $page + 1 ?>" aria-label="Next">
-                    <span aria-hidden="true">&raquo;</span>
-                  </a>
-                </li>
-              <?php endif; ?>
-            </ul>
-          </nav>
+        <div id="rCount" class="rcount">Showing <?= count($paginatedResearch) ?> of <?= $totalResearch ?> publication<?= $totalResearch !== 1 ? 's' : '' ?></div>
+        
+        <div id="rGrid" class="research-publications">
+            <?php foreach ($paginatedResearch as $r): ?>
+                <?php
+                $title     = isset($r['title'])     ? $r['title']     : '';
+                $authors   = isset($r['authors'])   ? $r['authors']   : '';
+                $doi       = isset($r['doi'])       ? $r['doi']       : '';
+                $publisher = isset($r['publisher']) ? $r['publisher'] : '';
+                $conference= isset($r['conference'])? $r['conference']: '';
+                $year      = isset($r['year'])      ? $r['year']      : '';
+                $view_url  = isset($r['view_url'])  ? $r['view_url']  : '';
+                
+                // Determine publication venue (conference or publisher)
+                $venue = !empty($conference) ? $conference : $publisher;
+                $type = !empty($conference) ? 'Conference' : 'Journal';
+                ?>
+                <article class="research-item">
+                    <h3 class="research-title">
+                        <?php if (!empty($view_url)): ?>
+                            <a href="<?= htmlspecialchars($view_url) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($title) ?></a>
+                        <?php else: ?>
+                            <?= htmlspecialchars($title) ?>
+                        <?php endif; ?>
+                    </h3>
+                    <div class="research-authors"><strong>Authors:</strong> <?= htmlspecialchars($authors) ?></div>
+                    <div class="research-meta">
+                        <?php if (!empty($venue)): ?>
+                            <span><strong>Venue:</strong> <?= htmlspecialchars($venue) ?></span>
+                        <?php endif; ?>
+                        <?php if (!empty($year)): ?>
+                            <span><strong>Year:</strong> <?= htmlspecialchars($year) ?></span>
+                        <?php endif; ?>
+                        <span class="research-type badge"><?= $type ?></span>
+                    </div>
+                    <?php if (!empty($doi)): ?>
+                        <div class="research-doi">
+                            <strong>DOI:</strong>
+                            <a href="https://doi.org/<?= htmlspecialchars($doi) ?>" target="_blank" rel="noopener"><?= htmlspecialchars($doi) ?></a>
+                        </div>
+                    <?php endif; ?>
+                    <div class="research-actions">
+                        <?php if (!empty($view_url)): ?>
+                            <a class="btn-link" href="<?= htmlspecialchars($view_url) ?>" target="_blank" rel="noopener">
+                                <i class="fas fa-external-link-alt"></i> View Publication
+                            </a>
+                        <?php endif; ?>
+                        <?php if (!empty($doi)): ?>
+                            <a class="btn-link secondary" href="https://doi.org/<?= htmlspecialchars($doi) ?>" target="_blank" rel="noopener">
+                                <i class="fas fa-link"></i> DOI
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </article>
+            <?php endforeach; ?>
         </div>
-      <?php endif; ?>
 
-      <div id="rEmpty" class="nempty"<?= count($research) ? ' hidden' : '' ?>>No faculty research entries are available yet.</div>
+        <!-- Pagination -->
+        <?php if ($totalPages > 1): ?>
+            <div class="pagination-wrapper">
+                <nav aria-label="Research pagination">
+                    <ul class="pagination">
+                        <?php if ($page > 1): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?page=faculty_research&page_num=<?= $page - 1 ?>" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                        <?php endif; ?>
+                        
+                        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                            <li class="page-item <?= $i === $page ? 'active' : '' ?>">
+                                <a class="page-link" href="?page=faculty_research&page_num=<?= $i ?>"><?= $i ?></a>
+                            </li>
+                        <?php endfor; ?>
+                        
+                        <?php if ($page < $totalPages): ?>
+                            <li class="page-item">
+                                <a class="page-link" href="?page=faculty_research&page_num=<?= $page + 1 ?>" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        <?php endif; ?>
+                    </ul>
+                </nav>
+            </div>
+        <?php endif; ?>
+
+        <div id="rEmpty" class="nempty"<?= count($research) ? ' hidden' : '' ?>>No faculty research entries are available yet.</div>
     </div>
   </section>
 </main>

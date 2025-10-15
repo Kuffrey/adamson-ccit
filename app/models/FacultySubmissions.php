@@ -409,18 +409,21 @@ class FacultySubmissions {
                 'review_notes' => $reviewNotes
             ]);
 
+            // Publish to faculty_research if approved
             $submission = self::getById($submissionId);
-            if ($submission && $status === 'approved' && $submission['submission_type'] === 'news') {
-                $newsData = [
-                    'title'    => $submission['title'],
-                    'content'  => $submission['content'],
-                    'category' => $submission['category'] ?? 'news',
-                    'status'   => 'published',
+            if ($submission && $status === 'approved' && $submission['submission_type'] === 'research') {
+                $rd = json_decode($submission['content'] ?? '{}', true) ?: [];
+                $data = [
+                    'title'      => $submission['title'] ?? '',
+                    'authors'    => $rd['authors'] ?? '',
+                    'doi'        => $rd['doi'] ?? '',
+                    'publisher'  => $rd['publisher'] ?? '',
+                    'conference' => $rd['conference'] ?? '',
+                    'year'       => $rd['year'] ?? '',
+                    'view_url'   => $rd['view_url'] ?? '',
+                    'status'     => 'published'
                 ];
-
-                if (!News::create($newsData['title'], $newsData['content'], $newsData['status'], $newsData['category'])) {
-                    throw new Exception('Failed to save the news to the database.');
-                }
+                FacultyResearch::create($data); // Insert into faculty_research table
             }
 
             return true;

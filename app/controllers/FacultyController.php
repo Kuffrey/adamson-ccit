@@ -10,13 +10,13 @@ class FacultyController {
 
     public function manageResearch(): string {
         ob_start();
-        include __DIR__ . '/../views/faculty_manage_research.php';
+        include __DIR__ . '/../views/faculty/faculty_manage_research.php';
         return ob_get_clean();
     }
 
     public function manageCertifications(): string {
         ob_start();
-        include __DIR__ . '/../views/faculty_manage_certifications.php';
+        include __DIR__ . '/../views/faculty/faculty_manage_certifications.php';
         return ob_get_clean();
     }
 
