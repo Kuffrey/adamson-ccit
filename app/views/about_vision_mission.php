@@ -20,11 +20,13 @@ $about = (new AboutVisionMission())->get();
     <div class="subhero__media" aria-hidden="true">
       <img src="/adamson-ccit/public/assets/images/hero-campus.jpg" alt="Adamson University campus exterior">
     </div>
-    <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">About CCIT</p>
+    <div class="hero__scrim" aria-hidden="true"></div>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+      <span class="hero__eyebrow">About CCIT</span>
       <h1 class="subhero__title">Vision &amp; Mission</h1>
-      <p class="subhero__lead"><?= htmlspecialchars($about['main_intro'] ?? 'Our purpose, our promise, and the departmental directions that guide CCIT.') ?></p>
+      <p class="hero__lead"><?= htmlspecialchars($about['main_intro'] ?? 'Our purpose, our promise, and the departmental directions that guide CCIT.') ?></p>
     </div>
   </section>
 

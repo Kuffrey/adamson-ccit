@@ -27,10 +27,13 @@ $cards = ProgramsGraduateSettings::getCards($settings, false); // Frontend mode 
       <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-campus.jpg') ?>" alt="Graduate studies at CCIT">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">Programs</p>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+      <span class="hero__eyebrow">Programs</span>
       <h1 class="subhero__title">Graduate Studies</h1>
-      <p class="subhero__lead"><?= e($settings['subhero_lead'] ?? 'Advanced training for IT leaders—rigor, ethics, and impact.') ?></p>
+      <p class="hero__lead"><?= e($settings['subhero_lead'] ?? 'Advanced training for IT leaders—rigor, ethics, and impact.') ?></p>
+    </div>
     </div>
   </section>
 

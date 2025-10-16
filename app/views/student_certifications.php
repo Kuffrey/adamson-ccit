@@ -141,10 +141,12 @@ $certs = StudentCertification::getAll();
       <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-campus.jpg') ?>" alt="Adamson University campus">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">Students</p>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+      <span class="hero__eyebrow">Students</span>
       <h1 class="subhero__title"><?= e($settings['hero_title'] ?? 'Certifications') ?></h1>
-      <p class="subhero__lead"><?= e($settings['hero_lead'] ?? 'Industry badges aligned with CCIT courses and labs.') ?></p>
+      <p class="hero__lead"><?= e($settings['hero_lead'] ?? 'Industry badges aligned with CCIT courses and labs.') ?></p>
     </div>
   </section>
 

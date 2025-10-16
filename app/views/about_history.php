@@ -22,15 +22,18 @@ $about = (new AboutHistory())->get();
     <div class="subhero__media" aria-hidden="true">
       <img src="/adamson-ccit/public/assets/images/hero-campus.jpg" alt="Adamson University campus exterior">
     </div>
-    <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">About CCIT</p>
+    <div class="hero__scrim" aria-hidden="true"></div>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+      <span class="hero__eyebrow">About CCIT</span>
       <h1 class="subhero__title">History</h1>
-      <p class="subhero__lead"><?= e($about['subhero_lead'] ?? 'Our journey, our growth, and the milestones that shaped CCIT.') ?></p>
+      <p class="hero__lead"><?= e($about['subhero_lead'] ?? 'Our journey, our growth, and the milestones that shaped CCIT.') ?></p>
+    </div>
     </div>
   </section>
 
-  <!-- ============ LOCAL SUBNAV (About section tabs) ============ -->
+  <!-- ============ LOCAL SUBNAV ============ -->
   <nav class="subnav" aria-label="About sub-navigation">
     <div class="container">
       <ul class="subnav__list" role="list">

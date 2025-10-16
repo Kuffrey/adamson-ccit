@@ -55,10 +55,12 @@ foreach ($grouped as $year => $issuersData) {
       <img src="<?= htmlspecialchars($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-campus.jpg') ?>" alt="Adamson University campus exterior">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">People</p>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+      <span class="hero__eyebrow">People</span>
       <h1 class="subhero__title">Faculty Certifications</h1>
-      <p class="subhero__lead"><?= htmlspecialchars($settings['subhero_lead'] ?? 'Professional badges, licenses, and industry certifications held by CCIT faculty.') ?></p>
+      <p class="hero__lead"><?= htmlspecialchars($settings['subhero_lead'] ?? 'Professional badges, licenses, and industry certifications held by CCIT faculty.') ?></p>
     </div>
   </section>
   <!-- ============ LOCAL SUBNAV ============ -->

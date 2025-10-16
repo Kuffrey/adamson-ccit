@@ -226,10 +226,12 @@ $chipClass = [
       <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-research.jpg') ?>" alt="Students presenting research posters">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">Students</p>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+      <span class="hero__eyebrow">Students</span>
       <h1 class="subhero__title">Research</h1>
-      <p class="subhero__lead"><?= e($settings['subhero_lead'] ?? 'Publications and conference papers by our students and faculty mentors.') ?></p>
+      <p class="hero__lead"><?= e($settings['subhero_lead'] ?? 'Publications and conference papers by our students and faculty mentors.') ?></p>
     </div>
   </section>
 

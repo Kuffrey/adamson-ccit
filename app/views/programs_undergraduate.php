@@ -41,10 +41,12 @@ $extAttr = function ($flag) { return !empty($flag) ? ' target="_blank" rel="noop
       <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-campus.jpg') ?>" alt="CCIT learning spaces and labs">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">Programs</p>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+      <span class="hero__eyebrow">Programs</span>
       <h1 class="subhero__title">Undergraduate Programs</h1>
-      <p class="subhero__lead"><?= e($settings['subhero_lead'] ?? 'Solid foundations, hands-on practice, and focused CCIT pathways.') ?></p>
+      <p class="hero__lead"><?= e($settings['subhero_lead'] ?? 'Solid foundations, hands-on practice, and focused CCIT pathways.') ?></p>
     </div>
   </section>
 

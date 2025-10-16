@@ -56,8 +56,13 @@ main { flex:1; }
 
 /* Main nav */
 nav[aria-label="Main"]{ flex:1; min-width:240px; }
-.main-nav{ display:flex; gap:18px; align-items:center; margin:0; padding:0; flex-wrap:wrap; overflow:hidden; }
+.main-nav{
+  display:flex; gap:18px; align-items:center; margin:0; padding:0;
+  flex-wrap:wrap;
+  overflow:visible; /* was hidden — this was blocking dropdowns */
+}
 .main-nav > li{ position:relative; }
+
 .main-nav > li > a,
 .main-nav > li > details > summary{
   display:inline-flex; align-items:center; gap:6px; padding:10px 0; text-decoration:none; cursor:pointer;
@@ -234,16 +239,257 @@ details[open] .panel{ opacity:1; transform:translateY(0); }
   *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
 }
 
-/* Force desktop nav to stay single-row; JS will collapse before it wraps */
-.main-nav{ flex-wrap:nowrap; overflow:hidden; }
+.m-collapsible .chev{
+  display:inline-block; transition:transform .2s ease;
+}
+.m-collapsible[aria-expanded="true"] .chev{
+  transform: rotate(180deg);
+}
 
-/* When JS detects overflow/wrapping, behave like mobile */
-.site-header.nav-collapsed .nav-toggle{ display:inline-flex; margin-left:auto; }
-.site-header.nav-collapsed nav[aria-label="Main"]{ display:none; }
-.site-header.nav-collapsed .main-nav-right{ display:none; }
-
-.main-nav{ flex-wrap:nowrap; overflow:hidden; }
-
+    .prog__header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 28px 28px 20px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .prog__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      background: #003169;
+      border-radius: 16px;
+      color: white;
+      flex-shrink: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(0, 49, 105, 0.15);
+    }
+    .prog__header h3 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #003169;
+      line-height: 1.3;
+      transition: all 0.3s ease;
+      letter-spacing: -0.02em;
+    }
+    .prog__body {
+      padding: 20px 28px 28px;
+    }
+    .prog__body p {
+      margin: 0;
+      color: #64748b;
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+    .prog__card:hover .prog__icon {
+      background: #0080c9;
+      transform: translateY(-4px) scale(1.1);
+      box-shadow: 0 12px 28px rgba(0, 128, 201, 0.25);
+    }
+    .prog__card:hover .prog__header h3 {
+      color: #0080c9;
+      transform: translateY(-2px);
+    }
+    .prog__card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+      background: white;
+      text-decoration: none;
+      display: block;
+      cursor: pointer;
+      position: relative;
+    }
+    .prog__card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: #003169;
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+      transform-origin: left;
+    }
+    .prog__card:hover::before {
+      transform: scaleX(1);
+    }
+    .prog__card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 40px rgba(0, 49, 105, 0.18);
+      border-color: #0080c9;
+    }
+    .prog__card:active {
+      transform: translateY(-2px);
+      transition-duration: 0.1s;
+    }
+    
+    /* Enhanced Why Choose CCIT section */
+    .why__card {
+      display: block !important;
+      text-decoration: none;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(0, 49, 105, 0.06);
+    }
+    .why__card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 60px rgba(0, 49, 105, 0.15);
+      border-color: #0080c9;
+      text-decoration: none;
+    }
+    .why__image {
+      position: relative;
+      height: 220px;
+      overflow: hidden;
+    }
+    .why__image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+      filter: brightness(1.1);
+    }
+    .why__card:hover .why__image img {
+      transform: scale(1.08);
+    }
+    .why__overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(0, 49, 105, 0.85) 0%, rgba(0, 128, 201, 0.75) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    .why__card:hover .why__overlay {
+      opacity: 1;
+    }
+    .why__overlay .why__ico {
+      background: rgba(255, 255, 255, 0.2) !important;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      transform: scale(1.2);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1.2); }
+      50% { transform: scale(1.3); }
+    }
+    .why__content {
+      padding: 28px;
+    }
+    .why__header {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .why__ico {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      background: #0080c9;
+      border-radius: 20px;
+      color: white;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 128, 201, 0.3);
+    }
+    .why__card:hover .why__content .why__ico {
+      background: #003169;
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 8px 25px rgba(0, 49, 105, 0.4);
+    }
+    .why__header h3 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #003169;
+      line-height: 1.3;
+      transition: all 0.3s ease;
+      letter-spacing: -0.02em;
+    }
+    .why__card:hover .why__header h3 {
+      color: #0080c9;
+      transform: translateY(-2px);
+    }
+    .why__body {
+      margin: 0;
+    }
+    .why__body p {
+      margin: 0 0 16px 0;
+      color: #64748b;
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+    .why__link {
+      display: inline-flex;
+      align-items: center;
+      font-weight: 700;
+      color: #0080c9;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid transparent;
+    }
+    .why__card:hover .why__link {
+      color: #003169;
+      border-bottom-color: #003169;
+      transform: translateX(4px);
+    }
+    /* Special styling for cards without images */
+    .why__card:not(:has(.why__image)) .why__header {
+      align-items: flex-start;
+    }
+    .why__card:not(:has(.why__image)) .why__ico {
+      background: #00713D;
+      box-shadow: 0 4px 15px rgba(0, 113, 61, 0.3);
+    }
+    .why__card:not(:has(.why__image)) .why__ico:hover {
+      background: #003169;
+      box-shadow: 0 8px 25px rgba(0, 49, 105, 0.4);
+    }
+    /* Additional polish for the section */
+    .why .sec__head h2 {
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: #003169;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+    .why .sec__kicker {
+      font-size: 1.2rem;
+      color: #64748b;
+      font-weight: 400;
+      line-height: 1.6;
+    }
+    
+    /* Partners section highlighting */
+    .partners {
+      scroll-margin-top: 100px; /* Native scroll padding */
+      transition: all 0.5s ease;
+    }
+    .partners.highlighted {
+      background: rgba(0, 128, 201, 0.02);
+      box-shadow: 0 12px 40px rgba(0, 128, 201, 0.2);
+    }
 
 /* use same font stack as header */
 main, .hero, .quick, .why, .spotlight, .programs, .partners, .news, .cta{
@@ -742,7 +988,7 @@ a:focus-visible, button:focus-visible{outline:3px solid #9ad1ff;outline-offset:2
 .subhero__media img{width:100%;height:100%;object-fit:cover;display:block}
 .subhero__scrim{position:absolute;inset:0;background:rgba(0,0,0,.45)}
 .subhero__inner{position:relative;z-index:2;display:flex;flex-direction:column;justify-content:center;min-height:inherit;padding:48px 0}
-.subhero__title{margin:12px 0 8px;font-weight:900;font-size:clamp(32px,5.2vw,48px);line-height:1.08}
+.subhero__title{margin:10px 0 8px;font-weight:900;font-size:clamp(32px,5.2vw,48px);line-height:1.08}
 .subhero__lead{margin:0;opacity:.95;max-width:70ch;font-size:clamp(16px,2vw,18px);font-weight:400;line-height:1.6}
 
 /* LOCAL SUBNAV (pills) */
@@ -3352,3 +3598,4 @@ body.modal-open { overflow: hidden; }
         display: none;
       }
     }
+

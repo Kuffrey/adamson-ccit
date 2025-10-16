@@ -24,10 +24,12 @@ $settings = AdmissionTransfereeSettings::getSettings();
       <img src="/adamson-ccit/public/assets/images/hero-campus.jpg" alt="Adamson University campus exterior" />
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">Admissions</p>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+      <span class="hero__eyebrow">Admissions</span>
       <h1 class="subhero__title">Transferee</h1>
-      <p class="subhero__lead"><?= e($settings['subhero_lead'] ?? '') ?></p>
+      <p class="hero__lead"><?= e($settings['subhero_lead'] ?? '') ?></p>
     </div>
   </section>
 

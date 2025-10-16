@@ -149,7 +149,7 @@ class FacultyPortfolio extends Model
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )
-        ");
+        "); 
     }
 
     // Profile methods

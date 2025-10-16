@@ -25,11 +25,14 @@ $dean = DeanCorner::get($pdo);
     <div class="subhero__media" aria-hidden="true">
       <img src="<?= htmlspecialchars($dean['subhero_image']) ?>" alt="Dean's Corner Banner">
     </div>
-    <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">About CCIT</p>
+    <div class="hero__scrim" aria-hidden="true"></div>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+      <span class="hero__eyebrow">About CCIT</span>
       <h1 class="subhero__title">Dean's Corner</h1>
-      <p class="subhero__lead">Message from the Dean</p>
+      <p class="hero__lead">Message from the Dean</p>
+    </div>
     </div>
   </section>
 

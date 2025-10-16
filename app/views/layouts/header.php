@@ -238,15 +238,20 @@ if (!$menus) {
 </header>
 
 <script>
-  // Existing mega menu sizing (About/Programs/Student/Faculty)
+  // Desktop dropdowns: click + hover (hover only when >=961px and pointer is fine)
   (function () {
     const items = Array.from(document.querySelectorAll('.site-header .main-nav > li > details'));
     const ctas  = document.querySelector('.site-header .main-nav-right');
-    const media = window.matchMedia('(pointer:fine) and (min-width:1024px)');
+
+    // Treat >=961px (matches CSS) and fine pointer as "desktop hover"
+    const isDesktopHover = () =>
+      matchMedia('(min-width: 961px)').matches &&
+      matchMedia('(pointer: fine)').matches;
 
     function closeOthers(except) {
       items.forEach(d => { if (d !== except) d.removeAttribute('open'); });
-      document.querySelectorAll('.site-header summary[aria-expanded="true"]').forEach(s=>s.setAttribute('aria-expanded','false'));
+      document.querySelectorAll('.site-header summary[aria-expanded="true"]')
+        .forEach(s => s.setAttribute('aria-expanded','false'));
     }
 
     function alignPanel(d) {
@@ -286,40 +291,56 @@ if (!$menus) {
       }
     }
 
+    // Close on outside click / ESC
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.site-header')) {
         items.forEach(d => d.removeAttribute('open'));
-        document.querySelectorAll('.site-header summary').forEach(s=>s.setAttribute('aria-expanded','false'));
+        document.querySelectorAll('.site-header summary')
+          .forEach(s => s.setAttribute('aria-expanded','false'));
       }
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         items.forEach(d => d.removeAttribute('open'));
-        document.querySelectorAll('.site-header summary').forEach(s=>s.setAttribute('aria-expanded','false'));
+        document.querySelectorAll('.site-header summary')
+          .forEach(s => s.setAttribute('aria-expanded','false'));
       }
     });
 
+    // Bind once; gate behavior with isDesktopHover() so it works after resize too
     items.forEach(d => {
       const summary = d.querySelector('summary');
       const panel   = d.querySelector('.panel');
       let closeTimer = null;
 
-      const open = () => { d.setAttribute('open',''); summary?.setAttribute('aria-expanded','true'); alignPanel(d); };
+      const open  = () => { d.setAttribute('open',''); summary?.setAttribute('aria-expanded','true'); alignPanel(d); };
       const close = () => { d.removeAttribute('open'); summary?.setAttribute('aria-expanded','false'); };
       const scheduleClose = () => { closeTimer = setTimeout(close, 140); };
-      const cancelClose = () => { if (closeTimer){ clearTimeout(closeTimer); closeTimer = null; } };
+      const cancelClose   = () => { if (closeTimer){ clearTimeout(closeTimer); closeTimer = null; } };
 
+      // Click toggles (works on all sizes)
       summary?.addEventListener('click', (e) => {
         e.preventDefault();
         if (d.open) { close(); } else { closeOthers(d); open(); }
       });
 
-      if (media.matches) {
-        summary?.addEventListener('pointerenter', () => { cancelClose(); closeOthers(d); open(); });
-        d.addEventListener('pointerleave', scheduleClose);
-        panel?.addEventListener('pointerenter', cancelClose);
-        panel?.addEventListener('pointerleave', scheduleClose);
-      }
+      // Hover behavior, but only when desktop-hover capable right now
+      summary?.addEventListener('pointerenter', () => {
+        if (!isDesktopHover()) return;
+        cancelClose(); closeOthers(d); open();
+      });
+      d.addEventListener('pointerleave', () => {
+        if (!isDesktopHover()) return;
+        scheduleClose();
+      });
+      panel?.addEventListener('pointerenter', () => {
+        if (!isDesktopHover()) return;
+        cancelClose();
+      });
+      panel?.addEventListener('pointerleave', () => {
+        if (!isDesktopHover()) return;
+        scheduleClose();
+      });
 
       addEventListener('resize', () => { if (d.open) alignPanel(d); });
     });
@@ -335,35 +356,75 @@ if (!$menus) {
 
   // Mobile drawer / hamburger
   (function(){
-  const btn = document.querySelector('.nav-toggle');
+    const btn = document.querySelector('.nav-toggle');
+    const sheet = document.getElementById('mobileNav');
+    const panel = sheet?.querySelector('.mobile-nav__panel');
+    const closers = sheet?.querySelectorAll('[data-close-nav]');
+    let lastFocus = null;
+
+    function openNav(){
+      if (!sheet) return;
+      lastFocus = document.activeElement;
+      sheet.hidden = false;
+      requestAnimationFrame(()=> sheet.classList.add('is-open'));
+      btn?.setAttribute('aria-expanded','true');
+      btn?.classList.add('is-active');
+      document.documentElement.style.overflow = 'hidden';
+      panel?.focus?.();
+    }
+    function closeNav(){
+      if (!sheet) return;
+      sheet.classList.remove('is-open');
+      btn?.setAttribute('aria-expanded','false');
+      btn?.classList.remove('is-active');
+      document.documentElement.style.overflow = '';
+      setTimeout(()=>{ sheet.hidden = true; lastFocus?.focus?.(); }, 220);
+    }
+
+    btn?.addEventListener('click', ()=> sheet.classList.contains('is-open') ? closeNav() : openNav());
+    closers?.forEach(el => el.addEventListener('click', closeNav));
+    sheet?.addEventListener('click', e => { if (e.target.matches('.mobile-nav__backdrop')) closeNav(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet?.classList.contains('is-open')) closeNav(); });
+  })();
+</script>
+
+<script>
+// Mobile collapsibles: toggle aria-expanded on click/Enter/Space
+(function () {
   const sheet = document.getElementById('mobileNav');
-  const panel = sheet?.querySelector('.mobile-nav__panel');
-  const closers = sheet?.querySelectorAll('[data-close-nav]');
-  let lastFocus = null;
+  if (!sheet) return;
 
-  function openNav(){
-    if (!sheet) return;
-    lastFocus = document.activeElement;
-    sheet.hidden = false;
-    requestAnimationFrame(()=> sheet.classList.add('is-open'));
-    btn?.setAttribute('aria-expanded','true');
-    btn?.classList.add('is-active');              // <-- add
-    document.documentElement.style.overflow = 'hidden';
-    panel?.focus?.();
-  }
-  function closeNav(){
-    if (!sheet) return;
-    sheet.classList.remove('is-open');
-    btn?.setAttribute('aria-expanded','false');
-    btn?.classList.remove('is-active');           // <-- remove
-    document.documentElement.style.overflow = '';
-    setTimeout(()=>{ sheet.hidden = true; lastFocus?.focus?.(); }, 220);
+  // Close other sections when opening one (accordion behavior)
+  function closeOthers(except) {
+    sheet.querySelectorAll('.m-collapsible[aria-expanded="true"]').forEach(li => {
+      if (li !== except) {
+        li.setAttribute('aria-expanded','false');
+        li.querySelector('.m-collapsible__btn')?.setAttribute('aria-expanded','false');
+      }
+    });
   }
 
-  btn?.addEventListener('click', ()=> sheet.classList.contains('is-open') ? closeNav() : openNav());
-  closers?.forEach(el => el.addEventListener('click', closeNav));
-  sheet?.addEventListener('click', e => { if (e.target.matches('.mobile-nav__backdrop')) closeNav(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet?.classList.contains('is-open')) closeNav(); });
+  sheet.addEventListener('click', (e) => {
+    const btn = e.target.closest('.m-collapsible__btn');
+    if (!btn) return;
+
+    const li = btn.closest('.m-collapsible');
+    const isOpen = li.getAttribute('aria-expanded') === 'true';
+
+    closeOthers(li);
+    li.setAttribute('aria-expanded', String(!isOpen));
+    btn.setAttribute('aria-expanded', String(!isOpen));
+  });
+
+  // Keyboard support for Enter/Space
+  sheet.addEventListener('keydown', (e) => {
+    const btn = e.target.closest('.m-collapsible__btn');
+    if (!btn) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      btn.click();
+    }
+  });
 })();
 </script>
 

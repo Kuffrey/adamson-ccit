@@ -189,10 +189,13 @@ $orgs = StudentOrganization::getAll();
   <img src="<?= e($settings['subhero_image_url'] ?? '/adamson-ccit/public/assets/images/hero-campus.jpg') ?>" alt="Adamson University student community">
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">Student Life</p>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+      <span class="hero__eyebrow">Student Life</span>
       <h1 class="subhero__title">Recognized Student Organizations</h1>
-  <p class="subhero__lead"><?= e($settings['subhero_lead'] ?? 'Official academic and co-academic organizations for CCIT students.') ?></p>
+      <p class="hero__lead"><?= e($settings['subhero_lead'] ?? 'Official academic and co-academic organizations for CCIT students.') ?></p>
+    </div>
     </div>
   </section>
 

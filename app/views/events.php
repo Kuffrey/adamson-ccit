@@ -66,10 +66,13 @@ $settings = (new EventsPageSettings())->get();
       <img src="/adamson-ccit/public/assets/images/hero-campus.jpg" alt="Adamson University campus exterior" />
     </div>
     <div class="subhero__scrim" aria-hidden="true"></div>
-    <div class="container subhero__inner">
-      <p class="eyebrow">CCIT Updates</p>
-      <h1 class="subhero__title">Events</h1>
-        <p class="subhero__lead"><?= htmlspecialchars($settings['subhero_lead'] ?? 'Career fairs, forums, workshops, and student showcases happening at CCIT.') ?></p>
+
+    <div class="container hero__inner">
+      <div class="hero__copy">
+        <span class="hero__eyebrow">CCIT Updates</span>
+        <h1 class="subhero__title">Events</h1>
+        <p class="hero__lead"><?= htmlspecialchars($settings['subhero_lead'] ?? 'Career fairs, forums, workshops, and student showcases happening at CCIT.') ?></p>
+      </div>
     </div>
   </section>
 
