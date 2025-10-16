@@ -16,10 +16,7 @@ try {
       PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
       PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
   ]);
-} catch (PDOException $e) {
-  // If DB fails, we'll render with fallbacks below
-  $pdo = null;
-}
+} catch (PDOException $e) { $pdo = null; }
 
 require_once __DIR__ . '/../../models/HeaderRepository.php';
 
@@ -73,42 +70,8 @@ if (!$menus) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | AdU-CCIT</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
-  <style>
-    /* CSS Reset & Base Styles */
-    *, *::before, *::after { box-sizing: border-box; }
-    * { margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body { font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Arial, sans-serif; line-height: 1.6; color: #0b234c; }
-    main { flex: 1; }
-    
-    /* Site layout */
-    .site-header { border-bottom: 1px solid var(--edgec, #e6e9ef); }
-    .user-menu { position: relative; }
-    .user-menu summary {
-      list-style: none; cursor: pointer; border: 1px solid #d1d5db; background: #fff; color: #0b234c;
-      width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center; padding: 0;
-    }
-    .user-menu summary::-webkit-details-marker { display: none; }
-    .user-menu summary:focus-visible { outline: 3px solid #9ad1ff; outline-offset: 2px; border-radius: 999px; }
-    .user-menu .panel {
-      position: absolute; right: 0; top: calc(100% + 10px);
-      background: #fff; border: 1px solid var(--edgec, #e6e9ef); border-radius: 12px; 
-      box-shadow: var(--shadow, 0 6px 20px rgba(17,24,39,.08));
-      padding: 8px; display: grid; gap: 4px; min-width: 220px; z-index: 4000;
-      opacity: 0; transform: translateY(6px); transition: opacity .15s ease, transform .15s ease;
-    }
-    .user-menu[open] .panel { opacity: 1; transform: translateY(0); }
-    .user-menu .panel a {
-      text-decoration: none; color: #111827; padding: 10px 12px; border-radius: 8px; font-weight: 600; 
-      display: flex; align-items: center; gap: 8px;
-    }
-    .user-menu .panel a:hover { background: #f3f4f6; }
-    .user-menu .umeta { padding: 8px 10px; border-bottom: 1px solid var(--edgec, #e6e9ef); color: #475569; font-weight: 600; }
-    .user-menu .role { text-transform: uppercase; font-size: 12px; letter-spacing: .05em; color: #0b234c; font-weight: 900; }
-    .main-nav-right { display: flex; gap: 10px; align-items: center; position: relative; z-index: 1200; }
-    .icon { width: 20px; height: 20px; display: inline-block; }
-  </style>
 </head>
 <body>
 
@@ -135,6 +98,11 @@ if (!$menus) {
       </a>
     </div>
 
+    <!-- Hamburger (mobile only via CSS) -->
+    <button class="nav-toggle" type="button" aria-label="Open menu" aria-controls="mobileNav" aria-expanded="false">
+       <span class="nav-toggle__bar" aria-hidden="true"></span>
+    </button>
+
     <nav aria-label="Main">
       <ul class="main-nav">
         <?php foreach ($menus as $m): ?>
@@ -160,13 +128,10 @@ if (!$menus) {
       <a href="<?= e($settings['cta_url']); ?>" class="btn blue"><?= e($settings['cta_label']); ?></a>
 
       <?php if (!$user): ?>
-        <!-- Not logged in -->
         <a href="/adamson-ccit/public/index.php?page=login" class="btn outline">Login</a>
       <?php else: ?>
-        <!-- Logged in: compact user icon + dropdown -->
         <details class="user-menu" aria-label="User menu">
           <summary aria-label="Open user menu" title="Account">
-            <!-- User icon (SVG) -->
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -193,13 +158,13 @@ if (!$menus) {
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 Faculty Dashboard
               </a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=faculty_manage_research">
+              <a role="menuitem" href="/adamson-ccit/public/index.php?page=faculty_manage_news">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20l-6-6 6-6"/><path d="M6 8v8"/></svg>
-                Manage Research
+                Submissions
               </a>
               <a role="menuitem" href="/adamson-ccit/public/index.php?page=faculty_manage_certifications">
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><rect x="3" y="3" width="18" height="14" rx="2"/></svg>
-                Manage Certifications
+                My Portfolio
               </a>
             <?php elseif ($user['role'] === 'admin'): ?>
               <a role="menuitem" href="/adamson-ccit/public/index.php?page=admin_dashboard">
@@ -228,6 +193,47 @@ if (!$menus) {
         </details>
       <?php endif; ?>
     </div>
+  </div>
+
+  <!-- Mobile drawer (reuses same $menus) -->
+  <div id="mobileNav" class="mobile-nav" hidden>
+    <div class="mobile-nav__backdrop" data-close-nav></div>
+    <aside class="mobile-nav__panel" role="dialog" aria-modal="true" aria-label="Main menu" tabindex="-1">
+      <div class="mobile-nav__header">
+        <span>Menu</span>
+        <button class="mobile-nav__close" type="button" aria-label="Close menu" data-close-nav>✕</button>
+      </div>
+
+      <nav class="mobile-nav__body">
+        <ul class="mobile-nav__list">
+          <?php foreach ($menus as $m): ?>
+            <?php if (($m['type'] ?? 'link') === 'link'): ?>
+              <li><a href="<?= e($m['url']); ?>"><?= e($m['label']); ?></a></li>
+            <?php else: ?>
+              <li class="m-collapsible" aria-expanded="false">
+                <button class="m-collapsible__btn" type="button" aria-expanded="false">
+                  <?= e($m['label']); ?><span class="chev" aria-hidden="true">▾</span>
+                </button>
+                <ul class="m-collapsible__panel">
+                  <?php foreach ($m['items'] ?? [] as $it): ?>
+                    <li><a href="<?= e($it['url']); ?>"><?= e($it['label']); ?></a></li>
+                  <?php endforeach; ?>
+                </ul>
+              </li>
+            <?php endif; ?>
+          <?php endforeach; ?>
+        </ul>
+
+        <div class="mobile-nav__footer">
+          <a class="btn blue" href="<?= e($settings['cta_url']); ?>"><?= e($settings['cta_label']); ?></a>
+          <?php if (!$user): ?>
+            <a class="btn outline" href="/adamson-ccit/public/index.php?page=login">Login</a>
+          <?php else: ?>
+            <a class="btn outline" href="/adamson-ccit/public/index.php?page=logout">Logout</a>
+          <?php endif; ?>
+        </div>
+      </nav>
+    </aside>
   </div>
 </header>
 
@@ -326,4 +332,103 @@ if (!$menus) {
     document.addEventListener('click', (e)=>{ if (!e.target.closest('.user-menu')) um.removeAttribute('open'); });
     document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') um.removeAttribute('open'); });
   })();
+
+  // Mobile drawer / hamburger
+  (function(){
+  const btn = document.querySelector('.nav-toggle');
+  const sheet = document.getElementById('mobileNav');
+  const panel = sheet?.querySelector('.mobile-nav__panel');
+  const closers = sheet?.querySelectorAll('[data-close-nav]');
+  let lastFocus = null;
+
+  function openNav(){
+    if (!sheet) return;
+    lastFocus = document.activeElement;
+    sheet.hidden = false;
+    requestAnimationFrame(()=> sheet.classList.add('is-open'));
+    btn?.setAttribute('aria-expanded','true');
+    btn?.classList.add('is-active');              // <-- add
+    document.documentElement.style.overflow = 'hidden';
+    panel?.focus?.();
+  }
+  function closeNav(){
+    if (!sheet) return;
+    sheet.classList.remove('is-open');
+    btn?.setAttribute('aria-expanded','false');
+    btn?.classList.remove('is-active');           // <-- remove
+    document.documentElement.style.overflow = '';
+    setTimeout(()=>{ sheet.hidden = true; lastFocus?.focus?.(); }, 220);
+  }
+
+  btn?.addEventListener('click', ()=> sheet.classList.contains('is-open') ? closeNav() : openNav());
+  closers?.forEach(el => el.addEventListener('click', closeNav));
+  sheet?.addEventListener('click', e => { if (e.target.matches('.mobile-nav__backdrop')) closeNav(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheet?.classList.contains('is-open')) closeNav(); });
+})();
 </script>
+
+<script>
+(function(){
+  const header = document.querySelector('.site-header');
+  const headerInner = header?.querySelector('.header-inner');
+  const navEl = header?.querySelector('nav[aria-label="Main"]');
+  const list = header?.querySelector('.main-nav');
+  const right = header?.querySelector('.main-nav-right');
+
+  if (!header || !headerInner || !navEl || !list || !right) return;
+
+  // Space buffer so they never "kiss" visually before collapsing
+  const GAP = 8;
+
+  function isWrapped(){
+    // true wrap: first and last items sit on different rows
+    const items = list.children;
+    if (!items.length) return false;
+    const firstTop = items[0].offsetTop;
+    const lastTop  = items[items.length - 1].offsetTop;
+    return lastTop > firstTop + 1; // small tolerance
+  }
+
+  function isColliding(){
+    // If either cluster is hidden (e.g., due to media query), don't force collapse
+    if (!list.offsetParent || !right.offsetParent) return false;
+
+    const navRect   = list.getBoundingClientRect();
+    const rightRect = right.getBoundingClientRect();
+
+    if (!navRect.width || !rightRect.width) return false;
+
+    // Positive means space between clusters; collapse only when < GAP
+    const available = rightRect.left - navRect.right;
+    return available < GAP;
+  }
+
+  function applyCollapse(){
+    // IMPORTANT: only collapse when there's true wrap OR true collision.
+    const collapse = isWrapped() || isColliding();
+    header.classList.toggle('nav-collapsed', collapse);
+  }
+
+  // Re-check on size changes of key containers
+  const ro = new ResizeObserver(()=> {
+    // double RAF to let flex & fonts settle before measuring
+    requestAnimationFrame(()=> requestAnimationFrame(applyCollapse));
+  });
+  ro.observe(headerInner);
+  ro.observe(list);
+  ro.observe(right);
+
+  // Fonts can change widths after load; then measure
+  const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  fontsReady.finally(()=> {
+    // initial measurement after layout paints
+    requestAnimationFrame(()=> requestAnimationFrame(applyCollapse));
+  });
+
+  // Also handle window resize
+  window.addEventListener('resize', ()=> {
+    requestAnimationFrame(()=> requestAnimationFrame(applyCollapse));
+  }, { passive:true });
+})();
+</script>
+
