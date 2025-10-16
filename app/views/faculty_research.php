@@ -84,7 +84,7 @@ $paginatedResearch = array_slice($research, $offset, $limit);
         </form>
       </div>
       <form class="nsearch" role="search" aria-label="Search research" onsubmit="return false;">
-        <input id="fQuery" type="search" placeholder="Search title, author, venue…" aria-label="Search research" />
+        <input id="fQuery" type="search" placeholder="Search…" aria-label="Search research" />
         <button class="btn btn--solid" type="submit"></button>
       </form>
     </div>

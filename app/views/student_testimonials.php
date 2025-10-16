@@ -17,18 +17,6 @@ $years = StudentTestimonial::getYears();
 <body>
 
 <main>
-
-  <style>
-    /* Consistent container padding */
-    .content > .container { 
-      padding: 16px 20px clamp(24px,5vw,48px); 
-    }
-    
-    /* Consistent grid layout */
-    .tgrid {
-      padding: 16px 0 clamp(32px,6vw,56px);
-    }
-  </style>
 </head>
 <body>
 
@@ -72,51 +60,54 @@ $years = StudentTestimonial::getYears();
     </div>
   </nav>
 
-  <!-- ============ TESTIMONIALS GRID ============ -->
-  <section class="content" aria-labelledby="testimonials-heading">
-    <div class="container">
-      <h2 id="testimonials-heading" class="sr-only">Student Testimonials</h2>
-      <div id="tGrid" class="tgrid">
-        <?php foreach ($testimonials as $t): ?>
-        <article class="t" data-prog="<?= htmlspecialchars($t['program']) ?>" data-year="<?= htmlspecialchars($t['grad_year']) ?>">
-          <header class="t__head">
-            <?php if (!empty($t['avatar_url'])): ?>
-              <img class="t__avatar" src="<?= htmlspecialchars($t['avatar_url']) ?>" alt="Portrait of <?= htmlspecialchars($t['name']) ?>">
-            <?php else: ?>
-              <div class="t__avatar t__avatar--ph" aria-hidden="true"><?= htmlspecialchars($t['avatar_initials'] ?? substr($t['name'],0,2)) ?></div>
-            <?php endif; ?>
-            <div class="t__meta">
-              <h3 class="t__name"><?= htmlspecialchars($t['name']) ?></h3>
-              <div class="t__row">
-                <span class="ttag">
-                  <?php
-                  $prog = strtoupper($t['program']);
-                  if ($prog === 'GRAD') {
-                    echo 'MIT (Graduate)';
-                  } else {
-                    echo $prog . ' ’' . htmlspecialchars($t['grad_year']);
-                  }
-                  ?>
-                </span>
-                <span class="t__sep">•</span>
-                <span class="t__role"><?= htmlspecialchars($t['role']) ?></span>
-              </div>
-            </div>
-          </header>
-          <blockquote class="t__quote">
-            <?= htmlspecialchars($t['quote']) ?>
-          </blockquote>
-        </article>
-        <?php endforeach; ?>
+<!-- ============ TESTIMONIALS GRID ============ -->
+<section class="content" aria-labelledby="testimonials-heading">
+  <div class="container">
+    <h2 id="testimonials-heading" class="sr-only">Student Testimonials</h2>
+
+    <div id="tGrid" class="prog__grid">
+      <?php foreach ($testimonials as $t): ?>
+<article class="prog__card tcard" data-prog="<?= htmlspecialchars($t['program']) ?>" data-year="<?= htmlspecialchars($t['grad_year']) ?>">
+  <div class="tcard__head">
+    <?php if (!empty($t['avatar_url'])): ?>
+      <img class="tcard__avatar" src="<?= htmlspecialchars($t['avatar_url']) ?>" alt="Portrait of <?= htmlspecialchars($t['name']) ?>">
+    <?php else: ?>
+      <div class="tcard__avatar tcard__avatar--ph" aria-hidden="true">
+        <?= htmlspecialchars($t['avatar_initials'] ?? strtoupper(substr($t['name'],0,2))) ?>
       </div>
-      <!-- Pagination placeholder -->
-      <nav class="pager" aria-label="Testimonials pagination">
-        <button class="pg" disabled>« Prev</button>
-        <span class="pg__status">Page 1 of 1</span>
-        <button class="pg" disabled>Next »</button>
-      </nav>
+    <?php endif; ?>
+
+    <h3 class="tcard__name"><?= htmlspecialchars($t['name']) ?></h3>
+
+    <div class="tcard__meta">
+      <span class="tcard__tag">
+        <?php
+          $prog = strtoupper($t['program']);
+          echo ($prog === 'GRAD') ? 'MIT (Graduate)' : $prog . ' ’' . htmlspecialchars($t['grad_year']);
+        ?>
+      </span>
+      <span class="tcard__role"><?= htmlspecialchars($t['role']) ?></span>
     </div>
-  </section>
+  </div>
+
+  <div class="tcard__body">
+    <blockquote class="tcard__quote">
+      <?= htmlspecialchars($t['quote']) ?>
+    </blockquote>
+  </div>
+</article>
+      <?php endforeach; ?>
+    </div>
+
+    <!-- Pagination (kept simple) -->
+    <nav class="pager" aria-label="Testimonials pagination">
+      <button class="pg" disabled>« Prev</button>
+      <span class="pg__status">Page 1 of 1</span>
+      <button class="pg" disabled>Next »</button>
+    </nav>
+  </div>
+</section>
+
 </main>
 
 </body>

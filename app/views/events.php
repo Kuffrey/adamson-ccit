@@ -122,7 +122,7 @@ $settings = (new EventsPageSettings())->get();
         <input type="hidden" name="page" value="events">
         <input type="hidden" name="cat" value="<?= e($cat) ?>">
         <input type="hidden" name="year" value="<?= e($year) ?>">
-        <input id="eQuery" name="q" type="search" value="<?= e($q) ?>" placeholder="Search events…" aria-label="Search events" />
+        <input id="eQuery" name="q" type="search" value="<?= e($q) ?>" placeholder="Search…" aria-label="Search events" />
         <button class="btn btn--solid" type="submit"></button>
       </form>
     </div>

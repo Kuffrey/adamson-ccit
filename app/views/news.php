@@ -197,7 +197,7 @@ $chipClass = [
         <input type="hidden" name="page" value="news">
         <input type="hidden" name="cat" value="<?= e($cat) ?>">
         <input type="hidden" name="year" value="<?= e($year) ?>">
-        <input id="nQuery" name="q" type="search" value="<?= e($q) ?>" placeholder="Search news…" aria-label="Search news" />
+        <input id="nQuery" name="q" type="search" value="<?= e($q) ?>" placeholder="Search…" aria-label="Search news" />
         <button class="btn btn--solid" type="submit"></button>
       </form>
     </div>

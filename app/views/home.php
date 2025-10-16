@@ -14,10 +14,8 @@
   <!-- ========================= HERO ========================= -->
   <section class="hero">
     <div class="hero__media" aria-hidden="true">
-      <!-- original asset, only scaled visually (no compression) -->
       <img src="<?= htmlspecialchars($hero['bg'] ?: '/adamson-ccit/public/assets/images/career-bg.jpg', ENT_QUOTES, 'UTF-8') ?>" alt="Adamson University campus" />
     </div>
-    <!-- solid scrim for readability -->
     <div class="hero__scrim" aria-hidden="true"></div>
 
     <div class="container hero__inner">

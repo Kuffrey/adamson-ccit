@@ -16,120 +16,6 @@ $certs = StudentCertification::getAll();
   <title>Student Certifications | AdU-CCIT</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css"/>
   
-  <style>
-    /* Consistent container padding */
-    .content > .container { 
-      padding: 16px 20px clamp(24px,5vw,48px); 
-    }
-    
-    /* Professional grid layout */
-    .prog__grid {
-      display: grid;
-      gap: 20px;
-      grid-template-columns: repeat(3,1fr);
-      padding: 20px 0 clamp(32px,6vw,56px);
-    }
-    
-    @media (max-width:960px) {
-      .prog__grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 18px;
-      }
-    }
-    
-    @media (max-width:580px) {
-      .prog__grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
-      }
-    }
-    
-    /* Enhanced card styling */
-    .prog__card {
-      border: 1px solid var(--edgec);
-      border-radius: 16px;
-      background: #fff;
-      overflow: hidden;
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
-    
-    .prog__card:hover {
-      box-shadow: 0 12px 32px rgba(0,0,0,0.12);
-      transform: translateY(-4px);
-      border-color: #d1d5db;
-    }
-    
-    /* Card header */
-    .prog__head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 24px 24px 16px;
-      border-bottom: 1px solid #f3f4f6;
-    }
-    
-    .prog__title {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 900;
-      color: #0b234c;
-      line-height: 1.3;
-    }
-    
-    /* Certification type badges */
-    .cert__type {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 12px;
-      border-radius: 20px;
-      font: 700 11px/1 "Inter",system-ui;
-      letter-spacing: .05em;
-      text-transform: uppercase;
-      border: 1px solid var(--edgec);
-      background: #f8fafc;
-      color: #0b234c;
-      white-space: nowrap;
-    }
-    
-    .cert__type--it {
-      background: #dcfce7;
-      border-color: #bbf7d0;
-      color: #15803d;
-    }
-    
-    .cert__type--web {
-      background: #fef3c7;
-      border-color: #fcd34d;
-      color: #92400e;
-    }
-    
-    /* Card content */
-    .prog__summary {
-      padding: 0 24px 16px;
-      margin: 0;
-      color: #374151;
-      line-height: 1.6;
-    }
-    
-    /* Card footer */
-    .prog__footer {
-      padding: 16px 24px 24px;
-      border-top: 1px solid #f3f4f6;
-      background: #fafbfc;
-    }
-    
-    .prog__meta {
-      margin: 0 0 12px;
-      color: #6b7280;
-      font-size: 13px;
-      font-weight: 500;
-      padding: 0 24px;
-    }
-  </style>
 </head>
 <body>
 
@@ -183,7 +69,7 @@ $certs = StudentCertification::getAll();
         <article class="prog__card">
           <header class="prog__head">
             <h3 class="prog__title"><?= e($cert['name']) ?></h3>
-            <span class="cert__type cert__type--<?= strtolower($cert['category'] ?? 'it') ?>"><?= e($cert['category'] ?? 'IT') ?></span>
+
           </header>
           <p class="prog__summary"><?= e($cert['description']) ?></p>
           <footer class="prog__footer">

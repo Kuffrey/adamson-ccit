@@ -64,12 +64,6 @@ $extAttr = function ($flag) { return !empty($flag) ? ' target="_blank" rel="noop
     </div>
   </nav>
 
-  <style>
-    /* Consistent container padding */
-    .content > .container { padding: 16px 20px clamp(24px,5vw,48px); }
-    .prog__grid { padding: 16px 0 clamp(32px,6vw,56px); }
-  </style>
-
   <!-- ============ PROGRAMS GRID (dynamic first, legacy fallback) ============ -->
   <section class="content" aria-labelledby="programs-heading">
     <div class="container">
@@ -81,15 +75,15 @@ $extAttr = function ($flag) { return !empty($flag) ? ' target="_blank" rel="noop
             <article class="prog__card" <?= !empty($c['slug']) ? 'id="'.e($c['slug']).'"' : '' ?>>
               <!-- Header -->
               <div class="prog__head">
-                <?php if (!empty($c['badge'])): ?>
-                  <span class="badge"><?= e($c['badge']) ?></span>
-                <?php endif; ?>
                 <h3 class="prog__title">
                   <?= e($c['title']) ?>
                   <?php if (!empty($c['muted'])): ?>
                     <span class="prog__muted"><?= e($c['muted']) ?></span>
                   <?php endif; ?>
                 </h3>
+                <?php if (!empty($c['badge'])): ?>
+                  <span class="badge"><?= e($c['badge']) ?></span>
+                <?php endif; ?>
               </div>
 
               <!-- Summary -->

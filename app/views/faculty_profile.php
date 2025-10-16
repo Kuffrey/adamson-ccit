@@ -70,7 +70,7 @@ $faculty = FacultyProfile::getAll();
       </div>
       
       <form class="nsearch" role="search" aria-label="Search directory">
-        <input id="fQuery" type="search" placeholder="Search name, degree, title…" aria-label="Search directory"/>
+        <input id="fQuery" type="search" placeholder="Search…" aria-label="Search directory"/>
         <button class="btn btn--solid" type="submit"></button>
       </form>
     </div>

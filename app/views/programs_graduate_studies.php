@@ -51,12 +51,6 @@ $cards = ProgramsGraduateSettings::getCards($settings, false); // Frontend mode 
     </div>
   </nav>
 
-  <style>
-    /* Consistent container padding */
-    .page-grad .content > .container { padding: 16px 20px clamp(24px,5vw,48px); }
-    .page-grad .prog__grid { padding: 16px 0 clamp(32px,6vw,56px); }
-  </style>
-
   <!-- ============ PROGRAMS GRID ============ -->
   <section class="content" aria-labelledby="grad-heading">
     <div class="container">
@@ -68,15 +62,15 @@ $cards = ProgramsGraduateSettings::getCards($settings, false); // Frontend mode 
             <article class="prog__card" <?= $card['slug'] ? 'id="' . e($card['slug']) . '"' : '' ?>>
               <!-- Header -->
               <div class="prog__head">
-                <?php if ($card['badge']): ?>
-                  <span class="badge"><?= e($card['badge']) ?></span>
-                <?php endif; ?>
                 <h3 class="prog__title">
                   <?= e($card['title']) ?>
                   <?php if ($card['muted']): ?>
                     <span class="prog__muted"><?= e($card['muted']) ?></span>
                   <?php endif; ?>
                 </h3>
+                <?php if ($card['badge']): ?>
+                  <span class="badge"><?= e($card['badge']) ?></span>
+                <?php endif; ?>
               </div>
 
               <!-- Summary -->
@@ -118,9 +112,6 @@ $cards = ProgramsGraduateSettings::getCards($settings, false); // Frontend mode 
                     <a class="ext" href="<?= e($card['cur_url']) ?>"<?= $card['cur_ext'] ? ' target="_blank" rel="noopener"' : '' ?>>Curriculum</a>
                   <?php endif; ?>
                 </div>
-                <?php if ($card['apply']): ?>
-                  <a class="btn btn--solid" href="<?= e($card['apply']) ?>">Apply</a>
-                <?php endif; ?>
               </div>
             </article>
           <?php endforeach; ?>

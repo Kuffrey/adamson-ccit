@@ -121,7 +121,7 @@ $cats = [
         <input type="hidden" name="page" value="announcements">
         <input type="hidden" name="cat" value="<?= e($cat) ?>">
         <input type="hidden" name="year" value="<?= e($year) ?>">
-        <input id="aQuery" name="q" type="search" value="<?= e($q) ?>" placeholder="Search announcements…" aria-label="Search announcements" />
+        <input id="aQuery" name="q" type="search" value="<?= e($q) ?>" placeholder="Search…" aria-label="Search announcements" />
         <button class="btn btn--solid" type="submit"></button>
       </form>
     </div>
