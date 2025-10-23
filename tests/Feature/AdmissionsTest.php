@@ -6,8 +6,8 @@ require_once __DIR__ . '/../../app/models/AdmissionFreshmanSettings.php'; // Fre
 require_once __DIR__ . '/../../app/models/AdmissionTransfereeSettings.php'; // Transferee admissions model
 require_once __DIR__ . '/../../app/models/AdmissionGraduateSettings.php'; // Graduate admissions model
 
-// Helper: Escape HTML for output
-function e(string $s): string {
+// Helper: Escape HTML for output (renamed to avoid conflict with Laravel's e() function)
+function escapeHtml(string $s): string {
 	return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }
 
@@ -58,7 +58,7 @@ test('freshman sidebar image URL is a string and safe', function () {
 	$settings = AdmissionFreshmanSettings::getSettings();
 	$url = $settings['sidebar_image_url'] ?? '';
 	expect($url)->toBeString();
-	expect(e($url))->not->toContain('<');
+	expect(escapeHtml($url))->not->toContain('<');
 });
 
 // Test: Transferee sidebar image URL is a string and safe
@@ -66,7 +66,7 @@ test('transferee sidebar image URL is a string and safe', function () {
 	$settings = AdmissionTransfereeSettings::getSettings();
 	$url = $settings['sidebar_image_url'] ?? '';
 	expect($url)->toBeString();
-	expect(e($url))->not->toContain('<');
+	expect(escapeHtml($url))->not->toContain('<');
 });
 
 // Test: Freshman CTA fields are present and non-empty

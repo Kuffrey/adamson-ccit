@@ -35,9 +35,9 @@ function createTestUGCard(array $overrides = []): string {
     return $data['title'];
 }
 
-// HTML escape helper (for completeness, not used in tests)
-function e(string $s): string {
-    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+// HTML escape helper (renamed to avoid conflict with Laravel's e() function)
+function escapeHtml(string $s): string {
+	return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }
 
 // ========== PROGRAMS FEATURE TESTS ==========

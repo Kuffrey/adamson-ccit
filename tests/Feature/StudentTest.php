@@ -17,8 +17,8 @@ require_once __DIR__ . '/../../app/models/StudentTestimonialsPageSettings.php'; 
 require_once __DIR__ . '/../../app/models/StudentTestimonial.php'; // Student testimonial data
 
 
-// Helper function: Escape HTML for output (for safety in templates)
-function e(string $s): string {
+// Helper function: Escape HTML for output (renamed to avoid conflict with Laravel's e() function)
+function escapeHtml(string $s): string {
 	return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }
 

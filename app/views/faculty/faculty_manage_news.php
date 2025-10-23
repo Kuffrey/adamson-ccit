@@ -443,8 +443,8 @@ function map_status_for_badge($statusRaw) {
             <div class="col-md-8">
               <div class="mb-3">
                 <label for="title" class="form-label">Article Title <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="title" name="title" required maxlength="255" placeholder="Enter article title">
-                <small class="form-text text-muted">Maximum 255 characters</small>
+                <input type="text" class="form-control" id="title" name="title" required maxlength="100" placeholder="Enter article title">
+                <small class="form-text text-muted">Recommended: 100 characters or less</small>
               </div>
               <div class="mb-3">
                 <label for="content" class="form-label">Article Content <span class="text-danger">*</span></label>
@@ -499,8 +499,8 @@ function map_status_for_badge($statusRaw) {
             <div class="col-md-8">
               <div class="mb-3">
                 <label for="edit_news_title" class="form-label">Article Title <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" id="edit_news_title" name="title" required maxlength="255" placeholder="Enter article title">
-                <small class="form-text text-muted">Maximum 255 characters</small>
+                <input type="text" class="form-control" id="edit_news_title" name="title" required maxlength="100" placeholder="Enter article title">
+                <small class="form-text text-muted">Recommended: 100 characters or less</small>
               </div>
               <div class="mb-3">
                 <label for="edit_news_content" class="form-label">Article Content <span class="text-danger">*</span></label>

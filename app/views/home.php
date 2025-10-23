@@ -1,3 +1,13 @@
+<?php
+require_once __DIR__ . '/../models/Event.php';
+
+// Fetch only published events for the homepage
+$events = Event::list('published');
+
+// Ensure global variable is accessible
+global $navigationLinks;
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -100,15 +110,14 @@
   <div class="container">
     <div class="spotlight__inner">
       <div class="spotlight__media">
-        <img src="<?= htmlspecialchars($spotlight['image'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
-             alt="<?= htmlspecialchars($spotlight['image_alt'] ?? '', ENT_QUOTES, 'UTF-8') ?>" />
         <?php if (!empty($spotlight['video_url'])): ?>
-        <a class="spotlight__play" aria-label="Play video"
-           href="<?= htmlspecialchars($spotlight['video_url'], ENT_QUOTES, 'UTF-8') ?>">
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <path fill="currentColor" d="M8 5v14l11-7z"/>
-          </svg>
-        </a>
+          <video controls class="spotlight__video">
+            <source src="<?= htmlspecialchars($spotlight['video_url'], ENT_QUOTES, 'UTF-8') ?>" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        <?php else: ?>
+          <img src="<?= htmlspecialchars($spotlight['image'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
+               alt="<?= htmlspecialchars($spotlight['image_alt'] ?? '', ENT_QUOTES, 'UTF-8') ?>" />
         <?php endif; ?>
       </div>
 
@@ -228,334 +237,193 @@
         <aside class="events">
           <h3 class="events__title">Upcoming Events</h3>
           <ul class="events__list" role="list">
-            <?php foreach (($events ?? []) as $index => $event): 
-              $eventId = !empty($event['id']) ? $event['id'] : 'event-' . $index;
-            ?>
-            <li class="event">
-              <time datetime="<?= htmlspecialchars($event['date'], ENT_QUOTES, 'UTF-8') ?>" class="event__date"><span><?= htmlspecialchars($event['day'], ENT_QUOTES, 'UTF-8') ?></span><?= htmlspecialchars($event['month'], ENT_QUOTES, 'UTF-8') ?></time>
-              <div class="event__body">
-                <a href="#" class="event-link" data-event-id="<?= htmlspecialchars($eventId, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($event['title'], ENT_QUOTES, 'UTF-8') ?></a>
-                <small><?= htmlspecialchars($event['details'], ENT_QUOTES, 'UTF-8') ?></small>
-              </div>
-            </li>
-            <?php endforeach; ?>
+            <?php foreach (($events ?? []) as $index => $event):
+  if (!empty($event['is_draft']) && $event['is_draft']) continue;
+
+  // Stable DOM id used by both the link and modal
+  $eventDomId = !empty($event['id']) ? (string)$event['id'] : 'x' . (string)$index;
+
+  // Extract day and month from start_at
+  $startDate = !empty($event['start_at']) ? new DateTime($event['start_at']) : null;
+  $day   = $startDate ? $startDate->format('d') : 'N/A';
+  $month = $startDate ? $startDate->format('M') : 'N/A';
+?>
+<li class="event">
+  <time datetime="<?= htmlspecialchars($event['start_at'] ?? '', ENT_QUOTES, 'UTF-8') ?>" class="event__date">
+    <span><?= htmlspecialchars($day, ENT_QUOTES, 'UTF-8') ?></span>
+    <?= htmlspecialchars($month, ENT_QUOTES, 'UTF-8') ?>
+  </time>
+  <div class="event__body">
+    <a href="#" class="event-link" data-event-id="<?= htmlspecialchars($eventDomId, ENT_QUOTES, 'UTF-8') ?>">
+      <?= htmlspecialchars($event['title'] ?? 'Untitled Event', ENT_QUOTES, 'UTF-8') ?>
+    </a>
+    <small><?= htmlspecialchars($event['details'] ?? '', ENT_QUOTES, 'UTF-8') ?></small>
+  </div>
+</li>
+<?php endforeach; ?>
+
           </ul>
         </aside>
       </div>
     </div>
   </section>
 
+  <!-- ========================= NAVIGATION LINKS ========================= -->
+  <nav class="navigation">
+    <ul class="navigation__list">
+      <?php foreach (($navigationLinks ?? []) as $link): ?>
+        <li class="navigation__item">
+          <a href="<?= htmlspecialchars($link['url'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($link['label'], ENT_QUOTES, 'UTF-8') ?></a>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+  </nav>
+
   <!-- ========================= FINAL CTA ========================= -->
   <section class="cta">
     <div class="container">
-    <div class="container cta__inner">
-      <div>
-        <h2><?= htmlspecialchars($cta['title'] ?? '', ENT_QUOTES, 'UTF-8') ?></h2>
-        <p><?= htmlspecialchars($cta['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+      <div class="container cta__inner">
+        <div>
+          <h2><?= htmlspecialchars($cta['title'] ?? '', ENT_QUOTES, 'UTF-8') ?></h2>
+          <p><?= htmlspecialchars($cta['description'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
+        </div>
+        <a class="btn btn--solid" href="<?= htmlspecialchars($cta['action_url'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+          <?= htmlspecialchars($cta['action_label'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+        </a>
       </div>
-      <a class="btn btn--solid" href="<?= htmlspecialchars($cta['action_url'] ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($cta['action_label'] ?? '', ENT_QUOTES, 'UTF-8') ?></a>
-    </div>
     </div>
   </section>
 </main>
 
-<!-- Event Modals -->
-<?php foreach (($events ?? []) as $index => $event): 
-  $eventId = !empty($event['id']) ? $event['id'] : 'event-' . $index;
+<!-- Event Modals — reuse Announcement modal styles -->
+<?php foreach (($events ?? []) as $index => $event):
+  if (!empty($event['is_draft']) && $event['is_draft']) continue;
+
+  $eventDomId  = !empty($event['id']) ? (string)$event['id'] : 'x' . (string)$index;
+  $title       = htmlspecialchars($event['title'] ?? 'Untitled', ENT_QUOTES, 'UTF-8');
+  $description = nl2br(htmlspecialchars($event['description'] ?? '', ENT_QUOTES, 'UTF-8'));
+  $category    = htmlspecialchars(ucfirst($event['category'] ?? 'General'), ENT_QUOTES, 'UTF-8');
+  $image       = htmlspecialchars($event['image_url'] ?? '/adamson-ccit/public/assets/images/news/sample5.jpg', ENT_QUOTES, 'UTF-8');
+  $location    = htmlspecialchars($event['location'] ?? 'TBA', ENT_QUOTES, 'UTF-8');
+  $startRaw    = $event['start_at'] ?? '';
+  $formattedDate = $startRaw ? date('F j, Y', strtotime($startRaw)) : 'TBA';
 ?>
-<div id="event-modal-<?= htmlspecialchars($eventId, ENT_QUOTES, 'UTF-8') ?>" class="event-modal" style="display: none;">
-  <div class="event-modal-backdrop" onclick="closeEventModal()"></div>
-  <div class="event-modal-content">
-    <div class="event-modal-header">
-      <h3><?= htmlspecialchars($event['title'], ENT_QUOTES, 'UTF-8') ?></h3>
-      <button class="event-modal-close" onclick="closeEventModal()" aria-label="Close">&times;</button>
-    </div>
-    <div class="event-modal-body">
-      <div class="event-date-time">
-        <div class="event-date">
-          <span class="event-day"><?= htmlspecialchars($event['day'], ENT_QUOTES, 'UTF-8') ?></span>
-          <span class="event-month"><?= htmlspecialchars($event['month'], ENT_QUOTES, 'UTF-8') ?></span>
-        </div>
-        <div class="event-time">
-          <?php if (!empty($event['start_time'])): ?>
-            <p><strong>Time:</strong> <?= htmlspecialchars($event['start_time'], ENT_QUOTES, 'UTF-8') ?>
-            <?= !empty($event['end_time']) ? ' - ' . htmlspecialchars($event['end_time'], ENT_QUOTES, 'UTF-8') : '' ?></p>
-          <?php endif; ?>
-        </div>
+<div id="event-modal-<?= htmlspecialchars($eventDomId, ENT_QUOTES, 'UTF-8') ?>" class="modal announcement-modal" role="dialog" aria-modal="true" style="display:none;">
+  <div class="modal-backdrop announcement-modal-backdrop"></div>
+  <div class="modal-content announcement-modal-content">
+    <div class="modal-header announcement-modal-header">
+      <div class="modal-header-info announcement-header-info">
+        <span class="modal-category announcement-category"><?= $category ?></span>
+        <span class="modal-date announcement-date"><?= htmlspecialchars($formattedDate, ENT_QUOTES, 'UTF-8') ?></span>
       </div>
-      <?php if (!empty($event['details'])): ?>
-        <p><strong>Location:</strong> <?= htmlspecialchars($event['details'], ENT_QUOTES, 'UTF-8') ?></p>
-      <?php endif; ?>
-      <?php if (!empty($event['description'])): ?>
-        <div class="event-description">
-          <strong>Description:</strong>
-          <p><?= nl2br(htmlspecialchars($event['description'], ENT_QUOTES, 'UTF-8')) ?></p>
-        </div>
-      <?php else: ?>
-        <div class="event-description">
-          <p>More details about this event will be available soon.</p>
-        </div>
-      <?php endif; ?>
+      <button class="modal-close announcement-modal-close" aria-label="Close" data-modal-focus>&times;</button>
     </div>
-    <div class="event-modal-footer">
-      <button class="btn btn--solid" onclick="closeEventModal()">Close</button>
+
+    <div class="modal-body announcement-modal-body">
+      <h3><?= $title ?></h3>
+      <?php if ($image): ?>
+        <img src="<?= $image ?>" alt="<?= $title ?>" class="announcement-image">
+      <?php endif; ?>
+      <?php if ($location): ?>
+        <p class="announcement-excerpt"><strong>📍 Location:</strong> <?= $location ?></p>
+      <?php endif; ?>
+      <div class="announcement-content"><?= $description ?: '<p>More details about this event will be available soon.</p>' ?></div>
+    </div>
+
+    <div class="modal-footer announcement-modal-footer">
+      <button class="btn btn--solid" onclick="closeModal()">Close</button>
     </div>
   </div>
 </div>
 <?php endforeach; ?>
 
-<!-- Event Modal Styles -->
-<style>
-.event-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 9999;
-  background: rgba(0, 0, 0, 0.6);
-  animation: fadeIn 0.3s ease;
-}
-
-.event-modal-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.event-modal-content {
-  position: relative;
-  background: white;
-  margin: 5% auto;
-  padding: 0;
-  width: 90%;
-  max-width: 500px;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  animation: slideIn 0.3s ease;
-}
-
-.event-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.event-modal-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-  color: #1e40af;
-}
-
-.event-modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #6b7280;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.2s;
-}
-
-.event-modal-close:hover {
-  background: #f3f4f6;
-}
-
-.event-modal-body {
-  padding: 1.5rem;
-}
-
-.event-date-time {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-.event-date {
-  text-align: center;
-  background: #1e40af;
-  color: white;
-  padding: 0.5rem;
-  border-radius: 8px;
-  min-width: 60px;
-}
-
-.event-day {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: bold;
-  line-height: 1;
-}
-
-.event-month {
-  display: block;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.event-time {
-  flex: 1;
-}
-
-.event-description {
-  margin-top: 1rem;
-}
-
-.event-modal-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
-  text-align: right;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideIn {
-  from { transform: translateY(-50px) scale(0.9); opacity: 0; }
-  to { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-@media (max-width: 768px) {
-  .event-modal-content {
-    margin: 10% auto;
-    width: 95%;
-  }
-  
-  .event-date-time {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-</style>
 
 </body>
 <script>
-// Event Modal Functions
-function openEventModal(eventId) {
-  console.log('Opening modal for event ID:', eventId);
-  const modal = document.getElementById('event-modal-' + eventId);
-  if (modal) {
-    modal.style.display = 'block';
-    modal.style.opacity = '1';
-    modal.style.visibility = 'visible';
+/* ========================= MODALS (Unified w/ Announcements) ========================= */
+(function () {
+  window.openModal = function (id) {
+    var m = document.getElementById(id);
+    if (!m) return;
+    m.classList.add('modal--open');
+    m.style.display = 'block';
+    // lock scroll
+    document.body.dataset.modalScrollLock = document.body.style.overflow || '';
     document.body.style.overflow = 'hidden';
-    console.log('Modal opened successfully');
-    console.log('Modal element:', modal);
-    console.log('Modal computed style:', window.getComputedStyle(modal));
-  } else {
-    console.error('Modal not found for ID:', eventId);
-    // List all available modals for debugging
-    const allModals = document.querySelectorAll('[id^="event-modal-"]');
-    console.log('Available modals:', Array.from(allModals).map(m => m.id));
-  }
-}
+    // focus something interactable
+    var f = m.querySelector('[data-modal-focus], .modal-close, a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])');
+    if (f) { try { f.focus(); } catch(_) {} }
+  };
 
-function closeEventModal() {
-  const modals = document.querySelectorAll('.event-modal');
-  modals.forEach(modal => {
-    modal.style.display = 'none';
+  window.closeModal = function () {
+    document.querySelectorAll('.modal, .announcement-modal').forEach(function (m) {
+      m.classList.remove('modal--open');
+      m.style.display = 'none';
+    });
+    // restore scroll
+    document.body.style.overflow = document.body.dataset.modalScrollLock || '';
+  };
+
+  // Backdrop & close buttons
+  document.addEventListener('click', function (e) {
+    if (e.target.matches('.modal-backdrop, .announcement-modal-backdrop')) closeModal();
+    if (e.target.matches('.modal-close, .announcement-modal-close')) { e.preventDefault(); closeModal(); }
   });
-  document.body.style.overflow = '';
-}
 
-// Set up event listeners for event links
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('DOM Content Loaded - Setting up event listeners');
-  
-  // Event modal setup
-  const eventLinks = document.querySelectorAll('.event-link');
-  console.log('Found event links:', eventLinks.length);
-  
-  const allModals = document.querySelectorAll('[id^="event-modal-"]');
-  console.log('Found event modals:', allModals.length);
-  console.log('Modal IDs:', Array.from(allModals).map(m => m.id));
-  
-  eventLinks.forEach((link, index) => {
-    const eventId = link.getAttribute('data-event-id');
-    console.log(`Event link ${index}: ID = ${eventId}`);
-    
-    link.addEventListener('click', function(e) {
-      e.preventDefault();
-      console.log('Event link clicked, event ID:', eventId);
-      if (eventId) {
-        openEventModal(eventId);
-      }
+  // ESC key
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // Wire up homepage event links to their modals
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.event-link').forEach(function (link) {
+      link.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        var id = this.getAttribute('data-event-id');
+        if (id) openModal('event-modal-' + id);
+      });
     });
   });
+})();
 
-  // Smooth scrolling for internal links (like #partners)
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-      const href = this.getAttribute('href');
-      const targetId = href.substring(1);
-      const targetElement = document.getElementById(targetId);
-      
-      console.log('Anchor clicked:', href);
-      console.log('Target ID:', targetId);
-      console.log('Target element found:', !!targetElement);
-      
-      if (targetElement) {
-        e.preventDefault();
-        
-        // Calculate offset for sticky headers if any
-        const offset = 100; // Increased offset for better visibility
-        const elementPosition = targetElement.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset - offset;
+/* ========================= SMOOTH SCROLL (anchors like #partners) ========================= */
+(function () {
+  function smoothTo(target) {
+    var offset = 100; // leave room for sticky header
+    var rect = target.getBoundingClientRect();
+    var y = rect.top + window.pageYOffset - offset;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+    // subtle highlight
+    target.style.transition = 'all 0.5s ease';
+    target.style.transform = 'scale(1.01)';
+    target.style.boxShadow = '0 12px 40px rgba(0, 128, 201, 0.2)';
+    target.style.backgroundColor = 'rgba(0, 128, 201, 0.02)';
+    setTimeout(function () {
+      target.style.transform = '';
+      target.style.boxShadow = '';
+      target.style.backgroundColor = '';
+    }, 1500);
+  }
 
-        console.log('Scrolling to position:', offsetPosition);
-
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        });
-        
-        // Add a highlight effect to the target section
-        targetElement.style.transition = 'all 0.5s ease';
-        targetElement.style.transform = 'scale(1.01)';
-        targetElement.style.boxShadow = '0 12px 40px rgba(0, 128, 201, 0.2)';
-        targetElement.style.backgroundColor = 'rgba(0, 128, 201, 0.02)';
-        
-        setTimeout(() => {
-          targetElement.style.transform = '';
-          targetElement.style.boxShadow = '';
-          targetElement.style.backgroundColor = '';
-        }, 1500);
-      } else {
-        console.error('Target element not found for:', targetId);
-        // List all available IDs for debugging
-        const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
-        console.log('Available IDs:', allIds);
-      }
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+      anchor.addEventListener('click', function (e) {
+        var href = this.getAttribute('href');
+        if (!href || href === '#') return;
+        var id = href.slice(1);
+        var target = document.getElementById(id);
+        if (target) {
+          e.preventDefault();
+          smoothTo(target);
+        }
+      });
     });
   });
-});
+})();
 
-// Close modal on escape key
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    closeEventModal();
-  }
-});
-
-/* Partners carousel: buttons, keyboard, drag/swipe (with threshold) + details panel (neutral default) */
-(function(){
+/* ========================= PARTNERS CAROUSEL ========================= */
+(function () {
   const viewport = document.querySelector('.pc__viewport');
   const track    = document.querySelector('.pc__track');
   const frames   = Array.from(document.querySelectorAll('.pc__frame'));
@@ -566,10 +434,10 @@ document.addEventListener('keydown', function(e) {
   const desc  = document.querySelector('.pcd__desc');
   const link  = document.querySelector('.pcd__link');
 
-  if(!viewport || !track || !frames.length || !title || !desc || !link) return;
+  if (!viewport || !track || !frames.length || !title || !desc || !link) return;
 
-  // a11y: keyboard-activatable
-  frames.forEach(f => { f.tabIndex = 0; f.setAttribute('aria-pressed','false'); });
+  // a11y: make frames keyboard-activatable
+  frames.forEach(f => { f.tabIndex = 0; f.setAttribute('aria-pressed', 'false'); });
 
   const gapPx = () => parseFloat(getComputedStyle(track).gap || getComputedStyle(track).columnGap || 24);
   const itemWidth = () => (track.querySelector('.pc__item')?.getBoundingClientRect().width || 160);
@@ -578,91 +446,95 @@ document.addEventListener('keydown', function(e) {
     return step * (itemWidth() + gapPx());
   };
 
-  function updateButtons(){
+  function updateButtons() {
     const max = viewport.scrollWidth - viewport.clientWidth - 1;
     prevBtn.disabled = viewport.scrollLeft <= 0;
     nextBtn.disabled = viewport.scrollLeft >= max;
   }
 
-  function setDetails(fromFrame){
+  function setDetails(fromFrame) {
     const name = fromFrame?.dataset.name || 'Select a partner to learn more';
     const d    = fromFrame?.dataset.desc || 'Click a logo to see a short description here.';
     const url  = fromFrame?.dataset.url  || '';
 
     title.textContent = name;
     desc.textContent  = d;
-    if (url && url !== '#'){ link.href = url; link.hidden = false; }
+    if (url && url !== '#') { link.href = url; link.hidden = false; }
     else { link.hidden = true; }
 
-    frames.forEach(f => { f.classList.remove('is-selected'); f.setAttribute('aria-pressed','false'); });
-    if (fromFrame){ fromFrame.classList.add('is-selected'); fromFrame.setAttribute('aria-pressed','true'); }
+    frames.forEach(f => { f.classList.remove('is-selected'); f.setAttribute('aria-pressed', 'false'); });
+    if (fromFrame) { fromFrame.classList.add('is-selected'); fromFrame.setAttribute('aria-pressed', 'true'); }
   }
 
-  // Buttons
   prevBtn?.addEventListener('click', () => {
-    viewport.scrollBy({left: -pageStep(), behavior:'smooth'});
+    viewport.scrollBy({ left: -pageStep(), behavior: 'smooth' });
     setTimeout(updateButtons, 150);
   });
   nextBtn?.addEventListener('click', () => {
-    viewport.scrollBy({left:  pageStep(), behavior:'smooth'});
+    viewport.scrollBy({ left:  pageStep(), behavior: 'smooth' });
     setTimeout(updateButtons, 150);
   });
 
   // Keyboard on viewport
   viewport.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight'){ e.preventDefault(); nextBtn.click(); }
-    if (e.key === 'ArrowLeft'){  e.preventDefault(); prevBtn.click(); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); nextBtn.click(); }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); prevBtn.click(); }
   });
 
-  // Drag/swipe with click threshold (so taps still click)
-  let isDown=false, dragged=false, startX=0, startScroll=0, pointerId=null;
-  const DRAG_THRESHOLD = 6; // px
+  // Drag/swipe with click threshold
+  let isDown = false, dragged = false, startX = 0, startScroll = 0, pointerId = null;
+  const DRAG_THRESHOLD = 6;
 
   viewport.addEventListener('pointerdown', (e) => {
     isDown = true; dragged = false; pointerId = e.pointerId;
     startX = e.clientX; startScroll = viewport.scrollLeft;
   });
-
   viewport.addEventListener('pointermove', (e) => {
-    if(!isDown) return;
+    if (!isDown) return;
     const dx = e.clientX - startX;
-    if(!dragged && Math.abs(dx) > DRAG_THRESHOLD){
+    if (!dragged && Math.abs(dx) > DRAG_THRESHOLD) {
       dragged = true;
-      try { viewport.setPointerCapture(pointerId); } catch(_) {}
+      try { viewport.setPointerCapture(pointerId); } catch (_) {}
     }
-    if(dragged){ viewport.scrollLeft = startScroll - dx; }
+    if (dragged) viewport.scrollLeft = startScroll - dx;
   });
-
-  function endDrag(e){
-    if(isDown && !dragged){
+  function endDrag(e) {
+    if (isDown && !dragged) {
       const frame = e?.target?.closest?.('.pc__frame');
-      if(frame) setDetails(frame);
+      if (frame) setDetails(frame);
     }
     isDown = false; dragged = false;
-    try { viewport.releasePointerCapture(pointerId); } catch(_) {}
+    try { viewport.releasePointerCapture(pointerId); } catch (_) {}
     setTimeout(updateButtons, 120);
   }
   viewport.addEventListener('pointerup', endDrag);
   viewport.addEventListener('pointercancel', endDrag);
 
-  // Normal click + keyboard on cards
+  // Click + keyboard on cards
   frames.forEach(f => {
     f.addEventListener('click', () => setDetails(f));
     f.addEventListener('keydown', (e) => {
-      if(e.key === 'Enter' || e.key === ' '){
+      if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         setDetails(f);
       }
     });
   });
 
-  // Init (neutral default)
+  // Init
   updateButtons();
   setDetails(null);
   window.addEventListener('resize', updateButtons);
-  viewport.addEventListener('scroll', updateButtons, {passive:true});
+  viewport.addEventListener('scroll', updateButtons, { passive: true });
 })();
 </script>
 
+<?php
+// Ensure global variable is accessible
+global $navigationLinks;
+
+// Debugging statement to log the value of $navigationLinks
+error_log('Navigation Links: ' . print_r($navigationLinks, true));
+?>
 
 </html>

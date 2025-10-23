@@ -1,8 +1,7 @@
 <?php
 require_once __DIR__ . '/../models/Announcement.php';
-if (!function_exists('e')) {
-    function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
-}
+
+if (!function_exists('e')) { function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); } }
 if (!function_exists('url_with')) {
     function url_with(array $params): string {
         $base = '/adamson-ccit/public/index.php';
@@ -56,12 +55,7 @@ $cats = [
 <body>
 <main>
 
-  <style>
-    /* Consistent container padding */
-    .content > .container { padding: 16px 20px clamp(24px,5vw,48px); }
-    .agrid { padding: 16px 0 clamp(32px,6vw,56px); }
-  </style>
-
+  <!-- SUB-HERO -->
   <section class="subhero">
     <div class="subhero__media" aria-hidden="true">
       <img src="/adamson-ccit/public/assets/images/hero-campus.jpg" alt="Adamson University campus exterior">
@@ -70,12 +64,14 @@ $cats = [
 
     <div class="container hero__inner">
       <div class="hero__copy">
-      <span class="hero__eyebrow">CCIT Updates</span>
-      <h1 class="subhero__title">Announcements</h1>
-      <p class="hero__lead">Official CCIT advisories, deadlines, and important updates.</p>
+        <span class="hero__eyebrow">CCIT Updates</span>
+        <h1 class="subhero__title">Announcements</h1>
+        <p class="hero__lead">Official CCIT advisories, deadlines, and important updates.</p>
+      </div>
     </div>
   </section>
 
+  <!-- SUBNAV -->
   <nav class="subnav" aria-label="News sub-navigation">
     <div class="container">
       <ul class="subnav__list" role="list">
@@ -86,6 +82,7 @@ $cats = [
     </div>
   </nav>
 
+  <!-- FILTER BAR -->
   <section class="nbar">
     <div class="container nbar__inner">
       <div class="nbar__left">
@@ -127,46 +124,38 @@ $cats = [
     </div>
   </section>
 
-  <section>
+  <!-- ANNOUNCEMENTS GRID -->
+  <section class="nlist">
     <div class="container">
-      <?php
-        $catLabel = $cats[$cat] ?? 'All';
-        $yrLabel  = ($year==='all') ? 'all years' : $year;
-        $countTxt = $total === 0 ? 'No announcements found' : "Showing {$total} result" . ($total!==1?'s':'');
-      ?>
-      <div id="aCount" class="ncount"><?= e($countTxt) ?> • <?= e($catLabel) ?> • <?= e($yrLabel) ?></div>
+      <div id="aCount" class="rcount">Loading...</div>
 
       <div id="aGrid" class="cards">
-        <?php if (!$items): ?>
-          <div class="nempty" role="status">No announcements match your filters.</div>
-        <?php else: foreach ($items as $row):
-          $id    = (int)($row['id'] ?? 0);
-          $title = (string)($row['title'] ?? 'Untitled');
+        <?php foreach ($items as $row):
+          $id     = (int)($row['id'] ?? 0);
+          $title  = (string)($row['title'] ?? 'Untitled');
           $excerpt= (string)($row['excerpt'] ?? '');
-          $catKey= strtolower((string)($row['category'] ?? 'general'));
-          $img   = (string)($row['image_url'] ?? '/adamson-ccit/public/assets/images/news/sample3.jpg');
-          $date  = (string)($row['date'] ?? $row['published_at'] ?? '');
-          $viewUrl= '/adamson-ccit/public/index.php?page=announcement_view&id='.$id;
+          $catKey = strtolower((string)($row['category'] ?? 'general'));
+          $img    = (string)($row['image_url'] ?? '/adamson-ccit/public/assets/images/news/sample3.jpg');
+          $date   = (string)($row['date'] ?? $row['published_at'] ?? '');
         ?>
         <article class="n" data-cat="<?= e($catKey) ?>" data-year="<?= e(substr($date,0,4) ?: '') ?>">
-          <div class="n__media" onclick="openAnnouncementModal('<?= e($id) ?>')" style="cursor: pointer;">
+          <a class="n__media" href="#" onclick="openModal('announcement-modal-<?= e($id) ?>'); return false;">
             <img src="<?= e($img) ?>" alt="<?= e($title) ?>">
             <span class="chip chip--gray"><?= e(ucfirst($catKey)) ?></span>
-          </div>
+          </a>
           <div class="n__body">
-            <h3 class="n__title"><a href="#" onclick="openAnnouncementModal('<?= e($id) ?>')"><?= e($title) ?></a></h3>
+            <h3 class="n__title"><a href="#" onclick="openModal('announcement-modal-<?= e($id) ?>'); return false;"><?= e($title) ?></a></h3>
             <?php if ($excerpt): ?><p class="n__excerpt"><?= e($excerpt) ?></p><?php endif; ?>
             <div class="n__meta">
-              <?php if ($date): ?>
-                <time datetime="<?= e($date) ?>"><?= e(date('M j, Y', strtotime($date))) ?></time>
-              <?php endif; ?>
+              <?php if ($date): ?><time datetime="<?= e($date) ?>"><?= e(date('M j, Y', strtotime($date))) ?></time><?php endif; ?>
             </div>
           </div>
         </article>
-        <?php endforeach; endif; ?>
+        <?php endforeach; ?>
       </div>
 
-      <!-- Pagination -->
+      <div id="aEmpty" class="nempty" hidden>No announcements match your filters.</div>
+
       <?php
         $prevUrl = url_with(['cat'=>$cat,'year'=>$year,'q'=>$q?:null,'p'=>max(1,$page-1)]);
         $nextUrl = url_with(['cat'=>$cat,'year'=>$year,'q'=>$q?:null,'p'=>min($pages,$page+1)]);
@@ -180,219 +169,141 @@ $cats = [
   </section>
 </main>
 
-<!-- Announcement Modals -->
-<?php foreach ($items as $row): 
+<!-- Modals (use unified modal CSS from style.css) -->
+<?php foreach ($items as $row):
   $id = (int)($row['id'] ?? 0);
   $title = (string)($row['title'] ?? 'Untitled');
-  $content = (string)($row['body'] ?? $row['content'] ?? '');
+  $content = (string)($row['body'] ?? ($row['content'] ?? ''));
   $excerpt = (string)($row['excerpt'] ?? '');
   $catKey = strtolower((string)($row['category'] ?? 'general'));
   $img = (string)($row['image_url'] ?? '/adamson-ccit/public/assets/images/news/sample3.jpg');
   $date = (string)($row['date'] ?? $row['published_at'] ?? '');
   $formattedDate = $date ? date('F j, Y', strtotime($date)) : '';
 ?>
-<div id="announcement-modal-<?= e($id) ?>" class="announcement-modal" style="display: none;">
-  <div class="announcement-modal-backdrop" onclick="closeAnnouncementModal()"></div>
-  <div class="announcement-modal-content">
-    <div class="announcement-modal-header">
-      <div class="announcement-header-info">
-        <span class="announcement-category"><?= e(ucfirst($catKey)) ?></span>
-        <?php if ($formattedDate): ?>
-          <span class="announcement-date"><?= e($formattedDate) ?></span>
-        <?php endif; ?>
+<div id="announcement-modal-<?= e($id) ?>" class="modal announcement-modal" role="dialog" aria-modal="true" style="display:none;">
+  <div class="modal-backdrop announcement-modal-backdrop"></div>
+  <div class="modal-content announcement-modal-content">
+    <div class="modal-header announcement-modal-header">
+      <div class="modal-header-info announcement-header-info">
+        <span class="modal-category announcement-category"><?= e(ucfirst($catKey)) ?></span>
+        <?php if ($formattedDate): ?><span class="modal-date announcement-date"><?= e($formattedDate) ?></span><?php endif; ?>
       </div>
-      <button class="announcement-modal-close" onclick="closeAnnouncementModal()" aria-label="Close">&times;</button>
+      <button class="modal-close announcement-modal-close" aria-label="Close" data-modal-focus>&times;</button>
     </div>
-    <div class="announcement-modal-body">
+    <div class="modal-body announcement-modal-body">
       <h3><?= e($title) ?></h3>
-      <?php if ($img): ?>
-        <img src="<?= e($img) ?>" alt="<?= e($title) ?>" class="announcement-image">
-      <?php endif; ?>
-      <?php if ($excerpt): ?>
-        <p class="announcement-excerpt"><?= e($excerpt) ?></p>
-      <?php endif; ?>
+      <?php if ($img): ?><img src="<?= e($img) ?>" alt="<?= e($title) ?>" class="announcement-image"><?php endif; ?>
+      <?php if ($excerpt): ?><p class="announcement-excerpt"><?= e($excerpt) ?></p><?php endif; ?>
       <div class="announcement-content">
         <?= $content ? nl2br(e($content)) : '<p>No additional content available.</p>' ?>
       </div>
     </div>
-    <div class="announcement-modal-footer">
-      <button class="btn btn--solid" onclick="closeAnnouncementModal()">Close</button>
+    <div class="modal-footer announcement-modal-footer">
+      <button class="btn btn--solid" onclick="closeModal()">Close</button>
     </div>
   </div>
 </div>
 <?php endforeach; ?>
 
-<!-- Announcement Modal Styles -->
-<style>
-.announcement-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 9999;
-  animation: fadeIn 0.3s ease;
-}
-
-.announcement-modal-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-}
-
-.announcement-modal-content {
-  position: relative;
-  background: white;
-  margin: 2% auto;
-  padding: 0;
-  width: 90%;
-  max-width: 700px;
-  max-height: 90vh;
-  border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-  animation: slideIn 0.3s ease;
-  overflow: hidden;
-  z-index: 10000;
-}
-
-.announcement-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f8fafc;
-}
-
-.announcement-header-info {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.announcement-category {
-  background: #1e40af;
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.announcement-date {
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.announcement-modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #6b7280;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.2s;
-}
-
-.announcement-modal-close:hover {
-  background: #f3f4f6;
-}
-
-.announcement-modal-body {
-  padding: 1.5rem;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-.announcement-modal-body h3 {
-  margin: 0 0 1rem 0;
-  font-size: 1.5rem;
-  color: #1e40af;
-  line-height: 1.3;
-}
-
-.announcement-image {
-  width: 100%;
-  max-height: 200px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin: 1rem 0;
-}
-
-.announcement-excerpt {
-  background: #f8fafc;
-  padding: 1rem;
-  border-radius: 8px;
-  border-left: 4px solid #1e40af;
-  margin: 1rem 0;
-  font-style: italic;
-}
-
-.announcement-content {
-  line-height: 1.6;
-  color: #374151;
-}
-
-.announcement-content p {
-  margin-bottom: 1rem;
-}
-
-.announcement-modal-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
-  text-align: right;
-  background: #f8fafc;
-}
-
-@media (max-width: 768px) {
-  .announcement-modal-content {
-    margin: 5% auto;
-    width: 95%;
-    max-height: 95vh;
-  }
-  
-  .announcement-header-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-}
-</style>
+<!-- Reuse the same generic modal JS -->
+<script>
+(function(){
+  window.openModal = function(id){
+    var m = document.getElementById(id);
+    if (!m) return;
+    m.classList.add('modal--open');
+    m.style.display = 'block';
+    document.body.dataset.modalScrollLock = document.body.style.overflow || '';
+    document.body.style.overflow = 'hidden';
+    var f = m.querySelector('[data-modal-focus], a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])');
+    if (f) { try { f.focus(); } catch(_) {} }
+  };
+  window.closeModal = function(){
+    document.querySelectorAll('.modal, .event-modal, .announcement-modal').forEach(function(m){
+      m.classList.remove('modal--open');
+      m.style.display = 'none';
+    });
+    document.body.style.overflow = document.body.dataset.modalScrollLock || '';
+  };
+  document.addEventListener('click', function(e){
+    if (e.target.matches('.modal-backdrop, .event-modal-backdrop, .announcement-modal-backdrop')) closeModal();
+    if (e.target.matches('.modal-close, .event-modal-close, .announcement-modal-close')) { e.preventDefault(); closeModal(); }
+  });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
+})();
+</script>
 
 <script>
-// Announcement Modal Functions
-function openAnnouncementModal(announcementId) {
-  const modal = document.getElementById('announcement-modal-' + announcementId);
-  if (modal) {
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-  }
-}
+/* Announcements filter/search (client-side) — unified rcount behavior */
+(function(){
+  'use strict';
+  var pills   = Array.prototype.slice.call(document.querySelectorAll('.ncats .pill'));
+  var yearSel = document.querySelector('.nyear select[name="year"]');
+  var qInput  = document.getElementById('aQuery');
+  var grid    = document.getElementById('aGrid');
+  var countEl = document.getElementById('aCount');
+  var emptyEl = document.getElementById('aEmpty');
+  if (!countEl) return;
+  var cards = grid ? Array.prototype.slice.call(grid.querySelectorAll('.n')) : [];
 
-function closeAnnouncementModal() {
-  const modals = document.querySelectorAll('.announcement-modal');
-  modals.forEach(modal => {
-    modal.style.display = 'none';
+  var urlParams = new URLSearchParams(window.location.search);
+  var activeCat = (urlParams.get('cat') || 'all').toLowerCase();
+
+  pills.forEach(function(p){
+    try{
+      var href=new URL(p.href, window.location.origin);
+      var pillCat=(href.searchParams.get('cat')||'all').toLowerCase();
+      p.classList.toggle('is-active', pillCat===activeCat);
+    }catch(_){}
   });
-  document.body.style.overflow = '';
-}
 
-// Close modal on escape key
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    closeAnnouncementModal();
+  function labelizeCat(cat){ if (cat==='all') return 'All';
+    var cap=cat.charAt(0).toUpperCase()+cat.slice(1); return cap+(cap.slice(-1)==='s'?'':'s'); }
+
+  function apply(){
+    var q=(qInput && qInput.value ? qInput.value : '').trim().toLowerCase();
+    var y=(yearSel && yearSel.value) ? yearSel.value : 'all';
+    var visible=0;
+
+    cards.forEach(function(card){
+      var cat=(card.getAttribute('data-cat')||'').toLowerCase();
+      var year=(card.getAttribute('data-year')||'');
+      var text=(card.innerText||'').toLowerCase();
+      var ok=true;
+      if(activeCat!=='all' && cat!==activeCat) ok=false;
+      if(ok && y!=='all' && year!==y) ok=false;
+      if(ok && q && text.indexOf(q)===-1) ok=false;
+      card.style.display= ok ? '' : 'none';
+      if(ok) visible++;
+    });
+
+    var catLabel=labelizeCat(activeCat);
+    var yearLabel=(y==='all') ? 'all years' : y;
+    var searchLabel=q ? (' matching "'+q+'"') : '';
+    countEl.textContent='Showing '+visible+' item'+(visible!==1?'s':'')+' • '+catLabel+' • '+yearLabel+searchLabel;
+    if (emptyEl) emptyEl.hidden = (visible !== 0);
   }
-});
+
+  pills.forEach(function(p){
+    p.addEventListener('click', function(e){
+      e.preventDefault();
+      pills.forEach(function(x){ x.classList.remove('is-active'); });
+      p.classList.add('is-active');
+      try{
+        var href=new URL(p.href, window.location.origin);
+        activeCat=(href.searchParams.get('cat')||'all').toLowerCase();
+      }catch(_){ activeCat='all'; }
+      apply();
+    });
+  });
+
+  if (yearSel) yearSel.addEventListener('change', apply);
+  if (qInput){
+    var form=qInput.closest('form');
+    if (form){ form.addEventListener('submit', function(e){ e.preventDefault(); apply(); }); }
+  }
+  apply();
+})();
 </script>
 
 </body>

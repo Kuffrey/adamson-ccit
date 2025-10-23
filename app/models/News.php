@@ -1,11 +1,27 @@
 <?php
 declare(strict_types=1);
-
 $base = __DIR__ . '/Model.php';
 if (is_file($base)) { require_once $base; }
 
 final class News extends Model
 {
+    /**
+     * Find a news article by exact title and content (for deduplication)
+     */
+    public static function findByTitleAndContent(string $title, string $content): ?array {
+        try {
+            $db = parent::db();
+            $bcol = self::bodyCol();
+            $sql = "SELECT * FROM news WHERE title = :title AND $bcol = :content LIMIT 1";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([':title' => $title, ':content' => $content]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            return $row ?: null;
+        } catch (\Throwable $e) {
+            error_log('News::findByTitleAndContent error: ' . $e->getMessage());
+            return null;
+        }
+    }
     private static array $cols = [];
     private static array $allowedStatus = ['draft','published','archived'];
     private static array $allowedCats   = ['news','research','achievement','student'];

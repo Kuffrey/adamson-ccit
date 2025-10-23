@@ -12,6 +12,16 @@ class Router {
         $base = '/adamson-ccit/public/index.php?page=';
         $page = $_GET['page'] ?? 'home';
 
+        // --- POST actions (handlers) ---
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    if ($page === 'change_password') {
+        Auth::requireRole(['student','faculty','admin','dean'], $base . 'login');
+        require_once __DIR__ . '/../../handlers/change_password_handler.php';
+        return; // handler will redirect/exit
+    }
+}
+
+
         switch ($page) {
             // Unified login system
             case 'login':

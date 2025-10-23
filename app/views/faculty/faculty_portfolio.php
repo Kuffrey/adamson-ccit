@@ -83,6 +83,23 @@ $sectionFolders = [
 ];
 $activeFolder = $_GET['folder'] ?? 'general';
 if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
+
+// Add these variables for print functionality
+$printAll   = isset($_GET['print']) && $_GET['print'] === 'all';
+$autoPrint  = isset($_GET['autoprint']) && $_GET['autoprint'] === '1';
+
+// Add the url_with helper function
+function url_with(array $overrides = []) {
+  $base = strtok($_SERVER['REQUEST_URI'], '?');
+  $q = $_GET;
+  foreach ($overrides as $k => $v) {
+    if ($v === null) unset($q[$k]);
+    else $q[$k] = $v;
+  }
+  $qs = http_build_query($q);
+  return $base . ($qs ? ('?'.$qs) : '');
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -94,151 +111,325 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
-    /* Modal sizing & stacking */
-    .modal { z-index: 1055; }
-    .btn { position: relative; z-index: 1; pointer-events: auto; }
+/* =========================
+   RESUME / PRINT REFINEMENTS
+   ========================= */
 
-    .resume-container {
-      margin: 0 auto; background: #fff; border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 2rem;
-    }
-    .resume-header { display:flex; align-items:center; gap:1.2rem; margin-bottom:1.5rem; border-bottom:1px solid #e5e7eb; padding-bottom:1rem; }
-    .resume-photo { width:120px; height:120px; border-radius:50%; object-fit:cover; border:3px solid #e5e7eb; background:#f1f5f9; }
-    .resume-main-info { flex:1; min-width:0; }
-    .resume-name { font-size:1.3rem; font-weight:700; color:var(--navy); margin-bottom:0.2rem; }
-    .resume-meta { font-size:1rem; color:#374151; margin-bottom:0.2rem; }
-    .resume-section-title {
-      font-size:1.1rem; font-weight:700; color:var(--navy);
-      margin-top:2rem; margin-bottom:0.7rem; letter-spacing:.01em;
-      border-bottom:1px solid #e5e7eb; padding-bottom:.2rem;
-    }
+/* ---- Base palette & type ---- */
+:root{
+  --ink:#0f172a;          /* near-black */
+  --sub:#475569;          /* muted slate */
+  --rule:#e5e7eb;         /* light divider */
+  --accent:#1f2937;       /* headers */
+  --accent-light:#f8fafc; /* light background */
+  --card-border:#e2e8f0;  /* card border */
+  --card-hover:#f1f5f9;   /* card hover state */
+}
 
-    /* ===== Classic table-like layout for short sections ===== */
-    :root{
-      --label-col-w: 240px;
-      --gap-x: 16px;
-      --gap-y: 8px;
-      --border: #e5e7eb;
-      --text: #111827;
-      --muted: #6b7280;
-    }
-    .resume-list{ list-style:none; margin:0; padding:0; }
-    .resume-list-item{
-      display:grid;
-      grid-template-columns: var(--label-col-w) 1fr auto;
-      column-gap: var(--gap-x);
-      row-gap: var(--gap-y);
-      align-items:start;
-      padding: .6rem 0;
-      border-bottom:1px solid #f3f4f6;
-    }
-    .resume-list-item:last-child{ border-bottom:none; }
-    .resume-label{
-      grid-column:1;
-      font-weight:600;
-      color:#374151;
-      font-size:.98rem;
-      line-height:1.35;
-      margin:0;
-    }
-    .resume-value{
-      grid-column:2;
-      color:var(--text);
-      font-size:.97rem;
-      line-height:1.45;
-      margin:0;
-      word-break: break-word;
-    }
-    .resume-list-item > .d-flex,
-    .resume-list-item > .mt-2.d-flex,
-    .resume-list-item > .btn-group{
-      grid-column:3;
-      margin:0 !important;
-    }
-    .resume-value a{ color:#0b6bff; text-decoration:none; }
-    .resume-value a:hover{ text-decoration:underline; }
-    .resume-cert-status{ display:inline-block; border-radius:8px; padding:.1rem .5rem;
-      font-size:.85rem; font-weight:700; background:#dcfce7; color:#166534; }
-    .resume-cert-status.expired{ background:#fef3c7; color:#92400e; }
+html,body{
+  color:var(--ink);
+  font: 14.5px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
 
-    .portfolio-folder-nav { display:flex; flex-wrap:wrap; gap:.5rem; margin: .5rem 0 1rem; }
-    .portfolio-folder-btn { display:inline-flex; align-items:center; gap:.4rem; padding:.4rem .7rem; border:1px solid #e5e7eb; border-radius:8px; text-decoration:none; color:#1f2937; background:#fff; }
-    .portfolio-folder-btn.active { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+@media (min-width: 992px){
+  .resume-container{
+    max-width: 900px;      /* nice readable measure */
+    padding: 2.25rem 2.25rem 2.5rem;
+    margin: 0 auto; 
+    background: #fff; 
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+}
 
-    .btn-edit { background:#f8fafc; color:#6b7280; border:1px solid #e5e7eb; border-radius:6px; font-size:.9rem; padding:4px 10px; }
-    .btn-edit:hover { background:#e0f2fe; color:#0369a1; }
+/* ---- Header (name block) ---- */
+.resume-header{
+  display: flex;
+  align-items: center;
+  border-bottom:1px solid var(--rule);
+  padding-bottom:1rem;
+  margin-bottom:1.25rem;
+  gap:1.25rem;
+}
+.resume-photo{
+  width:108px; height:108px; border-radius:12px; border:1px solid var(--rule);
+  object-fit: cover;
+}
+.resume-name{
+  font-size:1.9rem; letter-spacing:.2px; color:var(--accent);
+  margin-bottom:.15rem;
+}
+.resume-meta{
+  color:var(--sub); font-size:1rem;
+}
 
-    /* ===== Responsive for classic layout ===== */
-    @media (max-width: 768px){
-      :root{ --label-col-w: 38vw; }
-      .resume-list-item{ grid-template-columns: 1fr; }
-      .resume-label,.resume-value,.resume-list-item > .d-flex,.resume-list-item > .mt-2.d-flex,.resume-list-item > .btn-group{
-        grid-column:1 !important;
-      }
-      .resume-list-item > .d-flex,.resume-list-item > .mt-2.d-flex,.resume-list-item > .btn-group{
-        margin-top:.25rem !important; justify-content:flex-start;
-      }
-    }
-    @media print{
-      .portfolio-folder-nav, .btn, .modal { display:none !important; }
-      .resume-list-item{ border-bottom:1px solid var(--border); padding:.4rem 0; }
-      a[href]:after{ content:""; }
-    }
+/* ---- Section titles ---- */
+.resume-section-title{
+  margin-top:1.4rem;
+  margin-bottom:.75rem;
+  padding-bottom:.4rem;
+  border-bottom:1px solid var(--rule);
+  font-weight:750;
+  font-size:1.1rem;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  color:var(--accent);
+}
+.resume-section-title i{ color:var(--sub); margin-right: 0.4rem; }
 
-    /* ===== Compact grid for long, add-heavy sections ===== */
-    .compact-toolbar{
-      display:flex; align-items:center; gap:.5rem; margin:.5rem 0 1rem;
-    }
-    .compact-grid{
-      --cols: 3;
-      display:grid;
-      grid-template-columns: repeat(var(--cols), minmax(0,1fr));
-      gap:12px;
-      margin:0; padding:0; list-style:none;
-    }
-    @media (max-width: 1200px){ .compact-grid{ --cols: 2; } }
-    @media (max-width: 640px){ .compact-grid{ --cols: 1; } }
+/* ---- Definition-list layout (General/Personal) ---- */
+.resume-list{
+  padding-left: 0;
+  list-style: none;
+  margin-bottom: 1.5rem;
+}
+.resume-list-item{
+  display: flex;
+  flex-wrap: wrap;
+  padding:.5rem 0;
+  border-bottom:1px dashed var(--rule);
+  align-items: baseline;
+}
+.resume-label{
+  color:var(--sub);
+  text-transform:uppercase;
+  font-size:.8rem;
+  letter-spacing:.06em;
+  width: 140px;
+  padding-right: 12px;
+  flex-shrink: 0;
+}
+.resume-value{
+  font-size:.97rem;
+  flex-grow: 1;
+  width: calc(100% - 140px);
+}
 
-    .compact-card{
-      border:1px solid #e5e7eb; border-radius:12px; background:#fff;
-      overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.03);
-    }
-    .compact-head{
-      display:flex; align-items:center; gap:10px;
-      padding:10px 12px;
-      cursor:pointer; user-select:none;
-    }
-    .compact-title{
-      font-weight:650; color:#0f172a; line-height:1.2; flex:1; min-width:0;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .compact-meta{
-      font-size:.86rem; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .compact-actions{
-      display:flex; gap:6px; margin-left:auto;
-    }
-    .compact-actions .btn{
-      padding:4px 8px; border-radius:8px; font-size:.85rem;
-    }
-    .compact-body{
-      border-top:1px dashed #e5e7eb;
-      padding:10px 12px;
-    }
-    .compact-row{
-      display:grid; grid-template-columns: 160px 1fr; gap:10px; padding:6px 0;
-      border-bottom:1px solid #f3f4f6;
-    }
-    .compact-row:last-child{ border-bottom:none; }
-    .compact-row .label{ color:#475569; font-weight:600; }
-    .compact-row .value{ color:#0f172a; word-break:break-word; }
+/* ---- "Compact cards" re-skinned to consistent timeline list ---- */
+.compact-grid{ 
+  padding-left: 0;
+  list-style: none;
+  margin-bottom: 1.5rem;
+  display: grid;
+  --cols: 1;  /* Default to 1 column for timeline view */
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 12px;
+}
+.compact-card{
+  position: relative;
+  border-left:3px solid var(--card-border);
+  border-radius:0;
+  padding-left: 1rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  background: transparent;
+}
+.compact-card:last-child {
+  margin-bottom: 0;
+}
+.compact-head{
+  position: relative;
+  padding: 0.5rem 0;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.compact-title{
+  font-weight:600;
+  color:var(--ink);
+  font-size: 1rem;
+  margin-bottom: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+.compact-meta{
+  font-size:.85rem;
+  color:var(--sub);
+  width: 100%;
+  margin-top: 0.2rem;
+}
+.compact-actions{
+  position: absolute;
+  right: 0;
+  top: 0.5rem;
+  display: flex;
+  gap: 0.3rem;
+}
+.compact-actions .btn{ 
+  border-color: var(--rule);
+  padding: 0.2rem 0.4rem;
+  font-size: 0.8rem;
+}
+.compact-body{
+  padding: 0.5rem 0 0.25rem;
+  border-top: 0;
+}
+.compact-row{
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0.3rem 0;
+  align-items: baseline;
+}
+.compact-row .label{
+  width: 140px;
+  padding-right: 12px;
+  color: var(--sub);
+  text-transform: uppercase;
+  font-size: .75rem;
+  letter-spacing: .06em;
+  flex-shrink: 0;
+  font-weight: normal;
+}
+.compact-row .value{
+  color: var(--ink);
+  font-size: 0.95rem;
+  flex-grow: 1;
+  width: calc(100% - 140px);
+}
 
-    .chip{ display:inline-block; padding:.15rem .5rem; border-radius:999px; font-size:.74rem; font-weight:700; }
-    .chip.ok{ background:#dcfce7; color:#166534; }
-    .chip.warn{ background:#fef3c7; color:#92400e; }
+/* Better caret indicator */
+.compact-head .caret {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 0.4rem;
+  color: var(--sub);
+  transition: transform 0.2s;
+}
+.compact-head[aria-expanded="true"] .caret {
+  transform: rotate(90deg);
+}
 
-    .compact-head[data-bs-toggle="collapse"] .caret{ transition:transform .18s ease; }
-    .compact-head[aria-expanded="true"] .caret{ transform:rotate(180deg); }
+/* ---- Small chips refined ---- */
+.chip{ 
+  display: inline-block;
+  font-weight:600; 
+  padding:.12rem .48rem; 
+  border-radius:4px; 
+  font-size:.72rem;
+  margin-left: 0.3rem;
+  vertical-align: middle;
+}
+.chip.ok   { background:#e8f7eb; color:#166534; }
+.chip.warn { background:#fff4db; color:#92400e; }
+
+/* ---- Links (screen) ---- */
+.resume-value a, .compact-row .value a{
+  text-decoration:none; 
+  border-bottom:1px dotted #9ca3af;
+  color: #2563eb;
+}
+.resume-value a:hover, .compact-row .value a:hover{
+  border-bottom-style:solid;
+}
+
+/* ---- Folder navigation ---- */
+.portfolio-folder-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.5rem;
+}
+.portfolio-folder-btn {
+  padding: 0.4rem 0.7rem;
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background-color 0.2s;
+}
+.portfolio-folder-btn:hover {
+  background-color: var(--card-hover);
+  color: var(--ink);
+}
+.portfolio-folder-btn.active {
+  background-color: var(--accent);
+  color: white;
+}
+.portfolio-folder-btn i {
+  font-size: 0.85rem;
+}
+
+/* Compact toolbar */
+.compact-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Modal styling refinements */
+.modal { z-index: 1055; }
+.btn { position: relative; z-index: 1; pointer-events: auto; }
+.btn-edit { background:#f8fafc; color:#6b7280; border:1px solid #e5e7eb; border-radius:6px; font-size:.9rem; padding:4px 10px; }
+.btn-edit:hover { background:#e0f2fe; color:#0369a1; }
+
+/* ---- Utilities for page breaks if ever needed in markup ---- */
+.page-break{ page-break-before:always; break-before: page; }
+.no-break{ break-inside: avoid; page-break-inside: avoid; }
+
+/* =========================
+   PRINT: crisp & compact
+   ========================= */
+
+@page{
+  size: A4;
+  margin: 16mm 14mm;
+}
+
+@media print{
+  /* App chrome off */
+  .admin-topbar, .portfolio-folder-nav, .compact-toolbar, .btn, .modal,
+  [data-sb-open], .topbar__actions, .alert, .compact-actions { display:none !important; }
+
+  html,body{ font-size:11pt; color:#000; background:#fff !important; }
+  .resume-container{ box-shadow:none !important; border-radius:0 !important; padding:0 !important; margin:0 !important; }
+
+  /* Header tuned for paper */
+  .resume-header{
+    padding-bottom:10px; margin-bottom:18px; border-bottom:1px solid #ddd;
+  }
+  .resume-photo{
+    width:90px; height:90px; border-radius:8px; border:1px solid #ddd;
+  }
+  .resume-name{ font-size:22pt; }
+  .resume-meta{ font-size:10.5pt; }
+
+  /* Section titles on print */
+  .resume-section-title{
+    font-size:12pt; letter-spacing:.08em; color:#111827;
+    margin-top:18pt; margin-bottom:10pt; border-bottom:1px solid #ddd;
+    page-break-after:avoid; page-break-inside:avoid;
+  }
+
+  /* Show all details; avoid broken cards */
+  .collapse{ display:block !important; height:auto !important; }
+  .compact-card, .resume-list-item{ break-inside:avoid; page-break-inside:avoid; }
+
+  /* Timeline rule a bit darker for paper */
+  .compact-card{ border-left-color:#cbd5e1; margin-bottom: 14pt; }
+  
+  /* Cards with cleaner spacing on paper */
+  .compact-head { padding-top: 0; }
+  .compact-title { font-weight: 700; margin-bottom: 2pt; }
+  .compact-body { padding-top: 4pt; }
+  .compact-row { padding: 2pt 0; }
+
+  /* Muted icons & carets on paper */
+  .resume-section-title i, .compact-head .caret { color: #666; }
+  
+  /* Chips more subtle on paper */
+  .chip { background-color: transparent !important; border: 1px solid currentColor; }
+
+  /* Links without trailing URL */
+  a[href]:after{ content:""; }
+}
   </style>
 </head>
 <body>
@@ -251,6 +442,21 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
       </button>
       <span class="admin-topbar__title">My Portfolio</span>
       <span class="admin-topbar__spacer"></span>
+
+      <div class="topbar__actions">
+        <!-- Print this section -->
+        <a href="<?= esc(url_with(['print' => null, 'autoprint' => null])) ?>" 
+          class="btn btn-outline-secondary d-none d-md-inline-block" 
+          id="btnPrintSection">
+          <i class="fas fa-print"></i> Print This Section
+        </a>
+
+        <!-- Print full portfolio (renders all folders, triggers print) -->
+        <a href="<?= esc(url_with(['folder'=> 'general', 'print' => 'all', 'autoprint' => '1'])) ?>"
+          class="btn btn-primary">
+          <i class="fas fa-file-export"></i> Print Full Portfolio
+        </a>
+      </div>
     </header>
     <section class="admin-section">
       <div class="resume-container">
@@ -286,7 +492,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
         </nav>
 
         <!-- GENERAL -->
-        <?php if ($activeFolder === 'general'): ?>
+        <?php if ($activeFolder === 'general' || $printAll): ?>
           <div class="resume-section-title"><i class="fas fa-id-card"></i> General Information</div>
           <ul class="resume-list">
             <li class="resume-list-item"><div class="resume-label">Full Name</div><div class="resume-value"><?= esc($profile['full_name'] ?? $fullName) ?></div></li>
@@ -308,7 +514,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
         <?php endif; ?>
 
         <!-- CERTIFICATIONS (Compact) -->
-        <?php if ($activeFolder === 'certifications'): ?>
+        <?php if ($activeFolder === 'certifications' || $printAll): ?>
           <div class="resume-section-title"><i class="fas fa-certificate"></i> Licenses & Certifications</div>
 
           <div class="compact-toolbar">
@@ -370,7 +576,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
         <?php endif; ?>
 
         <!-- EXPERIENCE (Compact) -->
-        <?php if ($activeFolder === 'experience'): ?>
+        <?php if ($activeFolder === 'experience' || $printAll): ?>
           <div class="resume-section-title"><i class="fas fa-briefcase"></i> Employment & Academic Record</div>
 
           <div class="compact-toolbar">
@@ -408,7 +614,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
         <?php endif; ?>
 
         <!-- EDUCATION (Compact) -->
-        <?php if ($activeFolder === 'education'): ?>
+        <?php if ($activeFolder === 'education' || $printAll): ?>
           <div class="resume-section-title"><i class="fas fa-graduation-cap"></i> Educational Background</div>
 
           <div class="compact-toolbar">
@@ -446,7 +652,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
         <?php endif; ?>
 
         <!-- PERSONAL (kept classic, no "Add" button) -->
-        <?php if ($activeFolder === 'personal'): ?>
+        <?php if ($activeFolder === 'personal' || $printAll): ?>
           <div class="resume-section-title"><i class="fas fa-user"></i> Personal Information</div>
           <ul class="resume-list">
             <?php if (empty($personal)): ?>
@@ -470,7 +676,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
         <?php endif; ?>
 
         <!-- RESEARCH (Compact) -->
-        <?php if ($activeFolder === 'research'): ?>
+        <?php if ($activeFolder === 'research' || $printAll): ?>
           <div class="resume-section-title"><i class="fas fa-book"></i> Research & Publications</div>
 
           <div class="compact-toolbar">
@@ -513,7 +719,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
         <?php endif; ?>
 
         <!-- TRAININGS (Compact) -->
-        <?php if ($activeFolder === 'trainings'): ?>
+        <?php if ($activeFolder === 'trainings' || $printAll): ?>
           <div class="resume-section-title"><i class="fas fa-chalkboard-teacher"></i> Trainings & Seminars</div>
 
           <div class="compact-toolbar">
@@ -556,7 +762,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
         <?php endif; ?>
 
         <!-- PERFORMANCE (Compact) -->
-        <?php if ($activeFolder === 'performance'): ?>
+        <?php if ($activeFolder === 'performance' || $printAll): ?>
           <div class="resume-section-title"><i class="fas fa-chart-line"></i> Performance Evaluations</div>
 
           <div class="compact-toolbar">
@@ -595,7 +801,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
         <?php endif; ?>
 
         <!-- AWARDS (Compact) -->
-        <?php if ($activeFolder === 'awards'): ?>
+        <?php if ($activeFolder === 'awards' || $printAll): ?>
           <div class="resume-section-title"><i class="fas fa-trophy"></i> Awards & Recognitions</div>
 
           <div class="compact-toolbar">
@@ -756,7 +962,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
   <?php endforeach; ?>
 <?php endif; ?>
 
-<!-- Add/Edit/Delete Experience Modals -->
+<!-- Add Experience Modals -->
 <div class="modal fade" id="addExpModal" tabindex="-1" aria-labelledby="addExpModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
@@ -811,7 +1017,7 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
   </div>
 <?php endforeach; ?>
 
-<!-- Add/Edit/Delete Education Modals -->
+<!-- Add Education Modals -->
 <div class="modal fade" id="addEduModal" tabindex="-1" aria-labelledby="addEduModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
@@ -866,13 +1072,99 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
   </div>
 <?php endforeach; ?>
 
+<!-- Add Training Modal -->
+<div class="modal fade" id="addTrainingModal" tabindex="-1" aria-labelledby="addTrainingModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
+        <input type="hidden" name="action" value="add_training">
+        <div class="modal-header"><h5 class="modal-title" id="addTrainingModalLabel">Add Training</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label">Title</label><input type="text" name="title" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Provider</label><input type="text" name="provider" class="form-control"></div>
+          <div class="mb-3"><label class="form-label">Year</label><input type="number" name="year" class="form-control" min="1900" max="2100" step="1"></div>
+          <div class="mb-3"><label class="form-label">Certificate URL</label><input type="url" name="certificate_url" class="form-control"></div>
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-control">
+              <option value="active">Active</option>
+              <option value="expired">Expired</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Add Training</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Performance Modal -->
+<div class="modal fade" id="addPerformanceModal" tabindex="-1" aria-labelledby="addPerformanceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
+        <input type="hidden" name="action" value="add_performance">
+        <div class="modal-header"><h5 class="modal-title" id="addPerformanceModalLabel">Add Performance</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label">Title</label><input type="text" name="title" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Year</label><input type="number" name="year" class="form-control" min="1900" max="2100" step="1"></div>
+          <div class="mb-3"><label class="form-label">Rating</label><input type="text" name="rating" class="form-control"></div>
+          <div class="mb-3"><label class="form-label">Remarks</label><textarea name="remarks" class="form-control"></textarea></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Add Performance</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Award Modal -->
+<div class="modal fade" id="addAwardModal" tabindex="-1" aria-labelledby="addAwardModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
+        <input type="hidden" name="action" value="add_award">
+        <div class="modal-header"><h5 class="modal-title" id="addAwardModalLabel">Add Award</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label">Title</label><input type="text" name="title" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Year</label><input type="number" name="year" class="form-control" min="1900" max="2100" step="1"></div>
+          <div class="mb-3"><label class="form-label">Issuer</label><input type="text" name="issuer" class="form-control"></div>
+          <div class="mb-3"><label class="form-label">Description</label><textarea name="description" class="form-control"></textarea></div>
+          <div class="mb-3"><label class="form-label">Certificate URL</label><input type="url" name="certificate_url" class="form-control"></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Add Award</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Research Modal -->
+<div class="modal fade" id="addResearchModal" tabindex="-1" aria-labelledby="addResearchModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
+        <input type="hidden" name="action" value="add_research">
+        <div class="modal-header"><h5 class="modal-title" id="addResearchModalLabel">Add Research</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="mb-3"><label class="form-label">Title</label><input type="text" name="title" class="form-control" required placeholder="e.g. AI in Education"></div>
+          <div class="mb-3"><label class="form-label">Journal / Conference</label><input type="text" name="journal" class="form-control" placeholder="e.g. Philippine IT Journal"></div>
+          <div class="mb-3"><label class="form-label">Year</label><input type="number" name="year" class="form-control" min="1900" max="2100" step="1" required></div>
+          <div class="mb-3"><label class="form-label">Type</label><input type="text" name="type" class="form-control" placeholder="e.g. Journal, Conference, Book"></div>
+          <div class="mb-3"><label class="form-label">Authors</label><input type="text" name="authors" class="form-control" placeholder="e.g. Juan Dela Cruz, Maria Santos"></div>
+          <div class="mb-3"><label class="form-label">DOI / URL</label><input type="text" name="doi_url" class="form-control" placeholder="e.g. https://doi.org/xxx"></div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Add Research</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Edit Profile Modal -->
 <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-    <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php" enctype="multipart/form-data">
-      <input type="hidden" name="action" value="edit_profile">
-      <input type="hidden" name="user_id" value="<?= esc($facultyId) ?>">
-      <div class="modal-content">
+    <div class="modal-content">
+      <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="edit_profile">
+        <input type="hidden" name="user_id" value="<?= esc($facultyId) ?>">
         <div class="modal-header">
           <h5 class="modal-title" id="editProfileModalLabel">Edit Profile Information</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -930,148 +1222,86 @@ if (!isset($sectionFolders[$activeFolder])) $activeFolder = 'general';
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Research Modals -->
-<div class="modal fade" id="addResearchModal" tabindex="-1" aria-labelledby="addResearchModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-    <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
-      <input type="hidden" name="action" value="add_research">
-      <div class="modal-content">
-        <div class="modal-header"><h5 class="modal-title" id="addResearchModalLabel">Add Research</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-          <div class="mb-3"><label class="form-label">Title</label><input type="text" name="title" class="form-control" required placeholder="e.g. AI in Education"></div>
-          <div class="mb-3"><label class="form-label">Journal / Conference</label><input type="text" name="journal" class="form-control" placeholder="e.g. Philippine IT Journal"></div>
-          <div class="mb-3"><label class="form-label">Year</label><input type="number" name="year" class="form-control" min="1900" max="2100" step="1" required></div>
-          <div class="mb-3"><label class="form-label">Type</label><input type="text" name="type" class="form-control" placeholder="e.g. Journal, Conference, Book"></div>
-          <div class="mb-3"><label class="form-label">Authors</label><input type="text" name="authors" class="form-control" placeholder="e.g. Juan Dela Cruz, Maria Santos"></div>
-          <div class="mb-3"><label class="form-label">DOI / URL</label><input type="text" name="doi_url" class="form-control" placeholder="e.g. https://doi.org/xxx"></div>
-        </div>
-        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Add Research</button></div>
-      </div>
-    </form>
-  </div>
-</div>
-
-<?php if (!empty($research) && is_array($research)): ?>
-  <?php foreach ($research as $item): ?>
-    <div class="modal fade" id="editResearchModal<?= $item['id'] ?>" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
-          <input type="hidden" name="action" value="edit_research">
-          <input type="hidden" name="research_id" value="<?= $item['id'] ?>">
-          <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title" id="editResearchModalLabel<?= $item['id'] ?>">Edit Research</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-              <div class="mb-3"><label class="form-label">Title</label><input type="text" name="title" class="form-control" value="<?= esc($item['title']) ?>" required></div>
-              <div class="mb-3"><label class="form-label">Journal / Conference</label><input type="text" name="journal" class="form-control" value="<?= esc($item['journal']) ?>"></div>
-              <div class="mb-3"><label class="form-label">Year</label><input type="number" name="year" class="form-control" value="<?= esc($item['year']) ?>" min="1900" max="2100" step="1"></div>
-              <div class="mb-3"><label class="form-label">Type</label><input type="text" name="type" class="form-control" value="<?= esc($item['type']) ?>" placeholder="e.g. Journal, Conference, Book"></div>
-              <div class="mb-3"><label class="form-label">Authors</label><input type="text" name="authors" class="form-control" value="<?= esc($item['authors']) ?>" placeholder="e.g. Juan Dela Cruz, Maria Santos"></div>
-              <div class="mb-3"><label class="form-label">DOI / URL</label><input type="text" name="doi_url" class="form-control" value="<?= esc($item['doi_url']) ?>" placeholder="e.g. https://doi.org/xxx"></div>
-            </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save Changes</button></div>
-          </div>
-        </form>
-      </div>
+      </form>
     </div>
-
-    <div class="modal fade" id="deleteResearchModal<?= $item['id'] ?>" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
-          <input type="hidden" name="action" value="delete_research">
-          <input type="hidden" name="research_id" value="<?= $item['id'] ?>">
-          <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title" id="deleteResearchModalLabel<?= $item['id'] ?>">Delete Research</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-              <p>Are you sure you want to delete <strong><?= esc($item['title']) ?></strong>?</p>
-              <p class="text-danger">This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger">Delete</button></div>
-          </div>
-        </form>
-      </div>
-    </div>
-  <?php endforeach; ?>
-<?php endif; ?>
-
-<!-- Trainings -->
-<div class="modal fade" id="addTrainingModal" tabindex="-1" aria-labelledby="addTrainingModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-    <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
-      <input type="hidden" name="action" value="add_training">
-      <div class="modal-content">
-        <div class="modal-header"><h5 class="modal-title" id="addTrainingModalLabel">Add Training</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body">
-          <div class="mb-3"><label class="form-label">Title</label><input type="text" name="title" class="form-control" required></div>
-          <div class="mb-3"><label class="form-label">Provider</label><input type="text" name="provider" class="form-control"></div>
-          <div class="mb-3"><label class="form-label">Year</label><input type="number" name="year" class="form-control" min="1900" max="2100" step="1"></div>
-          <div class="mb-3"><label class="form-label">Certificate URL</label><input type="url" name="certificate_url" class="form-control"></div>
-          <div class="mb-3">
-            <label class="form-label">Status</label>
-            <select name="status" class="form-control">
-              <?php $tDefault = strtolower($training['status'] ?? 'active'); ?>
-              <option value="active" <?= ($tDefault === 'active') ? 'selected' : '' ?>>Active</option>
-              <option value="expired" <?= ($tDefault === 'expired') ? 'selected' : '' ?>>Expired</option>
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Add Training</button></div>
-      </div>
-    </form>
   </div>
 </div>
 
-<?php foreach ($trainings as $training): ?>
-  <div class="modal fade" id="editTrainingModal<?= $training['id'] ?>" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+<!-- Edit Personal Info Modal -->
+<div class="modal fade" id="editPersonalModal" tabindex="-1" aria-labelledby="editPersonalModalLabel" aria-hidden="true">
+  <div class="modal-dialog" style="max-width: 700px; min-width: 600px;">
+    <div class="modal-content">
       <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
-        <input type="hidden" name="action" value="edit_training">
-        <input type="hidden" name="training_id" value="<?= $training['id'] ?>">
-        <div class="modal-content">
-          <div class="modal-header"><h5 class="modal-title">Edit Training</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-          <div class="modal-body">
-            <div class="mb-3"><label class="form-label">Title</label><input type="text" name="title" class="form-control" value="<?= esc($training['title']) ?>" required></div>
-            <div class="mb-3"><label class="form-label">Provider</label><input type="text" name="provider" class="form-control" value="<?= esc($training['provider']) ?>"></div>
-            <div class="mb-3"><label class="form-label">Year</label><input type="number" name="year" class="form-control" value="<?= esc($training['year']) ?>" min="1900" max="2100" step="1"></div>
-            <div class="mb-3"><label class="form-label">Certificate URL</label><input type="url" name="certificate_url" class="form-control" value="<?= esc($training['certificate_url']) ?>"></div>
-            <div class="mb-3">
-              <label class="form-label">Status</label>
-              <select name="status" class="form-control">
-                <?php $tDefault = strtolower($training['status'] ?? 'active'); ?>
-                <option value="active" <?= ($tDefault === 'active') ? 'selected' : '' ?>>Active</option>
-                <option value="expired" <?= ($tDefault === 'expired') ? 'selected' : '' ?>>Expired</option>
+        <input type="hidden" name="action" value="edit_personal">
+        <input type="hidden" name="user_id" value="<?= esc($facultyId) ?>">
+        <div class="modal-header"><h5 class="modal-title" id="editPersonalModalLabel">Edit Personal Information</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Birthday</label><input type="date" name="birthday" class="form-control" value="<?= esc($personal['birthday'] ?? '') ?>"></div>
+
+            <?php
+              $genderRaw  = (string)($personal['gender'] ?? '');
+              $maritalRaw = (string)($personal['marital_status'] ?? '');
+              $g = mb_strtolower($genderRaw, 'UTF-8');
+              $m = mb_strtolower($maritalRaw, 'UTF-8');
+            ?>
+            <div class="col-md-6">
+              <label class="form-label">Gender</label>
+              <select name="gender" class="form-control">
+                <option value="">Select</option>
+                <option value="male"   <?= $g === 'male'   ? 'selected' : '' ?>>Male</option>
+                <option value="female" <?= $g === 'female' ? 'selected' : '' ?>>Female</option>
+                <option value="other"  <?= $g === 'other'  ? 'selected' : '' ?>>Other</option>
               </select>
             </div>
-          </div>
-          <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save Changes</button></div>
-        </div>
-      </form>
-    </div>
-  </div>
 
-  <div class="modal fade" id="deleteTrainingModal<?= $training['id'] ?>" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-      <form method="post" action="/adamson-ccit/handlers/faculty_portfolio_handler.php">
-        <input type="hidden" name="action" value="delete_training">
-        <input type="hidden" name="training_id" value="<?= $training['id'] ?>">
-        <div class="modal-content">
-          <div class="modal-header"><h5 class="modal-title">Delete Training</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-          <div class="modal-body">
-            <p>Are you sure you want to delete <strong><?= esc($training['title']) ?></strong>?</p>
-            <p class="text-danger">This action cannot be undone.</p>
+            <div class="col-md-6">
+              <label class="form-label">Marital Status</label>
+              <select name="marital_status" class="form-control">
+                <option value="">Select</option>
+                <option value="single"    <?= $m === 'single'    ? 'selected' : '' ?>>Single</option>
+                <option value="married"   <?= $m === 'married'   ? 'selected' : '' ?>>Married</option>
+                <option value="widowed"   <?= $m === 'widowed'   ? 'selected' : '' ?>>Widowed</option>
+                <option value="separated" <?= $m === 'separated' ? 'selected' : '' ?>>Separated</option>
+              </select>
+            </div>
+
+            <div class="col-md-6"><label class="form-label">Nationality</label><input type="text" name="nationality" class="form-control" value="<?= esc($personal['nationality'] ?? '') ?>" placeholder="e.g. Filipino"></div>
+            <div class="col-md-12"><label class="form-label">Address</label><input type="text" name="address" class="form-control" value="<?= esc($personal['address'] ?? '') ?>" placeholder="e.g. 123 Main St, Manila"></div>
+            <div class="col-md-6"><label class="form-label">Contact Number</label><input type="text" name="contact_number" class="form-control" value="<?= esc($personal['contact_number'] ?? '') ?>" placeholder="e.g. 09171234567"></div>
+            <div class="col-md-6"><label class="form-label">Emergency Contact Name</label><input type="text" name="emergency_contact_name" class="form-control" value="<?= esc($personal['emergency_contact_name'] ?? '') ?>" placeholder="e.g. Juan Dela Cruz"></div>
+            <div class="col-md-6"><label class="form-label">Emergency Contact Number</label><input type="text" name="emergency_contact_number" class="form-control" value="<?= esc($personal['emergency_contact_number'] ?? '') ?>" placeholder="e.g. 09181234567"></div>
           </div>
-          <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-danger">Delete</button></div>
         </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save Changes</button></div>
       </form>
     </div>
   </div>
-<?php endforeach; ?>
+</div>
+
+<?php if ($autoPrint): ?>
+<script>
+  // Wait a tick to ensure collapses are expanded by the print CSS override
+  window.addEventListener('load', function () {
+    window.print();
+    // After printing, remove autoprint to avoid repeat on refresh
+    const url = new URL(window.location.href);
+    url.searchParams.delete('autoprint');
+    history.replaceState(null, '', url.toString());
+  });
+</script>
+<?php endif; ?>
+
+<script>
+  // "Print This Section" button just opens the browser print dialog
+  (function(){
+    const btn = document.getElementById('btnPrintSection');
+    if (btn) btn.addEventListener('click', function(e){
+      e.preventDefault();
+      window.print();
+    });
+  })();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

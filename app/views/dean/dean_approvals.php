@@ -35,6 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action']) && !empty(
         $submission = FacultySubmissions::getById($submissionId);
 
         if ($action === 'approve') {
+
+
             FacultySubmissions::updateStatus($submissionId, 'approved', $user['id'] ?? null, $reviewNotes);
 
             // Publish research to faculty_research table
@@ -52,6 +54,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action']) && !empty(
                     'status'     => 'published' // Ensure status is set to 'published'
                 ];
                 FacultyResearch::create($data); // Insert into faculty_research table
+            }
+
+            // Publish news to news table if submission_type is news
+            if ($submission && $submission['submission_type'] === 'news') {
+                require_once __DIR__ . '/../../models/News.php';
+                $title    = $submission['title'] ?? '';
+                $content  = $submission['content'] ?? '';
+                $category = $submission['category'] ?? 'news';
+                $status   = 'published';
+                $imageUrl = null;
+                // Prevent duplicate: check if news with same title/content exists
+                $existing = News::findByTitleAndContent($title, $content);
+                if (!$existing) {
+                    News::create($title, $content, $status, $category, $imageUrl);
+                }
+            }
+
+            // Publish certification to faculty_certification_award if submission_type is certification
+            if ($submission && $submission['submission_type'] === 'certification') {
+                require_once __DIR__ . '/../../models/FacultyCertification.php';
+                $cd = json_decode($submission['content'] ?? '{}', true) ?: [];
+                $data = [
+                    'faculty_id'       => $submission['faculty_id'],
+                    'certification_id' => $cd['certification_id'] ?? null,
+                    'cert_title'       => $cd['cert_title'] ?? $submission['title'],
+                    'issuer'           => $cd['issuer'] ?? '',
+                    'year_earned'      => $cd['year_earned'] ?? null,
+                    'year_expiry'      => $cd['year_expiry'] ?? null,
+                    'credential_id'    => $cd['credential_id'] ?? null,
+                    'verification_url' => $cd['verification_url'] ?? null,
+                    'status'           => 'Active'
+                ];
+                // Only insert if not already present (deduplication by faculty_id, certification_id, year_earned)
+                $fc = new FacultyCertification();
+                $exists = false;
+                if (!empty($data['faculty_id']) && !empty($data['certification_id'])) {
+                    $pdo = new PDO("mysql:host=localhost;dbname=adamson_ccit", "root", "");
+                    $stmt = $pdo->prepare("SELECT id FROM faculty_certification_award WHERE faculty_id = ? AND certification_id = ? AND year_earned = ? LIMIT 1");
+                    $stmt->execute([$data['faculty_id'], $data['certification_id'], $data['year_earned']]);
+                    $exists = $stmt->fetch();
+                }
+                if (!$exists) {
+                    $fc->create($data);
+                }
             }
 
             $notice = 'Submission approved successfully!';
@@ -120,7 +166,6 @@ try {
             faculty_id INT NOT NULL,
             submission_type VARCHAR(50) NOT NULL,
             title VARCHAR(255) NOT NULL,
-            description TEXT,
             content TEXT,
             category VARCHAR(100),
             status VARCHAR(30) DEFAULT 'submitted',
@@ -340,9 +385,6 @@ try {
                                                 </td>
                                                 <td>
                                                     <strong><?= esc($submission['title']) ?></strong>
-                                                    <?php if (!empty($submission['description'])): ?>
-                                                        <br><small class="text-muted"><?= esc(substr($submission['description'], 0, 80)) ?>...</small>
-                                                    <?php endif; ?>
                                                 </td>
                                                 <td>
                                                     <?php if ($submission['category']): ?>
@@ -419,9 +461,6 @@ try {
                                                 </td>
                                                 <td>
                                                     <strong><?= esc($submission['title']) ?></strong>
-                                                    <?php if (!empty($submission['description'])): ?>
-                                                        <br><small class="text-muted"><?= esc(substr($submission['description'], 0, 80)) ?>...</small>
-                                                    <?php endif; ?>
                                                 </td>
                                                 <td>
                                                     <span class="badge badge--category"><?= esc($certData['issuer'] ?? 'Unknown') ?></span>
@@ -612,14 +651,6 @@ try {
                                 <div class="col-md-6">
                                     <h6><strong>Category:</strong></h6>
                                     <p><?= esc($submission['category']) ?></p>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                        <?php if ($submission['description']): ?>
-                            <h6><strong>Description:</strong></h6>
-                            <div class="card">
-                                <div class="card-body">
-                                    <?= nl2br(esc($submission['description'])) ?>
                                 </div>
                             </div>
                         <?php endif; ?>

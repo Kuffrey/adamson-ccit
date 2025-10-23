@@ -2,7 +2,9 @@
 require_once __DIR__ . '/../../lib/Auth.php';
 Auth::requireRole(['faculty'], '/adamson-ccit/public/index.php?page=login');
 
-function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+if (!function_exists('esc')) {
+    function esc($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+}
 
 // Get current user info
 $user = Auth::user() ?? [];

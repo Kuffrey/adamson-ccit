@@ -70,7 +70,6 @@ if (!$menus) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login | AdU-CCIT</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css">
 </head>
 <body>
@@ -171,19 +170,13 @@ if (!$menus) {
                 <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 Admin Dashboard
               </a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=admin_manage_news">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
-                Manage News
-              </a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=admin_manage_programs">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
-                Manage Programs
-              </a>
-              <a role="menuitem" href="/adamson-ccit/public/index.php?page=admin_manage_faculty">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M17 11v8m-4-4h8M3 21v-2a4 4 0 0 1 4-4h4"/></svg>
-                Manage Faculty
+            <?php elseif ($user['role'] === 'dean'): ?>
+              <a role="menuitem" href="/adamson-ccit/public/index.php?page=dean_dashboard">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Dean Dashboard
               </a>
             <?php endif; ?>
+            
 
             <a role="menuitem" href="/adamson-ccit/public/index.php?page=logout">
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>

@@ -125,7 +125,6 @@ $paginatedResearch = array_slice($research, $offset, $limit);
                         <?php if (!empty($year)): ?>
                             <span><strong>Year:</strong> <?= htmlspecialchars($year) ?></span>
                         <?php endif; ?>
-                        <span class="research-type badge"><?= $type ?></span>
                     </div>
                     <?php if (!empty($doi)): ?>
                         <div class="research-doi">
@@ -140,9 +139,6 @@ $paginatedResearch = array_slice($research, $offset, $limit);
                             </a>
                         <?php endif; ?>
                         <?php if (!empty($doi)): ?>
-                            <a class="btn-link secondary" href="https://doi.org/<?= htmlspecialchars($doi) ?>" target="_blank" rel="noopener">
-                                <i class="fas fa-link"></i> DOI
-                            </a>
                         <?php endif; ?>
                     </div>
                 </article>
@@ -219,3 +215,4 @@ $paginatedResearch = array_slice($research, $offset, $limit);
 </script>
 </body>
 </html>
+

@@ -76,9 +76,6 @@ $username = $user['username'] ?? ($_SESSION['user']['username'] ?? 'Admin');
             <tr><td>Career Image</td><td><?= esc($homepage['why_career_image'] ?? '—') ?></td></tr>
             <tr><td>Career Link</td><td><?= esc($homepage['why_career_link_label'] ?? '') ?> → <?= esc($homepage['why_career_link'] ?? '') ?></td></tr>
             <tr><td>Spotlight Title</td><td><?= esc($homepage['spotlight_title'] ?? '') ?></td></tr>
-            <tr><td>Programs - Undergraduate</td><td><?= esc($homepage['programs_undergrad_blurb'] ?? '') ?></td></tr>
-            <tr><td>Programs - Dual Degree</td><td><?= esc($homepage['programs_dual_blurb'] ?? '') ?></td></tr>
-            <tr><td>Programs - Graduate Studies</td><td><?= esc($homepage['programs_grad_blurb'] ?? '') ?></td></tr>
             <tr><td>CTA Title</td><td><?= esc($homepage['cta_title'] ?? '') ?></td></tr>
             <tr><td>CTA Description</td><td><?= esc($homepage['cta_description'] ?? '') ?></td></tr>
           </tbody>
@@ -97,8 +94,8 @@ $username = $user['username'] ?? ($_SESSION['user']['username'] ?? 'Admin');
                 <input type="text" name="hero_eyebrow" value="<?= esc($homepage['hero_eyebrow'] ?? '') ?>">
               </div>
               <div class="field">
-                <label>Title <small class="help">Aim for 6–10 words.</small></label>
-                <input type="text" name="hero_title" value="<?= esc($homepage['hero_title'] ?? '') ?>" required>
+                <label>Title <small class="help">Use Shift+Enter for a new line.</small></label>
+                <textarea name="hero_title" rows="2" required><?= esc($homepage['hero_title'] ?? '') ?></textarea>
               </div>
               <div class="field">
                 <label>Subtitle <small class="help">One brief sentence.</small></label>
@@ -161,8 +158,7 @@ $username = $user['username'] ?? ($_SESSION['user']['username'] ?? 'Admin');
             <div class="form-section">
               <div class="field"><label>Eyebrow</label><input type="text" name="spotlight_eyebrow" value="<?= esc($homepage['spotlight_eyebrow'] ?? '') ?>"></div>
               <div class="field"><label>Title</label><input type="text" name="spotlight_title" value="<?= esc($homepage['spotlight_title'] ?? '') ?>"></div>
-              <div class="field"><label>Image Path</label><input type="text" name="spotlight_image" value="<?= esc($homepage['spotlight_image'] ?? '') ?>"></div>
-              <div class="field"><label>Image Alt</label><input type="text" name="spotlight_image_alt" value="<?= esc($homepage['spotlight_image_alt'] ?? '') ?>"></div>
+              <div class="field"><label>Video URL</label><input type="text" name="spotlight_video_url" value="<?= esc($homepage['spotlight_video_url'] ?? '') ?>"></div>
             </div>
             <div class="form-row">
               <div class="field" style="grid-column: 1 / -1;">
@@ -175,19 +171,6 @@ $username = $user['username'] ?? ($_SESSION['user']['username'] ?? 'Admin');
               <div class="field"><label>CTA URL</label><input type="text" name="spotlight_cta_url" value="<?= esc($homepage['spotlight_cta_url'] ?? '') ?>"></div>
               <div class="field"><label>CTA2 Text</label><input type="text" name="spotlight_cta2_text" value="<?= esc($homepage['spotlight_cta2_text'] ?? '') ?>"></div>
               <div class="field"><label>CTA2 URL</label><input type="text" name="spotlight_cta2_url" value="<?= esc($homepage['spotlight_cta2_url'] ?? '') ?>"></div>
-              <div class="field"><label>Video URL</label><input type="text" name="spotlight_video_url" value="<?= esc($homepage['spotlight_video_url'] ?? '') ?>"></div>
-            </div>
-          </fieldset>
-        </div>
-
-        <!-- PROGRAMS -->
-        <div class="cms-card">
-          <fieldset id="sec-programs">
-            <legend class="cms-card-legend">Programs Blurbs</legend>
-            <div class="form-row">
-              <div class="field"><label>Undergraduate</label><textarea name="programs_undergrad_blurb" rows="2"><?= esc($homepage['programs_undergrad_blurb'] ?? '') ?></textarea></div>
-              <div class="field"><label>Dual Degree</label><textarea name="programs_dual_blurb" rows="2"><?= esc($homepage['programs_dual_blurb'] ?? '') ?></textarea></div>
-              <div class="field"><label>Graduate Studies</label><textarea name="programs_grad_blurb" rows="2"><?= esc($homepage['programs_grad_blurb'] ?? '') ?></textarea></div>
             </div>
           </fieldset>
         </div>
@@ -201,9 +184,6 @@ $username = $user['username'] ?? ($_SESSION['user']['username'] ?? 'Admin');
               <div class="field"><label>CTA Description</label><textarea name="cta_description" rows="2"><?= esc($homepage['cta_description'] ?? '') ?></textarea></div>
               <div class="field"><label>CTA Action Label</label><input type="text" name="cta_action_label" value="<?= esc($homepage['cta_action_label'] ?? '') ?>"></div>
               <div class="field"><label>CTA Action URL</label><input type="text" name="cta_action_url" value="<?= esc($homepage['cta_action_url'] ?? '') ?>"></div>
-            </div>
-            <div class="field-checkbox">
-              <label><input type="checkbox" name="show_pinned_announcements" value="1" <?= !empty($homepage['show_pinned_announcements']) ? 'checked' : '' ?>> Show pinned announcements</label>
             </div>
           </fieldset>
         </div>

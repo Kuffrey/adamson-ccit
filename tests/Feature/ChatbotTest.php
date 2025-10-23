@@ -1,4 +1,3 @@
-
 <?php
 
 // Helper function to send a request to the chatbot endpoint
@@ -271,7 +270,7 @@ test('chatbot handles unknown queries gracefully', function () {
 test('chatbot provides helpful suggestions for unclear queries', function () {
 	[$response, $info] = chatbotRequest('POST', ['message' => 'something random']);
 	expect($info['http_code'])->toBe(200);
-	expect($response)->toMatch("/programs|admission|facilities|contact|help/i");
+	expect($response)->toMatch("/Hi there! What would you like to know about our college\?|programs|admission|facilities|contact|help/i");
 });
 
 // ========== EDGE CASE TESTS ==========

@@ -116,6 +116,12 @@ class FacultySubmissions {
             if (empty($data['title'])) {
                 throw new Exception("Title is required");
             }
+            if (mb_strlen($data['title']) > 100) {
+                throw new Exception("Title must not exceed 100 characters");
+            }
+            if (empty($data['content'])) {
+                throw new Exception("Content is required");
+            }
             
             // Validate faculty ID exists
             if (!self::validateFacultyId($data['faculty_id'])) {
@@ -412,6 +418,7 @@ class FacultySubmissions {
             // Publish to faculty_research if approved
             $submission = self::getById($submissionId);
             if ($submission && $status === 'approved' && $submission['submission_type'] === 'research') {
+                require_once __DIR__ . '/FacultyResearch.php';
                 $rd = json_decode($submission['content'] ?? '{}', true) ?: [];
                 $data = [
                     'title'      => $submission['title'] ?? '',

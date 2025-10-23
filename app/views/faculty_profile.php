@@ -10,7 +10,7 @@ $faculty = FacultyProfile::getAll();
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Faculty &amp; Staff | AdU-CCIT</title>
+  <title>Faculty Profile | AdU-CCIT</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css"/>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/faculty.css"/>
 </head>
@@ -26,7 +26,7 @@ $faculty = FacultyProfile::getAll();
     <div class="container hero__inner">
       <div class="hero__copy">
       <span class="hero__eyebrow">People</span>
-      <h1 class="subhero__title">Faculty &amp; Staff</h1>
+      <h1 class="subhero__title">Faculty Profile</h1>
       <p class="hero__lead"><?= htmlspecialchars($settings['subhero_lead'] ?? 'College of Computing & Information Technology — administration and faculty roster.') ?></p>
     </div>
   </section>
@@ -55,6 +55,7 @@ $faculty = FacultyProfile::getAll();
           <button class="pill" data-dept="admin" role="tab">Administration</button>
           <button class="pill" data-dept="itis" role="tab">IT&amp;IS</button>
           <button class="pill" data-dept="cs" role="tab">CS</button>
+          <button class="pill" data-dept="mit" role="tab">MIT</button>
         </div>
         
         <form class="nyear" method="get" action="#" onsubmit="return false;">
@@ -109,7 +110,6 @@ $faculty = FacultyProfile::getAll();
             <?php endif; ?>
             <div class="f__body">
               <h3 class="f__name"><?= htmlspecialchars($f['name']) ?></h3>
-              <p class="f__title"><?= htmlspecialchars($f['title']) ?></p>
               <div class="fbadges">
                 <?php
                   $badges = array_map('trim', explode(',', $f['badges'] ?? ''));

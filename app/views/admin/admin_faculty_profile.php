@@ -281,6 +281,7 @@ $faculty = FacultyProfile::getAll();
                     <option value="admin">Administration</option>
                     <option value="itis">IT&IS</option>
                     <option value="cs">CS</option>
+                    <option value="mit">MIT</option>
                   </select>
                 </div>
                 <div class="col-md-6 mb-3">
@@ -296,11 +297,6 @@ $faculty = FacultyProfile::getAll();
                 </div>
               </div>
               <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">Title</label>
-                  <input type="text" class="form-control" name="faculty[title]" 
-                         placeholder="e.g., Professor, PhD in Computer Science" required>
-                </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Avatar Initials (Auto-generated)</label>
                   <input type="text" class="form-control" name="faculty[avatar_initials]" 
@@ -373,7 +369,6 @@ $faculty = FacultyProfile::getAll();
                       <th>Name (Role-Based Ordering)</th>
                       <th>Department</th>
                       <th>Role & Order</th>
-                      <th>Title</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -406,7 +401,6 @@ $faculty = FacultyProfile::getAll();
                           </span>
                           <br><small class="text-muted">Order: <?= esc($f['role_order'] ?? 'N/A') ?></small>
                         </td>
-                        <td><?= esc($f['title']) ?></td>
                         <td>
                           <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal<?= $f['id'] ?>">
                             <i class="fas fa-edit"></i>
@@ -499,6 +493,7 @@ $faculty = FacultyProfile::getAll();
                         <option value="admin" <?= $f['dept'] === 'admin' ? 'selected' : '' ?>>Administration</option>
                         <option value="itis" <?= $f['dept'] === 'itis' ? 'selected' : '' ?>>IT&IS</option>
                         <option value="cs" <?= $f['dept'] === 'cs' ? 'selected' : '' ?>>CS</option>
+                        <option value="mit" <?= $f['dept'] === 'mit' ? 'selected' : '' ?>>MIT</option>
                       </select>
                     </div>
                     <div class="col-md-6">
@@ -513,10 +508,6 @@ $faculty = FacultyProfile::getAll();
                     </div>
                   </div>
                   <div class="row mt-3">
-                    <div class="col-md-6">
-                      <label class="form-label">Title</label>
-                      <input type="text" class="form-control" name="faculty[title]" value="<?= esc($f['title']) ?>" required>
-                    </div>
                     <div class="col-md-6">
                       <label class="form-label">Avatar Initials (Auto-generated)</label>
                       <input type="text" class="form-control" name="faculty[avatar_initials]" value="<?= esc($f['avatar_initials'] ?? '') ?>" maxlength="4" readonly>
@@ -702,4 +693,44 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
+// Auto-generate badges from department and role
+function updateBadges(form) {
+    const deptField = form.querySelector('select[name$="[dept]"], select[name="faculty[dept]"]');
+    const roleField = form.querySelector('select[name$="[role]"], select[name="faculty[role]"]');
+    const badgesField = form.querySelector('input[name$="[badges]"], input[name="faculty[badges]"]');
+
+    if (deptField && roleField && badgesField) {
+        const dept = deptField.options[deptField.selectedIndex].text.trim();
+        const role = roleField.options[roleField.selectedIndex].text.trim();
+
+        // Combine department and role into badges
+        const badges = [dept, role].filter(Boolean).join(', ');
+        badgesField.value = badges;
+    }
+}
+
+// Extend badge updater to handle edit modals
+function initializeBadgeUpdater() {
+    document.querySelectorAll('form').forEach(form => {
+        const deptField = form.querySelector('select[name$="[dept]"], select[name="faculty[dept]"]');
+        const roleField = form.querySelector('select[name$="[role]"], select[name="faculty[role]"]');
+        const badgesField = form.querySelector('input[name$="[badges]"], input[name="faculty[badges]"]');
+
+        if (deptField) {
+            deptField.addEventListener('change', () => updateBadges(form));
+        }
+
+        if (roleField) {
+            roleField.addEventListener('change', () => updateBadges(form));
+        }
+
+        // Initialize badges on page load
+        if (deptField && roleField && badgesField) {
+            updateBadges(form);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initializeBadgeUpdater);
 </script>

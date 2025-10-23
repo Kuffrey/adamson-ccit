@@ -4,7 +4,10 @@ require_once __DIR__ . '/../models/FacultyCertificationsPageSettings.php';
 require_once __DIR__ . '/../models/FacultyCertification.php';
 $settings = FacultyCertificationsPageSettings::getSettings();
 $grouped  = FacultyCertification::getGrouped();
-$years    = array_keys($grouped);
+
+// Ensure the years are sorted in descending order
+$years = array_keys($grouped);
+rsort($years);
 
 // Build issuers list
 $issuers = [];
@@ -42,6 +45,10 @@ foreach ($grouped as $year => $issuersData) {
   }
   if ($filteredIssuers) $filtered[$year] = $filteredIssuers;
 }
+$filtered = array_reverse($filtered, true); // Ensure filtered array is sorted by year in descending order
+uksort($filtered, function($a, $b) {
+    return $b <=> $a;
+});
 ?>
 <!DOCTYPE html>
 <html lang="en">

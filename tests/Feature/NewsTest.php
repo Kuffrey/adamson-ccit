@@ -18,9 +18,9 @@ function url_with(array $params): string {
 }
 
 
-// Helper: Escape HTML for output
-function e(string $s): string {
-    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); // Prevent XSS
+// Helper: Escape HTML for output (renamed to avoid conflict with Laravel's e() function)
+function escapeHtml(string $s): string {
+	return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); // Prevent XSS
 }
 
 
@@ -86,7 +86,7 @@ test('processes URL parameters correctly', function () {
 // Test: HTML escaping for XSS
 test('escapes HTML output correctly', function () {
     $maliciousInput = '<script>alert("xss")</script>'; // Malicious
-    $escaped = e($maliciousInput); // Escape
+    $escaped = escapeHtml($maliciousInput); // Escape
     expect($escaped)->toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'); // Should be safe
 });
 

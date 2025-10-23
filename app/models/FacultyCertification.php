@@ -566,37 +566,22 @@ class FacultyCertification extends Model {
                 ]
             );
             
-            // Query faculty_profile table instead of users table
-            $stmt = $pdo->prepare("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM faculty_profile ORDER BY first_name, last_name");
+            // Modify the getAllFaculty method to include the dean in the selection
+            $query = "SELECT id, first_name, last_name FROM users WHERE role IN ('faculty', 'dean')";
+            $stmt = $pdo->prepare($query);
             $stmt->execute();
-            
-            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Debug logging
-            error_log("Faculty from faculty_profile table: " . count($results) . " records found");
-            if (!empty($results)) {
-                error_log("Sample faculty: " . print_r($results[0], true));
+            $faculty = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Ensure the keys 'first_name' and 'last_name' are properly handled
+            foreach ($faculty as &$member) {
+                $member['name'] = $member['first_name'] . ' ' . $member['last_name'];
             }
-            
-            return $results;
+
+            return $faculty;
             
         } catch (PDOException $e) {
             error_log("Get faculty error: " . $e->getMessage());
-            
-            // Fallback to users table if faculty_profile doesn't exist or fails
-            try {
-                $stmt = $pdo->prepare("SELECT id, CONCAT(first_name, ' ', last_name) as name FROM users WHERE role = 'faculty' ORDER BY first_name, last_name");
-                $stmt->execute();
-                
-                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                error_log("Fallback to users table: " . count($results) . " faculty found");
-                
-                return $results;
-                
-            } catch (PDOException $e2) {
-                error_log("Fallback query also failed: " . $e2->getMessage());
-                return [];
-            }
+            return [];
         }
     }
 }

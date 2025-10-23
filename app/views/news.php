@@ -1,8 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// Expect Router to have loaded Auth already. We only require the model here.
-
+// Expect Router to have loaded Auth already.
 require_once __DIR__ . '/../models/News.php';
 require_once __DIR__ . '/../models/NewsPageSettings.php';
 
@@ -12,7 +11,6 @@ if (!function_exists('e')) {
         return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
     }
 }
-
 if (!function_exists('url_with')) {
     function url_with(array $params): string {
         $base = '/adamson-ccit/public/index.php';
@@ -37,8 +35,6 @@ $metaYears = [];
 
 try {
     if (method_exists(News::class, 'searchPublished')) {
-        // Optional richer method you can add in your model:
-        // News::searchPublished(['cat'=>?, 'year'=>?, 'q'=>?], ['page'=>?, 'perPage'=>?])
         $result = News::searchPublished(
             [
                 'cat'  => $cat === 'all' ? null : $cat,
@@ -47,12 +43,12 @@ try {
             ],
             ['page' => $page, 'perPage' => $per]
         );
-        $items = $result['items'] ?? [];
-        $total = (int)($result['total'] ?? count($items));
+        $items     = $result['items'] ?? [];
+        $total     = (int)($result['total'] ?? count($items));
         $metaYears = $result['years'] ?? [];
     } else {
-        // Fallback: use latest() and do light in-PHP filtering so the page still works now.
-        $seed = News::latest(48);
+        // Fallback so the page still works now.
+        $seed  = News::latest(48);
         $items = array_values(array_filter($seed, function($r) use ($cat, $year, $q){
             $catOk  = ($cat === 'all') || (strtolower((string)($r['category'] ?? '')) === $cat);
             $yrOk   = ($year === 'all') || (substr((string)($r['date'] ?? ''), 0, 4) === $year);
@@ -60,11 +56,9 @@ try {
             $qOk    = ($q === '') || (strpos($qText, strtolower($q)) !== false);
             return $catOk && $yrOk && $qOk;
         }));
-        $total = count($items);
-        // Paginate locally
+        $total  = count($items);
         $offset = ($page - 1) * $per;
-        $items = array_slice($items, $offset, $per);
-        // Build year list from seed
+        $items  = array_slice($items, $offset, $per);
         foreach ($seed as $r) {
             $y = substr((string)($r['date'] ?? ''), 0, 4);
             if ($y) $metaYears[$y] = true;
@@ -73,7 +67,6 @@ try {
         rsort($metaYears);
     }
 } catch (Throwable $e) {
-    // Fail-soft: empty list but render the page
     $items = [];
     $total = 0;
     $metaYears = [];
@@ -95,6 +88,8 @@ $chipClass = [
     'student'      => 'chip chip--green',
 ];
 
+// ---------- Category labels (mirrors student_research) ----------
+$cats = ['all'=>'All','research'=>'Research','achievement'=>'Achievements','student'=>'Student Life'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -103,16 +98,14 @@ $chipClass = [
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>News | AdU-CCIT</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css" />
+  <style>
+    .content > .container { padding: 16px 20px clamp(24px,5vw,48px); }
+    .nlist .container { padding: 16px 20px clamp(24px,5vw,48px); }
+  </style>
 </head>
 <body>
 
 <main>
-
-  <style>
-    /* Consistent container padding */
-    .content > .container { padding: 16px 20px clamp(24px,5vw,48px); }
-    .ngrid { padding: 16px 0 clamp(32px,6vw,56px); }
-  </style>
 
   <!-- ============ SUB-HERO ============ -->
   <section class="subhero">
@@ -123,9 +116,10 @@ $chipClass = [
 
     <div class="container hero__inner">
       <div class="hero__copy">
-      <span class="hero__eyebrow">CCIT Updates</span>
-      <h1 class="subhero__title">News</h1>
-      <p class="hero__lead"><?= e($settings['subhero_lead'] ?? '') ?></p>
+        <span class="hero__eyebrow">CCIT Updates</span>
+        <h1 class="subhero__title">News</h1>
+        <p class="hero__lead"><?= e($settings['subhero_lead'] ?? '') ?></p>
+      </div>
     </div>
   </section>
 
@@ -140,32 +134,30 @@ $chipClass = [
   <?php endif; ?>
 
   <!-- ============ LOCAL SUBNAV ============ -->
-<nav class="subnav" aria-label="News sub-navigation">
-  <div class="container">
-    <ul class="subnav__list" role="list">
-      <li class="is-active">
-        <a href="/adamson-ccit/public/index.php?page=news" aria-current="page">News</a>
-      </li>
-      <li>
-        <a href="/adamson-ccit/public/index.php?page=events">Events</a>
-      </li>
-      <li>
-        <a href="/adamson-ccit/public/index.php?page=announcements">Announcements</a>
-      </li>
-    </ul>
-  </div>
-</nav>
+  <nav class="subnav" aria-label="News sub-navigation">
+    <div class="container">
+      <ul class="subnav__list" role="list">
+        <li class="is-active">
+          <a href="/adamson-ccit/public/index.php?page=news" aria-current="page">News</a>
+        </li>
+        <li>
+          <a href="/adamson-ccit/public/index.php?page=events">Events</a>
+        </li>
+        <li>
+          <a href="/adamson-ccit/public/index.php?page=announcements">Announcements</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
 
-  <!-- ============ FILTER BAR (server-side; no session usage) ============ -->
+  <!-- ============ FILTER BAR ============ -->
   <section class="nbar">
     <div class="container nbar__inner">
       <div class="nbar__left">
         <div class="ncats" role="tablist" aria-label="Filter news by category">
-          <?php
-            $cats = ['all'=>'All','research'=>'Research','achievement'=>'Achievements','student'=>'Student Life'];
-            foreach ($cats as $val => $label):
-              $active = ($cat === $val) ? 'is-active' : '';
-              $href = url_with(['cat'=>$val,'year'=>$year,'q'=>$q?:null,'p'=>1]);
+          <?php foreach ($cats as $val => $label):
+                $active = ($cat === $val) ? 'is-active' : '';
+                $href = url_with(['cat'=>$val,'year'=>$year,'q'=>$q?:null,'p'=>1]);
           ?>
             <a class="pill <?= $active ?>" role="tab" aria-selected="<?= $active? 'true':'false' ?>" href="<?= e($href) ?>"><?= e($label) ?></a>
           <?php endforeach; ?>
@@ -178,7 +170,6 @@ $chipClass = [
           <select name="year" onchange="this.form.submit()">
             <option value="all" <?= $year==='all'?'selected':''; ?>>All Years</option>
             <?php
-              // Prefer metaYears; if empty, seed with a small range
               if (!$metaYears) {
                   $yNow = (int)date('Y');
                   for ($y=$yNow; $y>=$yNow-6; $y--) echo '<option>'.(int)$y.'</option>';
@@ -215,55 +206,49 @@ $chipClass = [
   <!-- ============ NEWS GRID ============ -->
   <section class="nlist">
     <div class="container">
-      <?php
-        $catLabel = $cats[$cat] ?? 'All';
-        $yrLabel  = ($year==='all') ? 'all years' : $year;
-        $countTxt = $total === 0 ? 'No news found' : "Showing {$total} result" . ($total!==1?'s':'');
-      ?>
-      <div id="nCount" class="ncount"><?= e($countTxt) ?> • <?= e($catLabel) ?> • <?= e($yrLabel) ?></div>
+      <!-- EXACTLY like student_research: JS fills this -->
+      <div id="nCount" class="rcount">Loading...</div>
 
       <div id="nGrid" class="cards">
-        <?php if (!$items): ?>
-          <div class="nempty" role="status">No news matches your filters.</div>
-        <?php else: ?>
-          <?php foreach ($items as $row):
-            $id     = (int)($row['id'] ?? 0);
-            $title  = (string)($row['title'] ?? 'Untitled');
-            $excerpt= (string)($row['excerpt'] ?? ($row['summary'] ?? ''));
-            if ($excerpt === '' && !empty($row['body'])) {
-              $excerpt = mb_substr(strip_tags((string)$row['body']), 0, 140) . '…';
-            }
-            $catKey = strtolower((string)($row['category'] ?? ''));
-            $catCls = $chipClass[$catKey] ?? 'chip';
-            $catCap = $cats[$catKey] ?? ucfirst($catKey ?: 'News');
-            $img    = (string)($row['image_url'] ?? '/adamson-ccit/public/assets/images/news/sample1.jpg');
-            $date   = (string)($row['date'] ?? $row['published_at'] ?? '');
-            $author = (string)($row['author'] ?? 'CCIT Communications');
-            $viewUrl= '/adamson-ccit/public/index.php?page=news_article&id=' . $id;
-            $editUrl= '/adamson-ccit/public/index.php?page=admin_manage_news&action=edit&id='.$id;
-          ?>
-          <article class="n" data-cat="<?= e($catKey ?: 'news') ?>" data-year="<?= e(substr($date,0,4) ?: '') ?>">
-            <a class="n__media" href="<?= e($viewUrl) ?>">
-              <img src="<?= e($img) ?>" alt="<?= e($title) ?>">
-              <span class="<?= e($catCls) ?>"><?= e($catCap) ?></span>
-            </a>
-            <div class="n__body">
-              <h3 class="n__title"><a href="<?= e($viewUrl) ?>"><?= e($title) ?></a></h3>
-              <?php if ($excerpt): ?><p class="n__excerpt"><?= e($excerpt) ?></p><?php endif; ?>
-              <div class="n__meta">
-                <?php if ($date): ?>
-                  <time datetime="<?= e($date) ?>"><?= e(date('M j, Y', strtotime($date))) ?></time>
-                <?php endif; ?>
-                <?= $author ? ' • '.e($author) : '' ?>
-                <?php if ($isManager && $id): ?>
-                  &nbsp;•&nbsp;<a href="<?= e($editUrl) ?>" class="link">Edit</a>
-                <?php endif; ?>
-              </div>
+        <?php foreach ($items as $row):
+          $id     = (int)($row['id'] ?? 0);
+          $title  = (string)($row['title'] ?? 'Untitled');
+          $excerpt= (string)($row['excerpt'] ?? ($row['summary'] ?? ''));
+          if ($excerpt === '' && !empty($row['body'])) {
+            $excerpt = mb_substr(strip_tags((string)$row['body']), 0, 140) . '…';
+          }
+          $catKey = strtolower((string)($row['category'] ?? ''));
+          $catCls = $chipClass[$catKey] ?? 'chip';
+          $catCap = $cats[$catKey] ?? ucfirst($catKey ?: 'News');
+          $img    = (string)($row['image_url'] ?? '/adamson-ccit/public/assets/images/news/sample1.jpg');
+          $date   = (string)($row['date'] ?? $row['published_at'] ?? '');
+          $author = (string)($row['author'] ?? 'CCIT Communications');
+          $viewUrl= '/adamson-ccit/public/index.php?page=news_article&id=' . $id;
+          $editUrl= '/adamson-ccit/public/index.php?page=admin_manage_news&action=edit&id='.$id;
+        ?>
+        <article class="n" data-cat="<?= e($catKey ?: 'news') ?>" data-year="<?= e(substr($date,0,4) ?: '') ?>">
+          <a class="n__media" href="<?= e($viewUrl) ?>">
+            <img src="<?= e($img) ?>" alt="<?= e($title) ?>">
+            <span class="<?= e($catCls) ?>"><?= e($catCap) ?></span>
+          </a>
+          <div class="n__body">
+            <h3 class="n__title"><a href="<?= e($viewUrl) ?>"><?= e($title) ?></a></h3>
+            <?php if ($excerpt): ?><p class="n__excerpt"><?= e($excerpt) ?></p><?php endif; ?>
+            <div class="n__meta">
+              <?php if ($date): ?>
+                <time datetime="<?= e($date) ?>"><?= e(date('M j, Y', strtotime($date))) ?></time>
+              <?php endif; ?>
+              <?= $author ? ' • '.e($author) : '' ?>
+              <?php if ($isManager && $id): ?>
+                &nbsp;•&nbsp;<a href="<?= e($editUrl) ?>" class="link">Edit</a>
+              <?php endif; ?>
             </div>
-          </article>
-          <?php endforeach; ?>
-        <?php endif; ?>
+          </div>
+        </article>
+        <?php endforeach; ?>
       </div>
+
+      <div id="nEmpty" class="nempty" hidden>No news matches your filters.</div>
 
       <!-- Pagination -->
       <nav class="pager" aria-label="News pagination">
@@ -277,11 +262,104 @@ $chipClass = [
         <span class="pg__status">Page <?= (int)$page ?> of <?= (int)$pages ?></span>
         <a class="pg" href="<?= e($nextUrl) ?>" <?= $nextDisabled ?>>Next »</a>
       </nav>
-
     </div>
   </section>
 
 </main>
+
+<script>
+// News filter/search (client-side) — mirrors student_research rcount behavior
+(function(){
+  'use strict';
+
+  var pills   = Array.prototype.slice.call(document.querySelectorAll('.ncats .pill'));
+  var yearSel = document.querySelector('.nyear select[name="year"]');
+  var qInput  = document.getElementById('nQuery');
+  var grid    = document.getElementById('nGrid');
+  var countEl = document.getElementById('nCount');
+  var emptyEl = document.getElementById('nEmpty');
+
+  if (!countEl) return;
+  var cards = grid ? Array.prototype.slice.call(grid.querySelectorAll('.n')) : [];
+
+  // Initial active category from URL
+  var urlParams = new URLSearchParams(window.location.search);
+  var activeCat = (urlParams.get('cat') || 'all').toLowerCase();
+
+  // Update active pill state
+  pills.forEach(function(p){
+    try {
+      var href = new URL(p.href, window.location.origin);
+      var pillCat = (href.searchParams.get('cat') || 'all').toLowerCase();
+      p.classList.toggle('is-active', pillCat === activeCat);
+    } catch(_) {}
+  });
+
+  function labelizeCat(cat){
+    if (cat === 'all') return 'All';
+    var cap = cat.charAt(0).toUpperCase() + cat.slice(1);
+    return cap + (cap.slice(-1) === 's' ? '' : 's');
+  }
+
+  function apply(){
+    var q = (qInput && qInput.value ? qInput.value : '').trim().toLowerCase();
+    var y = (yearSel && yearSel.value) ? yearSel.value : 'all';
+    var visible = 0;
+
+    cards.forEach(function(card){
+      var cat  = (card.getAttribute('data-cat')  || '').toLowerCase();
+      var year = (card.getAttribute('data-year') || '');
+      var text = (card.innerText || '').toLowerCase();
+
+      var ok = true;
+      if (activeCat !== 'all' && cat !== activeCat) ok = false;
+      if (ok && y !== 'all' && year !== y) ok = false;
+      if (ok && q && text.indexOf(q) === -1) ok = false;
+
+      card.style.display = ok ? '' : 'none';
+      if (ok) visible++;
+    });
+
+    var catLabel    = labelizeCat(activeCat);
+    var yearLabel   = (y === 'all') ? 'all years' : y;
+    var searchLabel = q ? (' matching "' + q + '"') : '';
+
+    countEl.textContent = 'Showing ' + visible + ' item' + (visible !== 1 ? 's' : '') +
+                          ' • ' + catLabel + ' • ' + yearLabel + searchLabel;
+
+    if (emptyEl) emptyEl.hidden = (visible !== 0);
+  }
+
+  // Prevent navigation for pills; re-apply filters live
+  pills.forEach(function(p){
+    p.addEventListener('click', function(e){
+      e.preventDefault();
+      pills.forEach(function(x){ x.classList.remove('is-active'); });
+      p.classList.add('is-active');
+      try {
+        var href = new URL(p.href, window.location.origin);
+        activeCat = (href.searchParams.get('cat') || 'all').toLowerCase();
+      } catch(_) { activeCat = 'all'; }
+      apply();
+    });
+  });
+
+  if (yearSel) yearSel.addEventListener('change', apply);
+
+  if (qInput) {
+    var form = qInput.closest('form');
+    if (form) {
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        apply();
+      });
+    }
+  }
+
+  // Initial compute
+  apply();
+})();
+</script>
 
 </body>
 </html>

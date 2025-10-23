@@ -57,38 +57,34 @@ $dean = DeanCorner::get($pdo);
   <section class="content">
     <div class="container" style="display:flex;justify-content:center;">
       <article class="content__main">
-        <header class="stack">
-          <h2 class="h2">Meet the Dean</h2>
-          <p class="lead" style="font-size:1.1rem;color:#374151; margin-bottom:18px;">
-            <?= htmlspecialchars($dean['title']) ?>
-          </p>
-        </header>
+
         <section class="card" style="background:#fff;border:1px solid #e3e8f2;border-radius:18px;padding:36px 28px;box-shadow:0 2px 12px rgba(0,0,0,0.04);display:flex;flex-direction:column;align-items:center;">
           <img src="<?= htmlspecialchars($dean['photo']) ?>" alt="Dean Photo" style="width:200px;height:200px;object-fit:cover;border-radius:18px;border:3px solid #0a204b;box-shadow:0 2px 12px rgba(0,0,0,0.10);margin-bottom:18px;">
-          <h3 style="margin:0;color:#0a204b;font-size:1.5rem;letter-spacing:1px;line-height:1.2;">
+          <h3>
             <?= htmlspecialchars($dean['name']) ?>
           </h3>
-          <div style="color:#1e3c72;font-size:1.1rem;margin-top:6px;margin-bottom:18px;">
+          <div style="color:#1e3c72;margin-bottom:18px;">
             <?= htmlspecialchars($dean['title']) ?>
           </div>
-          <p class="lead" style="font-size:1.18rem;line-height:1.85;color:#222;margin:0 0 18px 0;text-align:center;">
+          <p class="lead" style="font-size: 16px;line-height:1.85;margin:0 0 18px 0;text-align:center;">
             <?= nl2br(htmlspecialchars($dean['message'])) ?>
           </p>
           <span style="font-size:1rem;color:#374151;">Email: <a href="mailto:<?= htmlspecialchars($dean['email']) ?>" style="color:#0a204b;text-decoration:underline;"><?= htmlspecialchars($dean['email']) ?></a></span>
         </section>
       </article>
-        <!-- Aside removed for single-column layout -->
     </div>
   </section>
 
   <!-- ============ CTA ============ -->
-  <section class="cta" style="padding:40px 0;">
-    <div class="container cta__inner" style="padding:0 24px;">
+  <section class="cta">
+    <div class="container">
+    <div class="container cta__inner">
       <div>
         <h2><?= htmlspecialchars($dean['cta_title']) ?></h2>
         <p><?= nl2br(htmlspecialchars($dean['cta_body'])) ?></p>
       </div>
       <a class="btn btn--solid" href="mailto:<?= htmlspecialchars($dean['email']) ?>"><?= htmlspecialchars($dean['cta_btn_label']) ?></a>
+    </div>
     </div>
   </section>
 </main>

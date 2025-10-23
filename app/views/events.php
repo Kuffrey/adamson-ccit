@@ -3,15 +3,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/../models/Event.php';
 require_once __DIR__ . '/../models/EventsPageSettings.php';
 
-if (!function_exists('e')) {
-    function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
-}
+if (!function_exists('e')) { function e(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); } }
 if (!function_exists('url_with')) {
-    function url_with(array $params): string {
-      $base = '/adamson-ccit/public/index.php';
-      $q = array_merge(['page' => 'events'], $params);
-      return $base . '?' . http_build_query($q);
-    }
+  function url_with(array $params): string {
+    $base = '/adamson-ccit/public/index.php';
+    $q = array_merge(['page' => 'events'], $params);
+    return $base . '?' . http_build_query($q);
+  }
 }
 
 $cat   = isset($_GET['cat'])  ? strtolower(trim((string)$_GET['cat'])) : 'all';
@@ -55,12 +53,7 @@ $settings = (new EventsPageSettings())->get();
 <body>
 <main>
 
-  <style>
-    /* Consistent container padding */
-    .content > .container { padding: 16px 20px clamp(24px,5vw,48px); }
-    .egrid { padding: 16px 0 clamp(32px,6vw,56px); }
-  </style>
-
+  <!-- SUB-HERO -->
   <section class="subhero">
     <div class="subhero__media" aria-hidden="true">
       <img src="/adamson-ccit/public/assets/images/hero-campus.jpg" alt="Adamson University campus exterior" />
@@ -71,7 +64,7 @@ $settings = (new EventsPageSettings())->get();
       <div class="hero__copy">
         <span class="hero__eyebrow">CCIT Updates</span>
         <h1 class="subhero__title">Events</h1>
-        <p class="hero__lead"><?= htmlspecialchars($settings['subhero_lead'] ?? 'Career fairs, forums, workshops, and student showcases happening at CCIT.') ?></p>
+        <p class="hero__lead"><?= e($settings['subhero_lead'] ?? 'Career fairs, forums, workshops, and student showcases happening at CCIT.') ?></p>
       </div>
     </div>
   </section>
@@ -131,24 +124,19 @@ $settings = (new EventsPageSettings())->get();
   <!-- EVENTS GRID -->
   <section class="nlist">
     <div class="container">
-      <?php
-        $catLabel = $cats[$cat] ?? 'All';
-        $yrLabel  = ($year==='all') ? 'all years' : $year;
-        $countTxt = $total === 0 ? 'No events found' : "Showing {$total} result" . ($total!==1?'s':'');
-        $chipClass = [
-          'career' =>'chip',
-          'forum'  =>'chip chip--blue',
-          'workshop'=>'chip chip--gray',
-          'competition'=>'chip chip--green',
-          'community'=>'chip'
-        ];
-      ?>
-      <div id="eCount" class="ncount"><?= e($countTxt) ?> • <?= e($catLabel) ?> • <?= e($yrLabel) ?></div>
+      <div id="eCount" class="rcount">Loading...</div>
 
       <div id="eGrid" class="cards">
-        <?php if (!$items): ?>
-          <div class="nempty" role="status">No events match your filters.</div>
-        <?php else: foreach ($items as $row):
+        <?php
+          $chipClass = [
+            'career' =>'chip',
+            'forum'  =>'chip chip--blue',
+            'workshop'=>'chip chip--gray',
+            'competition'=>'chip chip--green',
+            'community'=>'chip'
+          ];
+        ?>
+        <?php foreach ($items as $row):
           $id    = (int)($row['id'] ?? 0);
           $title = (string)($row['title'] ?? 'Untitled');
           $desc  = (string)($row['description'] ?? '');
@@ -156,18 +144,16 @@ $settings = (new EventsPageSettings())->get();
           $catKey= strtolower((string)($row['category'] ?? 'career'));
           $img   = (string)($row['image_url'] ?? '/adamson-ccit/public/assets/images/news/sample5.jpg');
           $start = (string)($row['start_at'] ?? '');
-          $end   = (string)($row['end_at']   ?? '');
-          $chip  = $chipClass[$catKey] ?? 'chip';
           $y     = $start ? date('Y', strtotime($start)) : '';
-          $editUrl= '/adamson-ccit/public/index.php?page=admin_manage_events&action=edit&id='.$id;
+          $chip  = $chipClass[$catKey] ?? 'chip';
         ?>
         <article class="n" data-cat="<?= e($catKey) ?>" data-year="<?= e($y) ?>" data-date="<?= e(substr($start,0,10)) ?>">
-          <div class="n__media" onclick="openEventModal('<?= e((string)$id) ?>')" style="cursor: pointer;">
+          <a class="n__media" href="#" onclick="openModal('event-modal-<?= e((string)$id) ?>'); return false;">
             <img src="<?= e($img) ?>" alt="<?= e($title) ?>" />
             <span class="<?= e($chip) ?>"><?= e(ucfirst($catKey)) ?></span>
-          </div>
+          </a>
           <div class="n__body">
-            <h3 class="n__title"><a href="#" onclick="openEventModal('<?= e((string)$id) ?>')"><?= e($title) ?></a></h3>
+            <h3 class="n__title"><a href="#" onclick="openModal('event-modal-<?= e((string)$id) ?>'); return false;"><?= e($title) ?></a></h3>
             <?php if ($loc): ?><p class="n__meta"><?= e($loc) ?></p><?php endif; ?>
             <?php if ($desc): ?><p class="n__excerpt"><?= e(mb_substr(strip_tags($desc), 0, 140).'…') ?></p><?php endif; ?>
             <div class="n__meta">
@@ -177,10 +163,11 @@ $settings = (new EventsPageSettings())->get();
             </div>
           </div>
         </article>
-        <?php endforeach; endif; ?>
+        <?php endforeach; ?>
       </div>
 
-      <!-- Pagination -->
+      <div id="eEmpty" class="nempty" hidden>No events match your filters.</div>
+
       <?php
         $prevUrl = url_with(['cat'=>$cat,'year'=>$year,'q'=>$q?:null,'p'=>max(1,$page-1)]);
         $nextUrl = url_with(['cat'=>$cat,'year'=>$year,'q'=>$q?:null,'p'=>min($pages,$page+1)]);
@@ -194,235 +181,145 @@ $settings = (new EventsPageSettings())->get();
   </section>
 </main>
 
-<!-- Event Modals -->
-<?php foreach ($items as $row): 
-  $id = (int)($row['id'] ?? 0);
-  $title = (string)($row['title'] ?? 'Untitled');
-  $content = (string)($row['description'] ?? '');
-  $catKey = strtolower((string)($row['category'] ?? 'career'));
-  $img = (string)($row['image_url'] ?? '/adamson-ccit/public/assets/images/news/sample5.jpg');
-  $start = (string)($row['start_at'] ?? '');
-  $loc = (string)($row['location'] ?? '');
+<!-- Event Modals (now reusing the same classes/styles as Announcements) -->
+<?php foreach ($items as $row):
+  $id       = (int)($row['id'] ?? 0);
+  $title    = (string)($row['title'] ?? 'Untitled');
+  $content  = (string)($row['description'] ?? '');
+  $catKey   = strtolower((string)($row['category'] ?? 'career'));
+  $img      = (string)($row['image_url'] ?? '/adamson-ccit/public/assets/images/news/sample5.jpg');
+  $start    = (string)($row['start_at'] ?? '');
+  $loc      = (string)($row['location'] ?? '');
   $formattedDate = $start ? date('F j, Y', strtotime($start)) : '';
 ?>
-<div id="event-modal-<?= e((string)$id) ?>" class="event-modal" style="display: none;">
-  <div class="event-modal-backdrop" onclick="closeEventModal()"></div>
-  <div class="event-modal-content">
-    <div class="event-modal-header">
-      <div class="event-header-info">
-        <span class="event-category"><?= e(ucfirst($catKey)) ?></span>
-        <?php if ($formattedDate): ?>
-          <span class="event-date"><?= e($formattedDate) ?></span>
-        <?php endif; ?>
+<div id="event-modal-<?= e((string)$id) ?>" class="modal announcement-modal" role="dialog" aria-modal="true" style="display:none;">
+  <div class="modal-backdrop announcement-modal-backdrop"></div>
+  <div class="modal-content announcement-modal-content">
+    <div class="modal-header announcement-modal-header">
+      <div class="modal-header-info announcement-header-info">
+        <span class="modal-category announcement-category"><?= e(ucfirst($catKey)) ?></span>
+        <?php if ($formattedDate): ?><span class="modal-date announcement-date"><?= e($formattedDate) ?></span><?php endif; ?>
       </div>
-      <button class="event-modal-close" onclick="closeEventModal()" aria-label="Close">&times;</button>
+      <button class="modal-close announcement-modal-close" aria-label="Close" data-modal-focus>&times;</button>
     </div>
-    <div class="event-modal-body">
+
+    <div class="modal-body announcement-modal-body">
       <h3><?= e($title) ?></h3>
+
       <?php if ($img): ?>
-        <img src="<?= e($img) ?>" alt="<?= e($title) ?>" class="event-image">
+        <img src="<?= e($img) ?>" alt="<?= e($title) ?>" class="announcement-image">
       <?php endif; ?>
+
       <?php if ($loc): ?>
-        <p class="event-location"><strong>📍 Location:</strong> <?= e($loc) ?></p>
+        <p class="announcement-excerpt"><strong>📍 Location:</strong> <?= e($loc) ?></p>
       <?php endif; ?>
-      <div class="event-content">
+
+      <div class="announcement-content">
         <?= $content ? nl2br(e($content)) : '<p>More details about this event will be available soon.</p>' ?>
       </div>
     </div>
-    <div class="event-modal-footer">
-      <button class="btn btn--solid" onclick="closeEventModal()">Close</button>
+
+    <div class="modal-footer announcement-modal-footer">
+      <button class="btn btn--solid" onclick="closeModal()">Close</button>
     </div>
   </div>
 </div>
 <?php endforeach; ?>
 
-<!-- Event Modal Styles -->
-<style>
-.event-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 9999;
-  animation: fadeIn 0.3s ease;
-}
-
-.event-modal-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-}
-
-.event-modal-content {
-  position: relative;
-  background: white;
-  margin: 2% auto;
-  padding: 0;
-  width: 90%;
-  max-width: 700px;
-  max-height: 90vh;
-  border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-  animation: slideIn 0.3s ease;
-  overflow: hidden;
-  z-index: 10000;
-}
-
-.event-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f8fafc;
-}
-
-.event-header-info {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.event-category {
-  background: #1e40af;
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.event-date {
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.event-modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #6b7280;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.2s;
-}
-
-.event-modal-close:hover {
-  background: #f3f4f6;
-}
-
-.event-modal-body {
-  padding: 1.5rem;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-.event-modal-body h3 {
-  margin: 0 0 1rem 0;
-  font-size: 1.5rem;
-  color: #1e40af;
-  line-height: 1.3;
-}
-
-.event-image {
-  width: 100%;
-  max-height: 200px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin: 1rem 0;
-}
-
-.event-location {
-  background: #f0f9ff;
-  padding: 0.75rem;
-  border-radius: 8px;
-  border-left: 4px solid #0ea5e9;
-  margin: 1rem 0;
-  color: #0c4a6e;
-}
-
-.event-content {
-  line-height: 1.6;
-  color: #374151;
-}
-
-.event-content p {
-  margin-bottom: 1rem;
-}
-
-.event-modal-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
-  text-align: right;
-  background: #f8fafc;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideIn {
-  from { 
-    opacity: 0;
-    transform: translateY(-50px) scale(0.95);
-  }
-  to { 
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@media (max-width: 768px) {
-  .event-modal-content {
-    margin: 5% auto;
-    width: 95%;
-    max-height: 95vh;
-  }
-  
-  .event-header-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-}
-</style>
+<!-- Generic modal JS (shared by news/events/announcements) -->
+<script>
+(function(){
+  window.openModal = function(id){
+    var m = document.getElementById(id);
+    if (!m) return;
+    m.classList.add('modal--open');
+    m.style.display = 'block';
+    document.body.dataset.modalScrollLock = document.body.style.overflow || '';
+    document.body.style.overflow = 'hidden';
+    var f = m.querySelector('[data-modal-focus], a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])');
+    if (f) { try { f.focus(); } catch(_) {} }
+  };
+  window.closeModal = function(){
+    document.querySelectorAll('.modal, .event-modal, .announcement-modal').forEach(function(m){
+      m.classList.remove('modal--open');
+      m.style.display = 'none';
+    });
+    document.body.style.overflow = document.body.dataset.modalScrollLock || '';
+  };
+  document.addEventListener('click', function(e){
+    if (e.target.matches('.modal-backdrop, .event-modal-backdrop, .announcement-modal-backdrop')) closeModal();
+    if (e.target.matches('.modal-close, .event-modal-close, .announcement-modal-close')) { e.preventDefault(); closeModal(); }
+  });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
+})();
+</script>
 
 <script>
-// Event Modal Functions
-function openEventModal(eventId) {
-  const modal = document.getElementById('event-modal-' + eventId);
-  if (modal) {
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-  }
-}
+/* Events filter/search (client-side) — unified rcount behavior */
+(function(){
+  'use strict';
+  var pills   = Array.prototype.slice.call(document.querySelectorAll('.ncats .pill'));
+  var yearSel = document.querySelector('.nyear select[name="year"]');
+  var qInput  = document.getElementById('eQuery');
+  var grid    = document.getElementById('eGrid');
+  var countEl = document.getElementById('eCount');
+  var emptyEl = document.getElementById('eEmpty');
+  if (!countEl) return;
+  var cards = grid ? Array.prototype.slice.call(grid.querySelectorAll('.n')) : [];
 
-function closeEventModal() {
-  const modals = document.querySelectorAll('.event-modal');
-  modals.forEach(modal => {
-    modal.style.display = 'none';
+  var urlParams = new URLSearchParams(window.location.search);
+  var activeCat = (urlParams.get('cat') || 'all').toLowerCase();
+
+  pills.forEach(function(p){
+    try{ var href=new URL(p.href, window.location.origin);
+      var pillCat=(href.searchParams.get('cat')||'all').toLowerCase();
+      p.classList.toggle('is-active', pillCat===activeCat);
+    }catch(_){}
   });
-  document.body.style.overflow = '';
-}
 
-// Close modal on escape key
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    closeEventModal();
+  function labelizeCat(cat){ if (cat==='all') return 'All';
+    var cap=cat.charAt(0).toUpperCase()+cat.slice(1); return cap+(cap.slice(-1)==='s'?'':'s'); }
+
+  function apply(){
+    var q=(qInput && qInput.value ? qInput.value : '').trim().toLowerCase();
+    var y=(yearSel && yearSel.value) ? yearSel.value : 'all';
+    var visible=0;
+    cards.forEach(function(card){
+      var cat=(card.getAttribute('data-cat')||'').toLowerCase();
+      var year=(card.getAttribute('data-year')||'');
+      var text=(card.innerText||'').toLowerCase();
+      var ok=true;
+      if(activeCat!=='all' && cat!==activeCat) ok=false;
+      if(ok && y!=='all' && year!==y) ok=false;
+      if(ok && q && text.indexOf(q)===-1) ok=false;
+      card.style.display= ok ? '' : 'none';
+      if(ok) visible++;
+    });
+    var catLabel=labelizeCat(activeCat);
+    var yearLabel=(y==='all') ? 'all years' : y;
+    var searchLabel=q ? (' matching "'+q+'"') : '';
+    countEl.textContent='Showing '+visible+' item'+(visible!==1?'s':'')+' • '+catLabel+' • '+yearLabel+searchLabel;
+    if (emptyEl) emptyEl.hidden = (visible !== 0);
   }
-});
+
+  pills.forEach(function(p){
+    p.addEventListener('click', function(e){
+      e.preventDefault();
+      pills.forEach(function(x){ x.classList.remove('is-active'); });
+      p.classList.add('is-active');
+      try{ var href=new URL(p.href, window.location.origin);
+        activeCat=(href.searchParams.get('cat')||'all').toLowerCase();
+      }catch(_){ activeCat='all'; }
+      apply();
+    });
+  });
+  if (yearSel) yearSel.addEventListener('change', apply);
+  if (qInput){
+    var form=qInput.closest('form');
+    if (form){ form.addEventListener('submit', function(e){ e.preventDefault(); apply(); }); }
+  }
+  apply();
+})();
 </script>
 
 </body>

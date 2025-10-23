@@ -2295,3 +2295,93 @@ Stack trace:
 [08-Oct-2025 21:55:20 Europe/Berlin] ADMIN ANNOUNCEMENT EDIT - Keeping current image: /adamson-ccit/public/uploads/announcements/1759950050-alumni-basketball.jpg
 [08-Oct-2025 21:55:20 Europe/Berlin] ADMIN ANNOUNCEMENT EDIT - Update data: {"title":"CCIT Alumni Basketball League","excerpt":"Calling All CS, IT, and IS Alumni!\r\n\r\nGet ready to hit the court. Online registration is now OPEN for the upcoming CCIT Alumni Basketball League!","content":"Gather your team and sign up now! Spots are limited and registration is on a first-come, first-served basis. Don\u2019t forget to check out the posted mechanics before registering.\r\n\r\nRegister here: https:\/\/forms.gle\/QXHhG9rTBVNXoiQj8\r\nOr scan the QR code to join.\r\n\r\nSee you on the court, CCIT Klasmeyts!\ud83c\udfc0","category":"general","date":"","status":"published","image_url":"\/adamson-ccit\/public\/uploads\/announcements\/1759950050-alumni-basketball.jpg"}
 [08-Oct-2025 21:55:20 Europe/Berlin] ADMIN ANNOUNCEMENT EDIT - Update result: SUCCESS
+[17-Oct-2025 21:46:41 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:46:41 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:48:39 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:48:39 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:48:40 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:48:40 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:49:01 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:49:01 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:49:09 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:49:09 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:50:45 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:50:45 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:50:46 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:50:46 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:50:58 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:50:58 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:53:36 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:53:36 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:56:46 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:56:46 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:57:10 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:57:10 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:57:12 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:57:12 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:57:16 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:57:16 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:57:22 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:57:22 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:58:47 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:58:47 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:58:51 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 21:58:51 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:00:26 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:00:26 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:00:37 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:00:37 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:00:42 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:00:42 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:02:10 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:02:10 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:02:16 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:02:16 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:02:25 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:02:25 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:02:55 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:02:55 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:05:23 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:05:23 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:06:26 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:06:26 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:08:05 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:08:05 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:10:06 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:10:06 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:16:53 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:16:53 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:16:56 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:16:56 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:18:53 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:18:53 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:18:54 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:18:54 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:18:54 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:18:54 Europe/Berlin] [Array to string conversion] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 4
+[17-Oct-2025 22:43:28 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 64
+[17-Oct-2025 22:43:28 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 66
+[17-Oct-2025 22:45:33 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 64
+[17-Oct-2025 22:45:33 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 66
+[17-Oct-2025 22:47:33 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 64
+[17-Oct-2025 22:47:33 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 66
+[17-Oct-2025 22:48:33 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 64
+[17-Oct-2025 22:48:33 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 66
+[17-Oct-2025 22:51:52 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 103
+[17-Oct-2025 22:51:52 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 105
+[17-Oct-2025 22:51:52 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 108
+[17-Oct-2025 22:52:42 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 103
+[17-Oct-2025 22:52:42 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 105
+[17-Oct-2025 22:52:42 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 108
+[17-Oct-2025 22:52:48 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 103
+[17-Oct-2025 22:52:48 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 105
+[17-Oct-2025 22:52:48 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 108
+[17-Oct-2025 22:52:50 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 103
+[17-Oct-2025 22:52:50 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 105
+[17-Oct-2025 22:52:50 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 108
+[17-Oct-2025 22:53:33 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 103
+[17-Oct-2025 22:53:33 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 105
+[17-Oct-2025 22:53:33 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 108
+[17-Oct-2025 22:58:13 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 103
+[17-Oct-2025 22:58:13 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 105
+[17-Oct-2025 22:58:13 Europe/Berlin] [Using ${var} in strings is deprecated, use {$var} instead] in C:\xampp\htdocs\adamson-ccit\app\views\admin_manage_about.php on line 108

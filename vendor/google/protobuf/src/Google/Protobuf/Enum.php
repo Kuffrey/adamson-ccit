@@ -6,15 +6,11 @@
 namespace Google\Protobuf;
 
 use Google\Protobuf\Internal\GPBType;
+use Google\Protobuf\Internal\RepeatedField;
 use Google\Protobuf\Internal\GPBUtil;
-use Google\Protobuf\RepeatedField;
 
 /**
  * Enum type definition.
- * New usages of this message as an alternative to EnumDescriptorProto are
- * strongly discouraged. This message does not reliability preserve all
- * information necessary to model the schema and preserve semantics. Instead
- * make use of FileDescriptorSet which preserves the necessary information.
  *
  * Generated from protobuf message <code>google.protobuf.Enum</code>
  */
@@ -65,9 +61,9 @@ class Enum extends \Google\Protobuf\Internal\Message
      *
      *     @type string $name
      *           Enum type name.
-     *     @type \Google\Protobuf\EnumValue[] $enumvalue
+     *     @type array<\Google\Protobuf\EnumValue>|\Google\Protobuf\Internal\RepeatedField $enumvalue
      *           Enum value definitions.
-     *     @type \Google\Protobuf\Option[] $options
+     *     @type array<\Google\Protobuf\Option>|\Google\Protobuf\Internal\RepeatedField $options
      *           Protocol buffer options.
      *     @type \Google\Protobuf\SourceContext $source_context
      *           The source context.
@@ -112,7 +108,7 @@ class Enum extends \Google\Protobuf\Internal\Message
      * Enum value definitions.
      *
      * Generated from protobuf field <code>repeated .google.protobuf.EnumValue enumvalue = 2;</code>
-     * @return RepeatedField<\Google\Protobuf\EnumValue>
+     * @return \Google\Protobuf\Internal\RepeatedField
      */
     public function getEnumvalue()
     {
@@ -123,7 +119,7 @@ class Enum extends \Google\Protobuf\Internal\Message
      * Enum value definitions.
      *
      * Generated from protobuf field <code>repeated .google.protobuf.EnumValue enumvalue = 2;</code>
-     * @param \Google\Protobuf\EnumValue[] $var
+     * @param array<\Google\Protobuf\EnumValue>|\Google\Protobuf\Internal\RepeatedField $var
      * @return $this
      */
     public function setEnumvalue($var)
@@ -138,7 +134,7 @@ class Enum extends \Google\Protobuf\Internal\Message
      * Protocol buffer options.
      *
      * Generated from protobuf field <code>repeated .google.protobuf.Option options = 3;</code>
-     * @return RepeatedField<\Google\Protobuf\Option>
+     * @return \Google\Protobuf\Internal\RepeatedField
      */
     public function getOptions()
     {
@@ -149,7 +145,7 @@ class Enum extends \Google\Protobuf\Internal\Message
      * Protocol buffer options.
      *
      * Generated from protobuf field <code>repeated .google.protobuf.Option options = 3;</code>
-     * @param \Google\Protobuf\Option[] $var
+     * @param array<\Google\Protobuf\Option>|\Google\Protobuf\Internal\RepeatedField $var
      * @return $this
      */
     public function setOptions($var)

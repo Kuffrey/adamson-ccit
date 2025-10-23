@@ -9,7 +9,7 @@ $about = (new AboutVisionMission())->get();
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vission & Mission | AdU-CCIT</title>
+  <title>Vision & Mission | AdU-CCIT</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css" />
 </head>
 <body>
@@ -52,10 +52,6 @@ $about = (new AboutVisionMission())->get();
     <div class="container content__grid">
 
       <article class="content__main">
-        <header class="stack">
-          <h2 class="h2">College of Computing &amp; Information Technology</h2>
-          <p class="lead">Our institutional commitment to excellence in computing education</p>
-        </header>
 
         <section class="card vision-card">
           <h3>Our Vision</h3>
@@ -119,18 +115,9 @@ $about = (new AboutVisionMission())->get();
             <li><a href="/adamson-ccit/public/index.php?page=admission_freshman">Admissions</a></li>
           </ul>
         </div>
-        
-        <div class="fact">
-          <h3>By the Numbers</h3>
-          <ul>
-            <li>2 specialized departments</li>
-            <li>3 undergraduate programs</li>
-            <li>Expert faculty and staff</li>
-          </ul>
-        </div>
 
         <figure class="content__photo">
-          <img src="/adamson-ccit/public/assets/images/hero-campus.jpg" alt="CCIT Students">
+          <img src="/adamson-ccit/public/assets/images/history/collab.jpg" alt="CCIT Students">
           <figcaption>Students collaborating in our modern computing facilities.</figcaption>
         </figure>
       </aside>
@@ -140,6 +127,7 @@ $about = (new AboutVisionMission())->get();
 
   <!-- ============ CTA ============ -->
   <section class="cta">
+    <div class="container">
     <div class="container cta__inner">
       <div>
         <h2>Ready to Join Our Mission?</h2>
@@ -147,6 +135,6 @@ $about = (new AboutVisionMission())->get();
       </div>
       <a class="btn btn--solid" href="/adamson-ccit/public/index.php?page=programs_undergraduate">Explore Programs</a>
     </div>
+    </div>
   </section>
-
 </main>

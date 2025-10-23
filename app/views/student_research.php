@@ -312,60 +312,7 @@ $chipClass = [
 
       <div id="rGrid" class="cards">
         <?php if (empty($items)): ?>
-          <!-- Fallback static content -->
-          <article class="r" data-cat="publication" data-year="2024">
-            <a class="r__media" href="#" target="_blank" rel="noopener">
-              <img src="/adamson-ccit/public/assets/images/research-placeholder.jpg" alt="Poster: Advanced Database Systems">
-              <span class="chip chip--blue">Publication</span>
-            </a>
-            <div class="r__body">
-              <h3 class="r__title">
-                <a href="#" target="_blank" rel="noopener">
-                  Advanced Database Systems in Modern Web Applications
-                </a>
-              </h3>
-              <p class="r__meta">Jane Smith, Prof. Robert Chen • IEEE Computer Society • 2024</p>
-              <div class="r__actions">
-                <a class="btn btn--outline-blue" href="#" target="_blank" rel="noopener">Read Paper</a>
-              </div>
-            </div>
-          </article>
 
-          <article class="r" data-cat="project" data-year="2024">
-            <a class="r__media" href="#" target="_blank" rel="noopener">
-              <img src="/adamson-ccit/public/assets/images/research-placeholder.jpg" alt="Poster: Smart Campus Navigation">
-              <span class="chip chip--green">Project</span>
-            </a>
-            <div class="r__body">
-              <h3 class="r__title">
-                <a href="#" target="_blank" rel="noopener">
-                  Smart Campus Navigation System
-                </a>
-              </h3>
-              <p class="r__meta">Michael Torres, Sarah Kim, Prof. Lisa Wang • Mobile Development • 2024</p>
-              <div class="r__actions">
-                <a class="btn btn--outline-blue" href="#" target="_blank" rel="noopener">View Project</a>
-              </div>
-            </div>
-          </article>
-
-          <article class="r" data-cat="award" data-year="2023">
-            <a class="r__media" href="#" target="_blank" rel="noopener">
-              <img src="/adamson-ccit/public/assets/images/research-placeholder.jpg" alt="Award: Best Student Paper">
-              <span class="chip chip--gray">Award</span>
-            </a>
-            <div class="r__body">
-              <h3 class="r__title">
-                <a href="#" target="_blank" rel="noopener">
-                  Best Student Paper Award
-                </a>
-              </h3>
-              <p class="r__meta">David Rodriguez • National Conference • Machine Learning • 2023</p>
-              <div class="r__actions">
-                <a class="btn btn--outline-blue" href="#" target="_blank" rel="noopener">View Details</a>
-              </div>
-            </div>
-          </article>
         <?php else: ?>
           <!-- Dynamic content from database -->
           <?php foreach ($items as $item): ?>

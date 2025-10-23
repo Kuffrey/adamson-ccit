@@ -53,9 +53,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $reviewNotes = trim($_POST['review_notes'] ?? '');
 
             if ($action === 'approve') {
-                FacultySubmissions::updateStatus($submissionId, 'approved', $user['id'] ?? null, $reviewNotes);
-                $notice = 'Faculty news submission approved and published successfully!';
-                DeanLogs::logApprove('faculty_submissions', $submissionId, $user['id'] ?? null, "Approved news submission: " . substr($reviewNotes, 0, 100));
+        // Approve the submission
+        FacultySubmissions::updateStatus($submissionId, 'approved', $user['id'] ?? null, $reviewNotes);
+
+        // Fetch the approved submission
+        $submission = FacultySubmissions::getById($submissionId);
+        if ($submission && $submission['submission_type'] === 'news') {
+          $title = $submission['title'] ?? '';
+          $content = $submission['content'] ?? '';
+          $category = $submission['category'] ?? 'news';
+          $status = 'published';
+          $imageUrl = null;
+          // Try to deduplicate
+          $existing = News::findByTitleAndContent($title, $content);
+          if (!$existing) {
+            News::create($title, $content, $status, $category, $imageUrl);
+          }
+        }
+        $notice = 'Faculty news submission approved and published successfully!';
+        DeanLogs::logApprove('faculty_submissions', $submissionId, $user['id'] ?? null, "Approved news submission: " . substr($reviewNotes, 0, 100));
             } elseif ($action === 'reject') {
                 FacultySubmissions::updateStatus($submissionId, 'rejected', $user['id'] ?? null, $reviewNotes);
                 $notice = 'Faculty news submission rejected.';
@@ -306,7 +322,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <th>Title</th>
                     <th>Category</th>
                     <th>Status</th>
-                    <th>Author</th>
                     <th>Created</th>
                     <th>Actions</th>
                   </tr>
@@ -325,7 +340,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <td><strong><?= $atitle ?></strong></td>
                     <td><span class="badge badge--category"><?= $acat ?></span></td>
                     <td><span class="badge badge--status badge--<?= $astatus ?>"><?= $astatus ?></span></td>
-                    <td><?= $aauthor ?></td>
+                    
                     <td><small><?= $acreated ?></small></td>
                     <td>
                       <div class="btn-group" role="group">
