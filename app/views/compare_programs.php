@@ -6,68 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Compare Programs | AdU-CCIT</title>
   <link rel="stylesheet" href="/adamson-ccit/public/assets/css/style.css"/>
-  <style>
-    .page-compare .content > .container{padding-block:clamp(40px,6vw,80px)}
-    .fade-in{animation:fadeIn .35s ease-out}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-
-    :root{
-      --ink:#0b234c; --sub:#475569; --edge:var(--edgec,#e6e9ef);
-      --hi:#0080c9; --acc:#00713D; --bg:#ffffff; --row:#f8fafc;
-    }
-
-    /* a11y helper */
-    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-
-    /* Picker bar */
-    .compare-bar{
-      display:grid;grid-template-columns:1fr 1fr;gap:12px;
-      background:var(--bg);border:1px solid var(--edge);border-radius:14px;padding:14px;
-      align-items:end;margin-bottom:18px
-    }
-    .picker select{
-      width:100%;padding:12px 14px;border:1px solid #cfd6e2;border-radius:12px;
-      background:#f8fafc;color:var(--ink);font:700 14px/1.2 Inter,system-ui
-    }
-    .bar-actions{grid-column:1/-1;display:flex;gap:12px;align-items:center;justify-content:flex-end}
-    .switch{display:inline-flex;gap:8px;align-items:center;font-weight:700;color:var(--sub)}
-    .switch input{width:18px;height:18px}
-
-    /* Comparison shell */
-    .cmp-wrap{background:var(--bg);border:1px solid var(--edge);border-radius:14px;overflow:hidden}
-
-    /* Rows grid (no header row) */
-    .cmp-rows{display:grid;grid-template-columns:.6fr 1fr 1fr}
-
-    .sec{
-      grid-column:1/-1;background:#f6f9ff;border-top:1px solid var(--edge);
-      padding:12px 16px;font-weight:900;color:#003169;letter-spacing:.04em;text-transform:uppercase;font-size:12px
-    }
-    .row{display:contents}
-    .cell{
-      padding:14px 16px;border-top:1px solid var(--edge);background:#fff;color:var(--ink)
-    }
-    .label{font-weight:800;color:#1f2a44;background:#fff}
-    .a,.b{border-left:1px solid var(--edge)}
-    .alt .cell{background:var(--row)}
-    .muted{color:#64748b}
-
-    /* Diff markers */
-    .diff{position:relative}
-    .diff::after{
-      content:"";position:absolute;right:12px;top:50%;transform:translateY(-50%);
-      width:8px;height:8px;border-radius:999px;background:var(--hi)
-    }
-
-    /* Mobile */
-    @media (max-width:900px){
-      .compare-bar{grid-template-columns:1fr;gap:10px}
-      .bar-actions{justify-content:flex-start}
-      .cmp-rows{grid-template-columns:1fr}
-      .a,.b{border-left:none}
-      .label{border-top:1px solid var(--edge)}
-    }
-  </style>
 </head>
 <body>
 
@@ -89,28 +27,20 @@
   <section class="content" role="region" aria-label="Compare Programs">
     <div class="container fade-in">
 
-      <!-- Minimal selectors -->
+      <!-- Program selectors -->
       <div class="compare-bar" role="group" aria-label="Choose programs">
         <div class="picker">
-          <label class="sr-only" for="cmp1">Choose first program</label>
+          <label for="cmp1">Choose first program</label>
           <select id="cmp1"></select>
         </div>
         <div class="picker">
-          <label class="sr-only" for="cmp2">Choose second program</label>
+          <label for="cmp2">Choose second program</label>
           <select id="cmp2"></select>
-        </div>
-        <div class="bar-actions">
-          <label class="switch">
-            <input type="checkbox" id="toggleDiff">
-            <span>Show differences only</span>
-          </label>
         </div>
       </div>
 
-      <!-- Comparison (no column headers rendered) -->
-      <div class="cmp-wrap">
-        <div class="cmp-rows" id="cmpRows"></div>
-      </div>
+      <!-- Comparison table -->
+      <div class="programs-summary-grid" id="programsSummaryGrid"></div>
 
     </div>
   </section>
@@ -125,17 +55,21 @@ const PROGRAMS = [
     name:'BS Information Technology',
     level:'Undergraduate',
     desc:'Comprehensive IT program focusing on software development, systems administration, and technology implementation in business environments.',
+    focus:'The BSIT Program includes the study of utilization of both hardware and software technologies involving planning, installing, customizing, operating, managing, administering and maintaining information technology infrastructure that provides computing solutions to address the needs of an organization.',
     tracks:['Consumer & Enterprise Application Development','Game Development','Network Infrastructure & Data Security'],
-    emphases:['Software Development','Systems Administration','Technology Implementation']
-  },
-  {
-    id:'bscs',
-    code:'BSCS',
-    name:'BS Computer Science',
-    level:'Undergraduate',
-    desc:'Rigorous computer science program emphasizing algorithmic thinking, software engineering principles, and advanced computing concepts.',
-    tracks:['Data Science','Web Science','Computer Vision'],
-    emphases:['Algorithmic Thinking','Software Engineering','Advanced Computing']
+    emphases:['Software Development','Systems Administration','Technology Implementation'],
+    roles: {
+      primary: [
+        'Web and Applications Developer',
+        'Junior Database Administrator',
+        'Systems Administrator',
+        'Network Engineer',
+        'Junior Information Security Administrator',
+        'Systems Integration Personnel',
+        'IT Audit Assistant',
+        'Technical Support Specialist'
+      ]
+    }
   },
   {
     id:'bsis',
@@ -143,17 +77,53 @@ const PROGRAMS = [
     name:'BS Information Systems',
     level:'Undergraduate',
     desc:'Strategic IT program combining business acumen with technical expertise for effective information systems management.',
+    focus:'The BSIS Program includes the study of application and effect of information technology to organizations. Graduates of the program should be able to implement an information system which considers complex technological and organizational factors affecting it. These include components, tools, techniques, strategies, methodologies etc.',
     tracks:['Business Analytics'],
-    emphases:['Business + IT','IS Management','Analytics']
+    emphases:['Business + IT','IS Management','Analytics'],
+    roles: {
+      primary: [
+        'Organizational Process Analyst',
+        'Data Analyst',
+        'Solutions Specialist',
+        'Systems Analyst',
+        'Project Management Personnel'
+      ],
+      secondary: [
+        'GA Specialist',
+        'Systems Analyst',
+        'Computer Programmer',
+        'Applications Developer',
+        'End User Trainer',
+        'Documentation Specialist',
+        'Quality Assurance Specialist'
+      ]
+    }
   },
   {
-    id:'dual',
-    code:'DUAL DEGREE',
-    name:'BS CS & Information Engineering',
+    id:'bscs',
+    code:'BSCS',
+    name:'BS Computer Science',
     level:'Undergraduate',
-    desc:'Accelerated dual degree program to earn CS plus Business Administration or Engineering.',
-    tracks:[],
-    emphases:['CS + Business Administration','CS + Engineering']
+    desc:'Rigorous computer science program emphasizing algorithmic thinking, software engineering principles, and advanced computing concepts.',
+    focus:'The BSCS Program includes the study of computing concepts and theories, algorithmic foundations, and new developments in computing. The program prepares students to design and create algorithmically complex software and develop new effective algorithms for solving computing problems.',
+    tracks:['Data Science','Web Science','Computer Vision'],
+    emphases:['Algorithmic Thinking','Software Engineering','Advanced Computing'],
+    roles: {
+      primary: [
+        'Software Engineer',
+        'Systems Software Developer',
+        'Applications Software Developer',
+        'Computer Programmer',
+        'Research and Development',
+        'Computing Professional'
+      ],
+      secondary: [
+        'Systems Analyst',
+        'Data Analyst',
+        'Quality Assurance Specialist',
+        'Software Support Specialist'
+      ]
+    }
   },
   {
     id:'mit',
@@ -161,8 +131,42 @@ const PROGRAMS = [
     name:'Master in Information Technology',
     level:'Graduate',
     desc:'Advanced IT training for leadership roles; emphasizes ethics, innovation, and social responsibility.',
+    focus:'Advanced theoretical and practical IT training to prepare students for leadership roles. Emphasizes ethical practices, social responsibility, and innovation for sustainable development.',
     tracks:['Advanced Computing Practice','IT Leadership & Governance','Ethics & Social Responsibility','Innovation & Sustainable Impact'],
-    emphases:['Leadership','Ethics','Innovation']
+    emphases:['Leadership','Ethics','Innovation'],
+    roles: {
+      primary: [
+        'IT Leadership and Governance',
+        'Ethics and Social Responsibility',
+        'Innovation and Sustainable Impact'
+      ]
+    }
+  },
+  {
+    id:'dual',
+    code:'BSCSIE',
+    name:'BS Computer Science & Information Engineering',
+    level:'Undergraduate',
+    desc:'Accelerated dual degree program to earn CS plus Business Administration or Engineering.',
+    focus:'Earn two degrees: BS Computer Science (Adamson University) and BS Information Engineering (MUST, Taiwan). The program combines advanced computing and engineering, with strong international collaboration and cross-cultural experience.',
+    tracks:[],
+    emphases:['CS + Business Administration','CS + Engineering'],
+    roles: {
+      primary: [
+        'Dual international degree recognition',
+        'In-depth knowledge in CS and Information Engineering',
+        'Broad technical skills: programming, software, databases, security',
+        'Cross-cultural experience and global competence',
+        'Diverse career options in technology fields',
+        'International apprenticeship opportunities'
+      ]
+    },
+    subareas: [
+      'Software Systems: Development, OS, Databases, Networking, AI, Graphics',
+      'Hardware Systems: Architecture, Networks, Microprogramming, Performance',
+      'Scientific Computing: Simulation, Bioinformatics, Medical Informatics, Machine Learning',
+      'Computer Theory: Algorithms, Information Theory, Graph Theory, Formal Languages'
+    ]
   }
 ];
 
@@ -178,58 +182,175 @@ function makeOptionGroup(label, list){
   return og;
 }
 
-/* Row model (kept succinct) */
-const ROWS = [
-  {section:'Overview'},
-  {label:'Summary', key:'desc', get:(p)=>p.desc },
-  {label:'Level', key:'level', get:(p)=>p.level },
-  {section:'Academic Focus'},
-  {label:'Tracks / Specializations', key:'tracks', get:(p)=>(p.tracks||[]).join(', ')||'—' },
-  {label:'Program Emphases', key:'emphases', get:(p)=>(p.emphases||[]).join(', ')||'—' },
-];
+/* ---------- Render dynamic summary cards with complete info ---------- */
+function renderSummaryCards(p1, p2){
+  const grid = $('#programsSummaryGrid');
+  grid.innerHTML = '';
 
-/* ---------- Render rows only (no headers) ---------- */
-function renderRows(p1,p2){
-  const wrap = $('#cmpRows'); wrap.innerHTML = '';
-  let alt = false;
-
-  ROWS.forEach(r=>{
-    if (r.section){
-      const sec = document.createElement('div');
-      sec.className = 'sec';
-      sec.textContent = r.section;
-      wrap.appendChild(sec);
-      alt = false;
-      return;
-    }
-
-    const v1 = r.get(p1);
-    const v2 = r.get(p2);
-    const isDiff = v1 !== v2;
-
-    const row = document.createElement('div');
-    row.className = 'row'+(alt?' alt':'');
-    row.dataset.diff = isDiff ? '1' : '0';
-    row.innerHTML = `
-      <div class="cell label">${r.label}</div>
-      <div class="cell a ${isDiff?'diff':''}">${v1}</div>
-      <div class="cell b ${isDiff?'diff':''}">${v2}</div>
+  [p1, p2].forEach((p) => {
+    const card = document.createElement('div');
+    card.className = 'program-summary-card';
+    card.innerHTML = `
+      <h3>${p.name} (${p.code})</h3>
+      <div class="focus"><strong>FOCUS:</strong> ${p.focus || p.desc}</div>
+      <div class="roles-title">Summary:</div>
+      <p>${p.desc}</p>
+      <div class="roles-title">Level:</div>
+      <p>${p.level}</p>
+      <div class="roles-title">Tracks / Specializations:</div>
+      <ul>${(p.tracks && p.tracks.length) ? p.tracks.map(track => `<li>${track}</li>`).join('') : '<li>—</li>'}</ul>
+      <div class="roles-title">Program Emphases:</div>
+      <ul>${(p.emphases && p.emphases.length) ? p.emphases.map(em => `<li>${em}</li>`).join('') : '<li>—</li>'}</ul>
+      ${p.roles?.primary ? `<div class="roles-title">Primary Job Roles:</div>
+      <ul>${p.roles.primary.map(role => `<li>${role}</li>`).join('')}</ul>` : ''}
+      ${p.roles?.secondary ? `<div class="roles-title">Secondary Job Roles:</div>
+      <ul>${p.roles.secondary.map(role => `<li>${role}</li>`).join('')}</ul>` : ''}
+      ${p.subareas ? `<div class="roles-title">Sub-Areas:</div>
+      <ul>${p.subareas.map(sa => `<li>${sa}</li>`).join('')}</ul>` : ''}
     `;
-    wrap.appendChild(row);
-    alt = !alt;
+    grid.appendChild(card);
   });
-
-  applyDiffFilter();
 }
 
-/* ---------- Diff filter ---------- */
-function applyDiffFilter(){
-  const only = $('#toggleDiff').checked;
-  const rows = Array.from(document.querySelectorAll('#cmpRows .row'));
-  rows.forEach(row=>{
-    const isDiff = row.dataset.diff === '1';
-    row.style.display = (only && !isDiff) ? 'none' : '';
-  });
+/* ---------- Render two-column table comparison ---------- */
+function renderSummaryCards(p1, p2){
+  const grid = $('#programsSummaryGrid');
+  
+  const html = `
+    <div class="comparison-table">
+      <!-- Program Headers -->
+      <div class="program-column">
+        <div class="program-header">${p1.name}<br>(${p1.code})</div>
+      </div>
+      <div class="program-column">
+        <div class="program-header">${p2.name}<br>(${p2.code})</div>
+      </div>
+
+      <!-- Overview Section -->
+      <div class="section-row">Overview</div>
+      
+      <div class="data-row">
+        <div class="data-item">
+          <span class="data-label">Summary</span>
+          ${p1.desc}
+        </div>
+        <div class="data-item">
+          <span class="data-label">Summary</span>
+          ${p2.desc}
+        </div>
+      </div>
+
+      <div class="data-row">
+        <div class="data-item focus-item">
+          <span class="data-label">Focus</span>
+          ${p1.focus || p1.desc}
+        </div>
+        <div class="data-item focus-item">
+          <span class="data-label">Focus</span>
+          ${p2.focus || p2.desc}
+        </div>
+      </div>
+
+      <div class="data-row">
+        <div class="data-item">
+          <span class="data-label">Level</span>
+          ${p1.level}
+        </div>
+        <div class="data-item">
+          <span class="data-label">Level</span>
+          ${p2.level}
+        </div>
+      </div>
+
+      <!-- Academic Structure Section -->
+      <div class="section-row">Academic Structure</div>
+
+      <div class="data-row">
+        <div class="data-item">
+          <span class="data-label">Tracks / Specializations</span>
+          ${(p1.tracks && p1.tracks.length) ? 
+            `<ul>${p1.tracks.map(t => `<li>${t}</li>`).join('')}</ul>` : 
+            '<span class="empty-cell">No specific tracks</span>'}
+        </div>
+        <div class="data-item">
+          <span class="data-label">Tracks / Specializations</span>
+          ${(p2.tracks && p2.tracks.length) ? 
+            `<ul>${p2.tracks.map(t => `<li>${t}</li>`).join('')}</ul>` : 
+            '<span class="empty-cell">No specific tracks</span>'}
+        </div>
+      </div>
+
+      <div class="data-row">
+        <div class="data-item">
+          <span class="data-label">Program Emphases</span>
+          ${(p1.emphases && p1.emphases.length) ? 
+            `<ul>${p1.emphases.map(e => `<li>${e}</li>`).join('')}</ul>` : 
+            '<span class="empty-cell">—</span>'}
+        </div>
+        <div class="data-item">
+          <span class="data-label">Program Emphases</span>
+          ${(p2.emphases && p2.emphases.length) ? 
+            `<ul>${p2.emphases.map(e => `<li>${e}</li>`).join('')}</ul>` : 
+            '<span class="empty-cell">—</span>'}
+        </div>
+      </div>
+
+      <!-- Career Opportunities Section -->
+      <div class="section-row">Career Opportunities</div>
+
+      <div class="data-row">
+        <div class="data-item">
+          <span class="data-label">Primary Job Roles</span>
+          ${p1.roles?.primary ? 
+            `<ul>${p1.roles.primary.map(r => `<li>${r}</li>`).join('')}</ul>` : 
+            '<span class="empty-cell">—</span>'}
+        </div>
+        <div class="data-item">
+          <span class="data-label">Primary Job Roles</span>
+          ${p2.roles?.primary ? 
+            `<ul>${p2.roles.primary.map(r => `<li>${r}</li>`).join('')}</ul>` : 
+            '<span class="empty-cell">—</span>'}
+        </div>
+      </div>
+
+      ${(p1.roles?.secondary || p2.roles?.secondary) ? `
+        <div class="data-row">
+          <div class="data-item">
+            <span class="data-label">Secondary Job Roles</span>
+            ${p1.roles?.secondary ? 
+              `<ul>${p1.roles.secondary.map(r => `<li>${r}</li>`).join('')}</ul>` : 
+              '<span class="empty-cell">—</span>'}
+          </div>
+          <div class="data-item">
+            <span class="data-label">Secondary Job Roles</span>
+            ${p2.roles?.secondary ? 
+              `<ul>${p2.roles.secondary.map(r => `<li>${r}</li>`).join('')}</ul>` : 
+              '<span class="empty-cell">—</span>'}
+          </div>
+        </div>
+      ` : ''}
+
+      ${(p1.subareas || p2.subareas) ? `
+        <div class="section-row">Specialized Areas</div>
+        <div class="data-row">
+          <div class="data-item">
+            <span class="data-label">Sub-Areas</span>
+            ${p1.subareas ? 
+              `<ul>${p1.subareas.map(s => `<li>${s}</li>`).join('')}</ul>` : 
+              '<span class="empty-cell">—</span>'}
+          </div>
+          <div class="data-item">
+            <span class="data-label">Sub-Areas</span>
+            ${p2.subareas ? 
+              `<ul>${p2.subareas.map(s => `<li>${s}</li>`).join('')}</ul>` : 
+              '<span class="empty-cell">—</span>'}
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+  
+  grid.innerHTML = html;
 }
 
 /* ---------- Init ---------- */
@@ -250,12 +371,11 @@ function init(){
   function update(){
     const p1 = PROGRAMS.find(p=>p.id===sel1.value);
     const p2 = PROGRAMS.find(p=>p.id===sel2.value);
-    renderRows(p1,p2);
+    renderSummaryCards(p1, p2);
   }
 
   sel1.addEventListener('change', update);
   sel2.addEventListener('change', update);
-  $('#toggleDiff').addEventListener('change', applyDiffFilter);
 
   update();
 }

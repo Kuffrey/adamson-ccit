@@ -1,4 +1,23 @@
 <?php
+/**
+ * FacultyNewsSubmissionTest.php
+ *
+ * This file contains unit tests for the FacultySubmissions model.
+ * Unit tests are automated scripts that check if individual parts of your code (units) work as expected.
+ * Each test case below verifies a specific behavior or validation rule for faculty news submissions.
+ *
+ * Test Cases Overview:
+ * 1. testCreateNewsSubmission: Checks successful creation of a news submission.
+ * 2. testCreateSubmissionTitleMaxLength: Ensures titles longer than 100 characters are rejected.
+ * 3. testEditNewsSubmission: Verifies editing a submission updates its fields.
+ * 4. testDeleteNewsSubmission: Confirms deletion removes the submission.
+ * 5. testViewSubmissionDetails: Checks retrieval of submission details.
+ * 6. testCreateSubmissionMissingTitle: Ensures submissions without a title are rejected.
+ * 7. testCreateSubmissionMissingContent: Ensures submissions without content are rejected.
+ * 8. testStatusTransitions: Verifies status changes (submitted → under_review → approved).
+ *
+ * Each test creates test data, checks expected results, and cleans up after itself.
+ */
 
 use PHPUnit\Framework\TestCase;
 
