@@ -1,16 +1,17 @@
 <?php
-// Database configuration for adamson_ccit
+// Database configuration using Railway environment variables with fallback to hardcoded values
 if (!defined('DB_HOST')) {
-    define('DB_HOST', 'localhost');
-    define('DB_NAME', 'adamson_ccit');
-    define('DB_USER', 'root');
-    define('DB_PASS', '');
+    define('DB_HOST', getenv('MYSQLHOST') ?: 'mysql.railway.internal');
+    define('DB_NAME', getenv('MYSQLDATABASE') ?: 'railway');
+    define('DB_USER', getenv('MYSQLUSER') ?: 'root');
+    define('DB_PASS', getenv('MYSQLPASSWORD') ?: 'oKFZhDcFsLetntJIYUprcgdnIHHEqrlY');
+    define('DB_PORT', getenv('MYSQLPORT') ?: 3306);
 }
 
 // Test database connection
 try {
-    $test_pdo = new PDO(
-        "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8",
+    $pdo = new PDO(
+        "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8",
         DB_USER,
         DB_PASS,
         [
@@ -20,6 +21,6 @@ try {
     );
     // Connection successful
 } catch (PDOException $e) {
-    error_log("Database connection test failed: " . $e->getMessage());
+    error_log("Database connection failed: " . $e->getMessage());
     die("Database connection failed. Please check your configuration.");
 }
