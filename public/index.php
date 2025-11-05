@@ -15,12 +15,12 @@ ob_start();
 // ----------------------
 // Include database configuration
 // ----------------------
-require_once __DIR__ . '/../app/config/db.php'; // fixed path
+require_once __DIR__ . '/../config/db.php'; // <-- fixed path
 
 // ----------------------
 // Include router/controller
 // ----------------------
-require_once __DIR__ . '/../app/controllers/Router.php'; // fixed path
+require_once __DIR__ . '/../controllers/Router.php'; // <-- fixed path
 
 // ----------------------
 // Get current URI and page
@@ -51,10 +51,10 @@ if ($isAdmin || $isFacultyDashboard || $isDeanDashboard) {
     Router::route();
 } else {
     // Public pages — include header, footer, chatbot
-    include __DIR__ . '/../app/views/layouts/header.php';
+    include __DIR__ . '/../views/layouts/header.php';
     Router::route();
-    include __DIR__ . '/../app/views/layouts/chatbot.php';
-    include __DIR__ . '/../app/views/layouts/footer.php';
+    include __DIR__ . '/../views/layouts/chatbot.php';
+    include __DIR__ . '/../views/layouts/footer.php';
 }
 
 // Flush output buffer
