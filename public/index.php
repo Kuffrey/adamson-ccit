@@ -1,6 +1,6 @@
 <?php
 // ----------------------
-// Enable error reporting
+// Enable error reporting (Railway debugging)
 // ----------------------
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -15,12 +15,12 @@ ob_start();
 // ----------------------
 // Include database configuration
 // ----------------------
-require_once __DIR__ . '/../config/db.php'; // assuming db.php is at /config/db.php
+require_once __DIR__ . '/../app/config/db.php'; // fixed path
 
 // ----------------------
 // Include router/controller
 // ----------------------
-require_once __DIR__ . '/../controllers/Router.php'; // fixed relative path
+require_once __DIR__ . '/../app/controllers/Router.php'; // fixed path
 
 // ----------------------
 // Get current URI and page
@@ -47,10 +47,10 @@ $isDeanDashboard = strpos($page, 'dean_') === 0 || $page === 'dean_dashboard';
 // Route requests
 // ----------------------
 if ($isAdmin || $isFacultyDashboard || $isDeanDashboard) {
-    // For admin, faculty, and dean dashboard/admin pages — no public header/footer
+    // Admin, faculty, dean — no public header/footer
     Router::route();
 } else {
-    // For all other pages — include public header/footer/chatbot
+    // Public pages — include header, footer, chatbot
     include __DIR__ . '/../app/views/layouts/header.php';
     Router::route();
     include __DIR__ . '/../app/views/layouts/chatbot.php';
