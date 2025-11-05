@@ -15,7 +15,7 @@ ob_start();
 // ----------------------
 // Include database configuration
 // ----------------------
-require_once __DIR__ . '/../config/db.php'; // <-- fixed path
+require_once __DIR__ . '/../app/config/database.php'; // <-- fixed path
 
 // ----------------------
 // Include router/controller
