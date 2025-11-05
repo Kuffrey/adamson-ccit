@@ -3,14 +3,13 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
 // public/index.php — front controller
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 ob_start();
 
-// Define ROOT_DIR - parent of public folder
-define('ROOT_DIR', dirname(__DIR__));
-
-require_once ROOT_DIR . '/app/controllers/Router.php';
+// This will work when Root Directory is empty in Railway
+require_once __DIR__ . '/../app/controllers/Router.php';
 
 $uri   = $_SERVER['REQUEST_URI'] ?? '';
 $page  = $_GET['page'] ?? '';
@@ -29,10 +28,10 @@ if ($isAdmin || $isFacultyDashboard || $isDeanDashboard) {
     Router::route();
 } else {
     // For all other pages (including public faculty pages) — include public header/footer/chatbot
-    include ROOT_DIR . '/app/views/layouts/header.php';
+    include __DIR__ . '/../app/views/layouts/header.php';
     Router::route();
-    include ROOT_DIR . '/app/views/layouts/chatbot.php';
-    include ROOT_DIR . '/app/views/layouts/footer.php';
+    include __DIR__ . '/../app/views/layouts/chatbot.php';
+    include __DIR__ . '/../app/views/layouts/footer.php';
 }
 
 ob_end_flush();
