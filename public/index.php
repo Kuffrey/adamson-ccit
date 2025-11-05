@@ -1,4 +1,8 @@
 <?php
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 // public/index.php — front controller
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 ob_start();
