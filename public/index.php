@@ -7,8 +7,7 @@ error_reporting(E_ALL);
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 ob_start();
 
-// Define ROOT_DIR for the entire application
-// On Railway: /app is the public folder, parent contains app/ and config/
+// Define ROOT_DIR - parent of public folder
 define('ROOT_DIR', dirname(__DIR__));
 
 require_once ROOT_DIR . '/app/controllers/Router.php';
