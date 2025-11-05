@@ -1,13 +1,18 @@
 <?php
-
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
 // public/index.php — front controller
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 ob_start();
 
-require_once __DIR__ . '/../app/controllers/Router.php';
+// Go up one level from /public to the project root
+$rootDir = dirname(__DIR__);
+
+// Require the Router and DB config
+require_once $rootDir . '/app/controllers/Router.php';
+require_once $rootDir . '/config/db.php';
 
 $uri   = $_SERVER['REQUEST_URI'] ?? '';
 $page  = $_GET['page'] ?? '';
@@ -26,10 +31,10 @@ if ($isAdmin || $isFacultyDashboard || $isDeanDashboard) {
     Router::route();
 } else {
     // For all other pages (including public faculty pages) — include public header/footer/chatbot
-    include __DIR__ . '/../app/views/layouts/header.php';
+    include $rootDir . '/app/views/layouts/header.php';
     Router::route();
-    include __DIR__ . '/../app/views/layouts/chatbot.php';
-    include __DIR__ . '/../app/views/layouts/footer.php';
+    include $rootDir . '/app/views/layouts/chatbot.php';
+    include $rootDir . '/app/views/layouts/footer.php';
 }
 
 ob_end_flush();
