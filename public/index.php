@@ -7,9 +7,7 @@ error_reporting(E_ALL);
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 ob_start();
 
-// Use absolute path resolution for Railway compatibility
-$appRoot = realpath(__DIR__ . '/..') ?: dirname(__DIR__);
-require_once $appRoot . '/app/controllers/Router.php';
+require_once __DIR__ . '/../app/controllers/Router.php';
 
 $uri   = $_SERVER['REQUEST_URI'] ?? '';
 $page  = $_GET['page'] ?? '';
