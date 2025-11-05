@@ -1,5 +1,10 @@
 <?php
-require_once __DIR__ . '/../lib/Auth.php';
+// Use ROOT_DIR if defined, otherwise calculate it
+if (!defined('ROOT_DIR')) {
+    define('ROOT_DIR', dirname(dirname(__DIR__)));
+}
+
+require_once ROOT_DIR . '/app/lib/Auth.php';
 
 class Router {
     public static function route(): void
@@ -245,11 +250,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
             case 'faculty_portfolio_save':
                 Auth::requireRole(['faculty'], $base . 'login');
-                require_once __DIR__ . '/../../handlers/faculty_portfolio_handler.php'; break;
+                require_once ROOT_DIR . '/handlers/faculty_portfolio_handler.php'; break;
 
             case 'faculty_portfolio_delete':
                 Auth::requireRole(['faculty'], $base . 'login');
-                require_once __DIR__ . '/../../handlers/faculty_portfolio_handler.php'; break;
+                require_once ROOT_DIR . '/handlers/faculty_portfolio_handler.php'; break;
 
             /* -------------------- ADMIN + DEAN CMS -------------------- */
             case 'admin_dashboard':
@@ -389,11 +394,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
             case 'dean_portfolio_save':
                 Auth::requireRole(['dean'], $base . 'login');
-                require_once __DIR__ . '/../../handlers/dean_portfolio_handler.php'; break;
+                require_once ROOT_DIR . '/handlers/dean_portfolio_handler.php'; break;
 
             case 'dean_portfolio_delete':
                 Auth::requireRole(['dean'], $base . 'login');
-                require_once __DIR__ . '/../../handlers/dean_portfolio_handler.php'; break;
+                require_once ROOT_DIR . '/handlers/dean_portfolio_handler.php'; break;
 
             /* -------------------- DEAN MANAGEMENT -------------------- */
 
