@@ -15,12 +15,32 @@ ob_start();
 // ----------------------
 // Include database configuration
 // ----------------------
-require_once __DIR__ . '/../app/config/database.php'; // <-- fixed path
+$databaseConfigPath = null;
+foreach ([__DIR__ . '/../app/config/database.php', __DIR__ . '/../config/database.php', dirname(__DIR__) . '/app/config/database.php', dirname(__DIR__) . '/config/database.php'] as $candidate) {
+    if (is_file($candidate)) {
+        $databaseConfigPath = $candidate;
+        break;
+    }
+}
+if (!$databaseConfigPath) {
+    throw new RuntimeException('Database configuration file not found.');
+}
+require_once $databaseConfigPath;
 
 // ----------------------
 // Include router/controller
 // ----------------------
-require_once __DIR__ . '/../controllers/Router.php'; // <-- fixed path
+$routerPath = null;
+foreach ([__DIR__ . '/../controllers/Router.php', dirname(__DIR__) . '/controllers/Router.php'] as $candidate) {
+    if (is_file($candidate)) {
+        $routerPath = $candidate;
+        break;
+    }
+}
+if (!$routerPath) {
+    throw new RuntimeException('Router file not found.');
+}
+require_once $routerPath;
 
 // ----------------------
 // Get current URI and page
