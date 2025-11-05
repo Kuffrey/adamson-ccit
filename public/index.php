@@ -13,34 +13,43 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 ob_start();
 
 // ----------------------
-// Include database configuration
+// Detect the project root
 // ----------------------
-$databaseConfigPath = null;
-foreach ([__DIR__ . '/../app/config/database.php', __DIR__ . '/../config/database.php', dirname(__DIR__) . '/app/config/database.php', dirname(__DIR__) . '/config/database.php'] as $candidate) {
-    if (is_file($candidate)) {
-        $databaseConfigPath = $candidate;
+$projectRoot = null;
+foreach ([__DIR__, dirname(__DIR__), dirname(__DIR__, 2)] as $candidate) {
+    if (is_dir($candidate . '/app') || is_dir($candidate . '/controllers')) {
+        $projectRoot = realpath($candidate);
         break;
     }
 }
-if (!$databaseConfigPath) {
-    throw new RuntimeException('Database configuration file not found.');
+if (!$projectRoot) {
+    $projectRoot = realpath(__DIR__);
 }
-require_once $databaseConfigPath;
+
+// ----------------------
+// Include database configuration
+// ----------------------
+$resolveFile = static function (array $candidates, string $label) {
+    foreach ($candidates as $candidate) {
+        if (is_file($candidate)) {
+            return $candidate;
+        }
+    }
+    throw new RuntimeException("$label file not found.");
+};
+require_once $resolveFile([
+    $projectRoot . '/app/config/database.php',
+    $projectRoot . '/config/database.php',
+    $projectRoot . '/config/db.php',
+], 'Database configuration');
 
 // ----------------------
 // Include router/controller
 // ----------------------
-$routerPath = null;
-foreach ([__DIR__ . '/../controllers/Router.php', dirname(__DIR__) . '/controllers/Router.php'] as $candidate) {
-    if (is_file($candidate)) {
-        $routerPath = $candidate;
-        break;
-    }
-}
-if (!$routerPath) {
-    throw new RuntimeException('Router file not found.');
-}
-require_once $routerPath;
+require_once $resolveFile([
+    $projectRoot . '/app/controllers/Router.php',
+    $projectRoot . '/controllers/Router.php',
+], 'Router');
 
 // ----------------------
 // Get current URI and page
@@ -71,10 +80,19 @@ if ($isAdmin || $isFacultyDashboard || $isDeanDashboard) {
     Router::route();
 } else {
     // Public pages — include header, footer, chatbot
-    include __DIR__ . '/../views/layouts/header.php';
+    include $resolveFile([
+        $projectRoot . '/app/views/layouts/header.php',
+        $projectRoot . '/views/layouts/header.php',
+    ], 'Header layout');
     Router::route();
-    include __DIR__ . '/../views/layouts/chatbot.php';
-    include __DIR__ . '/../views/layouts/footer.php';
+    include $resolveFile([
+        $projectRoot . '/app/views/layouts/chatbot.php',
+        $projectRoot . '/views/layouts/chatbot.php',
+    ], 'Chatbot layout');
+    include $resolveFile([
+        $projectRoot . '/app/views/layouts/footer.php',
+        $projectRoot . '/views/layouts/footer.php',
+    ], 'Footer layout');
 }
 
 // Flush output buffer
